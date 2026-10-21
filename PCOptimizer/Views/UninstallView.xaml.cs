@@ -68,10 +68,30 @@ public partial class UninstallView : UserControl
 
     void Search_Changed(object sender, TextChangedEventArgs e) => _view?.Refresh();
 
-    void Grid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    void Grid_SelectionChanged(object sender, SelectionChangedEventArgs e) => UpdateButtons();
+
+    void RowCheck_Click(object sender, RoutedEventArgs e) => UpdateButtons();
+
+    /// <summary>Header checkbox: tick or untick every program currently shown (respects the search filter).</summary>
+    void SelectAll_Click(object sender, RoutedEventArgs e)
     {
+        bool on = SelectAllBox.IsChecked == true;
+        foreach (InstalledApp a in _view) a.IsChecked = on;
+        UpdateButtons();
+    }
+
+    List<InstalledApp> Targets()
+    {
+        var ticked = _programs.Where(p => p.IsChecked).ToList();
+        return ticked.Count > 0 ? ticked : Grid.SelectedItem is InstalledApp a ? [a] : [];
+    }
+
+    void UpdateButtons()
+    {
+        int ticked = _programs.Count(p => p.IsChecked);
+        UninstallButton.Content = ticked > 1 ? $"Uninstall {ticked} selected" : "Uninstall";
+        UninstallButton.IsEnabled = !_busy && Targets().Count > 0;
         var app = Grid.SelectedItem as InstalledApp;
-        UninstallButton.IsEnabled = app is not null && !_busy;
         LocationButton.IsEnabled = app?.InstallLocation is { Length: > 0 } loc && Directory.Exists(loc);
     }
 
@@ -80,48 +100,73 @@ public partial class UninstallView : UserControl
         if (Grid.SelectedItem is InstalledApp { InstallLocation: { } loc }) Shell.Open(loc);
     }
 
-    async void Grid_MouseDoubleClick(object sender, MouseButtonEventArgs e) => await UninstallSelectedAsync();
-    async void Uninstall_Click(object sender, RoutedEventArgs e) => await UninstallSelectedAsync();
-
-    async Task UninstallSelectedAsync()
+    async void Grid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
-        if (_busy || Grid.SelectedItem is not InstalledApp app) return;
-        if (MessageBox.Show($"Uninstall {app.Name}?\n\nIts own uninstaller will open; follow its steps to finish.",
+        if (Grid.SelectedItem is InstalledApp a) await UninstallAsync([a]);
+    }
+
+    async void Uninstall_Click(object sender, RoutedEventArgs e) => await UninstallAsync(Targets());
+
+    /// <summary>Runs each uninstaller in turn (installers can't run in parallel) and drops the ones that are gone.</summary>
+    async Task UninstallAsync(List<InstalledApp> apps)
+    {
+        if (_busy || apps.Count == 0) return;
+        string question = apps.Count == 1
+            ? $"Uninstall {apps[0].Name}?"
+            : $"Uninstall these {apps.Count} programs?\n\n" + string.Join("\n", apps.Take(15).Select(a => "  • " + a.Name)) +
+              (apps.Count > 15 ? $"\n  …and {apps.Count - 15} more" : "");
+        if (MessageBox.Show(question + "\n\nEach program's own uninstaller opens in turn; follow its steps to finish.",
                 "Uninstall", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
             return;
 
         _busy = true;
-        UninstallButton.IsEnabled = false;
-        app.Status = "Uninstaller running…";
+        UpdateButtons();
+        int removed = 0, left = 0;
         try
         {
-            await InstalledApps.UninstallAsync(app);
-            await Task.Delay(1500); // let the uninstaller finish removing its registry entry
-            if (!InstalledApps.StillInstalled(app))
+            for (int i = 0; i < apps.Count; i++)
             {
-                _programs.Remove(app);
-                UpdateSummary();
-                SummaryText.Text = $"Uninstalled {app.Name}. " + SummaryText.Text;
+                var app = apps[i];
+                SummaryText.Text = apps.Count > 1 ? $"Uninstalling {i + 1} of {apps.Count}: {app.Name}…" : $"Uninstalling {app.Name}…";
+                app.Status = "Uninstaller running…";
+                try
+                {
+                    await InstalledApps.UninstallAsync(app);
+                    await Task.Delay(1500); // let the uninstaller finish removing its registry entry
+                    if (!InstalledApps.StillInstalled(app))
+                    {
+                        _programs.Remove(app);
+                        removed++;
+                    }
+                    else
+                    {
+                        app.Status = "Still installed? Refresh when done";
+                        left++;
+                    }
+                }
+                catch (System.ComponentModel.Win32Exception)
+                {
+                    app.Status = "Cancelled";
+                    left++;
+                }
+                catch (Exception ex)
+                {
+                    app.Status = "Couldn't start uninstaller";
+                    left++;
+                    if (apps.Count == 1)
+                        MessageBox.Show($"Couldn't start the uninstaller for {app.Name}:\n{ex.Message}\n\nTry Settings → Apps instead.",
+                            "Uninstall", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
             }
-            else
-            {
-                app.Status = "Still installed? Refresh when done";
-            }
-        }
-        catch (System.ComponentModel.Win32Exception)
-        {
-            app.Status = "Cancelled";
-        }
-        catch (Exception ex)
-        {
-            app.Status = "Couldn't start uninstaller";
-            MessageBox.Show($"Couldn't start the uninstaller for {app.Name}:\n{ex.Message}\n\nTry Settings → Apps instead.",
-                "Uninstall", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
         finally
         {
             _busy = false;
-            Grid_SelectionChanged(this, null!);
+            SelectAllBox.IsChecked = false;
+            UpdateSummary();
+            if (removed > 0 || left > 0)
+                SummaryText.Text = $"Removed {removed}" + (left > 0 ? $", {left} still installed (see Status)" : "") + " · " + SummaryText.Text;
+            UpdateButtons();
         }
     }
 

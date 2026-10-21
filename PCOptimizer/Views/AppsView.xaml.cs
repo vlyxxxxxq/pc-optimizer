@@ -36,10 +36,10 @@ public partial class AppsView : UserControl
 
     async Task RefreshInstalledAsync()
     {
-        var installed = await Winget.InstalledIdsAsync();
+        var inventory = await Winget.InventoryAsync();
         foreach (var p in _catalog.SelectMany(g => g.Packages))
         {
-            p.IsInstalled = installed.Contains(p.Id);
+            p.IsInstalled = Winget.IsInstalled(p, inventory);
             if (p.IsInstalled) p.IsSelected = false;
             p.Status = p.IsInstalled ? "Installed" : "";
         }

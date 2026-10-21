@@ -4,6 +4,14 @@ A native Windows desktop app (C# / WPF, .NET 10, no third-party packages). Runs 
 area so Game Mode can kick in automatically. Inspired by Chris Titus Tech's WinUtil, game boosters
 like Razer Cortex and Process Lasso, and Windows' own maintenance tools.
 
+## Download
+
+Grab `PCOptimizer.exe` from the [latest release](../../releases/latest). It's a single file with
+everything built in: no installer and no .NET needed. Works on 64-bit Windows 10 and 11.
+
+The EXE isn't code-signed, so the first time you run it Windows SmartScreen may say
+"Windows protected your PC". Click **More info → Run anyway**.
+
 ## Features
 
 - **Dashboard** – health score (0–100) on launch with one-click fixes, live CPU/memory charts, drives.
@@ -25,8 +33,8 @@ like Razer Cortex and Process Lasso, and Windows' own maintenance tools.
 - **Tweaks** – 24 reversible gaming, privacy and Explorer tweaks showing their real current state,
   "Apply recommended", and restore point creation.
 - **Apps** – winget-powered: see and install updates for everything, or batch-install popular apps.
-- **Uninstaller** – every installed program with icon, size and install date; search and uninstall
-  with the program's own uninstaller. Plus removable Windows extras (Clipchamp, News, Solitaire…).
+- **Uninstaller** – every installed program with icon, size and install date; search, tick several and
+  uninstall them in one go with each program's own uninstaller. Plus removable Windows extras (Clipchamp, News, Solitaire…).
 - **Tools** – power plans (+ add Ultimate Performance), flush DNS, restart Explorer, repair Windows
   (DISM/SFC, network reset, Windows Update fix, chkdsk), shortcuts to Windows tools.
 - **Settings** – start with Windows (in the tray), close to tray, notifications.

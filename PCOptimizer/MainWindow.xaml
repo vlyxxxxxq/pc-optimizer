@@ -15,7 +15,23 @@
         <Border Background="{StaticResource SidebarBrush}">
             <DockPanel>
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="24,20,20,20">
-                    <Image Source="Assets/app.ico" Width="36" Height="36" RenderOptions.BitmapScalingMode="HighQuality"/>
+                    <!-- Vector copy of the app icon so it stays sharp at any DPI (an .ico gets scaled and blurs). -->
+                    <Border Width="36" Height="36" CornerRadius="9">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#6CA0FF" Offset="0"/>
+                                <GradientStop Color="#3A6BE8" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Border.Background>
+                        <Canvas Width="36" Height="36">
+                            <!-- 270° dial open at the bottom, needle pointing up-right, hub -->
+                            <Path Data="M10.65,26.75 A10.4,10.4 0 1 1 25.35,26.75" Stroke="White" StrokeThickness="3"
+                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                            <Line X1="18" Y1="19.4" X2="24.2" Y2="14.2" Stroke="White" StrokeThickness="3"
+                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                            <Ellipse Canvas.Left="15.3" Canvas.Top="16.7" Width="5.4" Height="5.4" Fill="White"/>
+                        </Canvas>
+                    </Border>
                     <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
                         <TextBlock Text="PC Optimizer" FontSize="16" FontWeight="SemiBold"/>
                         <TextBlock Text="Keep Windows tidy" Style="{StaticResource Muted}"/>

@@ -32,6 +32,10 @@ public sealed class InstalledApp : ObservableObject
 
     string _status = "";
     public string Status { get => _status; set => Set(ref _status, value); }
+
+    bool _isChecked;
+    /// <summary>Ticked for a batch uninstall.</summary>
+    public bool IsChecked { get => _isChecked; set => Set(ref _isChecked, value); }
 }
 
 public static class InstalledApps

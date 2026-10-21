@@ -72,6 +72,17 @@
         <Border Grid.Row="3" Style="{StaticResource Card}" Padding="0">
             <DataGrid x:Name="Grid" RowHeight="50" SelectionChanged="Grid_SelectionChanged" MouseDoubleClick="Grid_MouseDoubleClick">
                 <DataGrid.Columns>
+                    <DataGridTemplateColumn Width="48" CanUserSort="False">
+                        <DataGridTemplateColumn.Header>
+                            <CheckBox x:Name="SelectAllBox" Click="SelectAll_Click" ToolTip="Select every program in the list"/>
+                        </DataGridTemplateColumn.Header>
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <CheckBox IsChecked="{Binding IsChecked, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          Click="RowCheck_Click" HorizontalAlignment="Center"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
                     <DataGridTemplateColumn Header="Program" Width="*" SortMemberPath="Name">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
