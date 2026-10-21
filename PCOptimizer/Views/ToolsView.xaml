@@ -1,0 +1,139 @@
+<UserControl x:Class="PCOptimizer.Views.ToolsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="32,28,32,32">
+            <TextBlock Text="Tools" Style="{StaticResource PageTitle}"/>
+            <TextBlock Text="Handy one-click fixes and shortcuts to built-in Windows maintenance tools."
+                       Style="{StaticResource PageSubtitle}"/>
+
+            <!-- Administrator -->
+            <Border Style="{StaticResource Card}" Margin="0,20,0,0">
+                <DockPanel>
+                    <Button x:Name="ElevateButton" DockPanel.Dock="Right" Content="Restart as administrator"
+                            Style="{StaticResource PrimaryButton}" Click="Elevate_Click" VerticalAlignment="Center"/>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="Administrator mode" FontSize="15" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="ElevateText" Style="{StaticResource Muted}" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <!-- Power plan -->
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
+                    <DockPanel>
+                        <Button x:Name="UltimateButton" DockPanel.Dock="Right" Content="Add Ultimate Performance"
+                                Click="Ultimate_Click" Padding="12,5" VerticalAlignment="Top"/>
+                        <StackPanel>
+                            <TextBlock Text="Power plan" FontSize="15" FontWeight="SemiBold"/>
+                            <TextBlock Style="{StaticResource Muted}" Margin="0,2,0,8"
+                                       Text="High performance keeps the CPU ready at full speed, at the cost of more power use. Ultimate Performance is Windows' hidden max-power plan; Game Mode uses it automatically when it exists."/>
+                        </StackPanel>
+                    </DockPanel>
+                    <ItemsControl x:Name="PlanList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource InputBrush}" CornerRadius="8" Padding="14,10" Margin="0,6,0,0">
+                                    <DockPanel>
+                                        <Button DockPanel.Dock="Right" Content="Activate" Tag="{Binding Guid}"
+                                                Click="Plan_Click" Padding="12,5"
+                                                Visibility="{Binding IsInactive, Converter={StaticResource BoolToVis}}"/>
+                                        <TextBlock DockPanel.Dock="Right" Text="Active" Foreground="{StaticResource GoodBrush}"
+                                                   FontWeight="SemiBold" VerticalAlignment="Center"
+                                                   Visibility="{Binding IsActive, Converter={StaticResource BoolToVis}}"/>
+                                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center" FontSize="14"/>
+                                    </DockPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- Quick fixes -->
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
+                    <TextBlock Text="Quick fixes" FontSize="15" FontWeight="SemiBold"/>
+                    <DockPanel Margin="0,12,0,0">
+                        <Button DockPanel.Dock="Right" Content="Flush DNS" Click="FlushDns_Click" MinWidth="150"/>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Flush DNS cache"/>
+                            <TextBlock Text="Fixes sites that won't load after a network or DNS change." Style="{StaticResource Muted}"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <DockPanel Margin="0,12,0,0">
+                        <Button DockPanel.Dock="Right" Content="Restart Explorer" Click="RestartExplorer_Click" MinWidth="150"/>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Restart Windows Explorer"/>
+                            <TextBlock Text="Fixes a frozen taskbar, Start menu or desktop without rebooting." Style="{StaticResource Muted}"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <TextBlock x:Name="FixOutput" Style="{StaticResource Muted}" Margin="0,12,0,0" Visibility="Collapsed"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Repairs -->
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
+                    <TextBlock Text="Repair Windows" FontSize="15" FontWeight="SemiBold"/>
+                    <TextBlock Style="{StaticResource Muted}" Margin="0,2,0,0"
+                               Text="Each fix opens an administrator console so you can watch it work. They're safe to run and don't touch your files."/>
+                    <DockPanel Margin="0,12,0,0">
+                        <Button DockPanel.Dock="Right" Content="Run" Tag="system" Click="Repair_Click" MinWidth="90"/>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Scan and repair system files"/>
+                            <TextBlock Text="DISM + SFC. Fixes crashes and errors caused by corrupted Windows files. Takes 10–30 minutes."
+                                       Style="{StaticResource Muted}"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <DockPanel Margin="0,12,0,0">
+                        <Button DockPanel.Dock="Right" Content="Run" Tag="network" Click="Repair_Click" MinWidth="90"/>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Reset network"/>
+                            <TextBlock Text="Resets Winsock, TCP/IP and DNS. Fixes &quot;connected, no internet&quot;. Needs a restart."
+                                       Style="{StaticResource Muted}"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <DockPanel Margin="0,12,0,0">
+                        <Button DockPanel.Dock="Right" Content="Run" Tag="update" Click="Repair_Click" MinWidth="90"/>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Fix Windows Update"/>
+                            <TextBlock Text="Stops update services, clears the download cache and starts them again. Fixes stuck updates."
+                                       Style="{StaticResource Muted}"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <DockPanel Margin="0,12,0,0">
+                        <Button DockPanel.Dock="Right" Content="Run" Tag="disk" Click="Repair_Click" MinWidth="90"/>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Check drive C: for errors"/>
+                            <TextBlock Text="Online file-system scan (read-only); tells you if a repair is needed." Style="{StaticResource Muted}"/>
+                        </StackPanel>
+                    </DockPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Windows tools -->
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
+                    <TextBlock Text="Windows tools" FontSize="15" FontWeight="SemiBold"/>
+                    <WrapPanel Margin="-5,10,0,0">
+                        <WrapPanel.Resources>
+                            <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                <Setter Property="Margin" Value="5"/>
+                                <EventSetter Event="Click" Handler="Launch_Click"/>
+                            </Style>
+                        </WrapPanel.Resources>
+                        <Button Content="Disk Cleanup" Tag="cleanmgr.exe"/>
+                        <Button Content="Optimize Drives" Tag="dfrgui.exe"/>
+                        <Button Content="Storage Sense" Tag="ms-settings:storagesense"/>
+                        <Button Content="Startup apps settings" Tag="ms-settings:startupapps"/>
+                        <Button Content="Windows Update" Tag="ms-settings:windowsupdate"/>
+                        <Button Content="Task Manager" Tag="taskmgr.exe"/>
+                        <Button Content="Resource Monitor" Tag="resmon.exe"/>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -1,0 +1,159 @@
+<UserControl x:Class="PCOptimizer.Views.DashboardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <!-- Faint horizontal guides at 25/50/75% behind each chart -->
+        <ControlTemplate x:Key="ChartGrid">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/>
+                </Grid.RowDefinitions>
+                <Border BorderBrush="#232836" BorderThickness="0,0,0,1"/>
+                <Border Grid.Row="1" BorderBrush="#232836" BorderThickness="0,0,0,1"/>
+                <Border Grid.Row="2" BorderBrush="#232836" BorderThickness="0,0,0,1"/>
+                <Border Grid.Row="3" BorderBrush="#2C3242" BorderThickness="0,0,0,1"/>
+            </Grid>
+        </ControlTemplate>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="32,28,32,32">
+            <TextBlock Text="Dashboard" Style="{StaticResource PageTitle}"/>
+            <TextBlock Text="Your PC's health at a glance, with live resource usage."
+                       Style="{StaticResource PageSubtitle}"/>
+
+            <!-- Health -->
+            <Border Style="{StaticResource Card}" Margin="0,20,0,0" Padding="24">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition/>
+                    </Grid.ColumnDefinitions>
+
+                    <Grid Width="140" Height="140" VerticalAlignment="Top">
+                        <Ellipse Stroke="#262B38" StrokeThickness="12"/>
+                        <Path x:Name="ScoreArc" StrokeThickness="12" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock x:Name="ScoreText" Text="…" FontSize="40" FontWeight="SemiBold"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock x:Name="ScoreLabel" Text="Checking" Style="{StaticResource Muted}"
+                                       HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <StackPanel Grid.Column="1" Margin="28,0,0,0">
+                        <DockPanel>
+                            <Button x:Name="RecheckButton" DockPanel.Dock="Right" Content="Re-check"
+                                    Click="Recheck_Click" VerticalAlignment="Top"/>
+                            <StackPanel>
+                                <TextBlock Text="PC health" FontSize="18" FontWeight="SemiBold"/>
+                                <TextBlock x:Name="HealthSummary" Style="{StaticResource Muted}" Margin="0,2,0,0"
+                                           Text="Checking for junk files, startup load and disk space…"/>
+                            </StackPanel>
+                        </DockPanel>
+                        <ItemsControl x:Name="FindingsList" Margin="0,10,0,0">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{StaticResource InputBrush}" CornerRadius="8" Padding="12,10" Margin="0,6,0,0">
+                                        <DockPanel>
+                                            <Button DockPanel.Dock="Right" Content="{Binding ActionLabel}" Tag="{Binding Action}"
+                                                    Click="Finding_Click" Padding="14,6" VerticalAlignment="Center"
+                                                    Visibility="{Binding HasAction, Converter={StaticResource BoolToVis}}"/>
+                                            <TextBlock Text="{Binding Glyph}" Foreground="{Binding Brush}" FontSize="16"
+                                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                                       VerticalAlignment="Center" Margin="2,0,14,0"/>
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Detail}" Style="{StaticResource Muted}"/>
+                                            </StackPanel>
+                                        </DockPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <UniformGrid Columns="3" Margin="-8,8,-8,0">
+                <!-- CPU -->
+                <Border Style="{StaticResource Card}" Margin="8">
+                    <StackPanel>
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Right" Text="last 60s" Style="{StaticResource Muted}"/>
+                            <TextBlock Text="CPU" Style="{StaticResource CardLabel}"/>
+                        </DockPanel>
+                        <TextBlock x:Name="CpuText" Text="–" Style="{StaticResource BigNumber}"/>
+                        <TextBlock Text="total processor load" Style="{StaticResource Muted}"/>
+                        <Grid Height="70" Margin="0,14,0,0">
+                            <Control Template="{StaticResource ChartGrid}"/>
+                            <Canvas x:Name="CpuChart" ClipToBounds="True">
+                                <Polygon x:Name="CpuFill" Fill="{StaticResource AccentBrush}" Opacity="0.18"/>
+                                <Polyline x:Name="CpuLine" Stroke="{StaticResource AccentBrush}" StrokeThickness="1.8"
+                                          StrokeLineJoin="Round"/>
+                            </Canvas>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Memory -->
+                <Border Style="{StaticResource Card}" Margin="8">
+                    <StackPanel>
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Right" Text="last 60s" Style="{StaticResource Muted}"/>
+                            <TextBlock Text="MEMORY" Style="{StaticResource CardLabel}"/>
+                        </DockPanel>
+                        <TextBlock x:Name="MemText" Text="–" Style="{StaticResource BigNumber}"/>
+                        <TextBlock x:Name="MemDetail" Style="{StaticResource Muted}"/>
+                        <Grid Height="70" Margin="0,14,0,0">
+                            <Control Template="{StaticResource ChartGrid}"/>
+                            <Canvas x:Name="MemChart" ClipToBounds="True">
+                                <Polygon x:Name="MemFill" Fill="{StaticResource GoodBrush}" Opacity="0.18"/>
+                                <Polyline x:Name="MemLine" Stroke="{StaticResource GoodBrush}" StrokeThickness="1.8"
+                                          StrokeLineJoin="Round"/>
+                            </Canvas>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- System -->
+                <Border Style="{StaticResource Card}" Margin="8">
+                    <StackPanel>
+                        <TextBlock Text="SYSTEM" Style="{StaticResource CardLabel}"/>
+                        <TextBlock x:Name="UptimeText" Text="–" Style="{StaticResource BigNumber}"/>
+                        <TextBlock Text="since last restart" Style="{StaticResource Muted}"/>
+                        <TextBlock x:Name="OsText" Margin="0,16,0,0" TextWrapping="Wrap"/>
+                        <TextBlock x:Name="CpuNameText" Style="{StaticResource Muted}" Margin="0,4,0,0"/>
+                        <TextBlock x:Name="CoresText" Style="{StaticResource Muted}" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+
+            <!-- Drives -->
+            <Border Style="{StaticResource Card}" Margin="0,8,0,0">
+                <StackPanel>
+                    <TextBlock Text="STORAGE" Style="{StaticResource CardLabel}"/>
+                    <ItemsControl x:Name="DrivesList" Margin="0,6,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,10,0,0">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock>
+                                        <Run Text="{Binding Name, Mode=OneWay}" FontWeight="SemiBold"/>
+                                        <Run Text="{Binding Label, Mode=OneWay}" Foreground="{StaticResource MutedBrush}"/>
+                                    </TextBlock>
+                                    <TextBlock Text="{Binding Detail}" Style="{StaticResource Muted}" HorizontalAlignment="Right"/>
+                                    <ProgressBar Grid.Row="1" Margin="0,6,0,0" Maximum="100"
+                                                 Value="{Binding Percent, Mode=OneWay}" Foreground="{Binding Brush}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

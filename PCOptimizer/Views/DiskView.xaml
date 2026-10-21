@@ -1,0 +1,100 @@
+<UserControl x:Class="PCOptimizer.Views.DiskView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Margin="32,28,32,32">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition/>
+        </Grid.RowDefinitions>
+
+        <StackPanel>
+            <TextBlock Text="Disk Space" Style="{StaticResource PageTitle}"/>
+            <TextBlock Style="{StaticResource PageSubtitle}"
+                       Text="Find what's eating your storage. Double-click a folder to drill in. Deleted files go to the Recycle Bin, so you can restore them."/>
+        </StackPanel>
+
+        <DockPanel Grid.Row="1" Margin="0,20,0,0">
+            <Button x:Name="ScanButton" DockPanel.Dock="Right" Content="Scan" Style="{StaticResource PrimaryButton}"
+                    Click="Scan_Click" MinWidth="90"/>
+            <Button DockPanel.Dock="Right" Content="Browse…" Click="Browse_Click" Margin="0,0,10,0"/>
+            <Button x:Name="UpButton" DockPanel.Dock="Right" Click="Up_Click" Margin="0,0,10,0" ToolTip="Parent folder">
+                <TextBlock Text="&#xE74A;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"/>
+            </Button>
+            <ItemsControl x:Name="DriveButtons" DockPanel.Dock="Right" Margin="0,0,10,0">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Button Content="{Binding}" Tag="{Binding}" Click="Drive_Click" Margin="0,0,6,0" Padding="12,8"/>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBox x:Name="PathBox" Margin="0,0,10,0" VerticalContentAlignment="Center" KeyDown="PathBox_KeyDown"/>
+        </DockPanel>
+
+        <StackPanel Grid.Row="2" Margin="0,12,0,12">
+            <TextBlock x:Name="StatusText" Style="{StaticResource Muted}" FontSize="13"
+                       Text="Pick a folder or drive and click Scan."/>
+            <ProgressBar x:Name="Progress" Height="3" Margin="0,8,0,0" Visibility="Hidden"/>
+        </StackPanel>
+
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="5*"/>
+                <ColumnDefinition Width="16"/>
+                <ColumnDefinition Width="7*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Folders -->
+            <Border Style="{StaticResource Card}" Padding="10">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="LARGEST FOLDERS" Style="{StaticResource CardLabel}" Margin="8,6,0,8"/>
+                    <ListBox x:Name="FolderList" Background="Transparent" BorderThickness="0"
+                             ItemContainerStyle="{StaticResource PlainListItem}"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             MouseDoubleClick="FolderList_MouseDoubleClick">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <DockPanel>
+                                        <TextBlock DockPanel.Dock="Right" Text="{Binding SizeText}" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource TextBrush}" Margin="8,0,0,0"/>
+                                        <TextBlock Text="{Binding Name}" Foreground="{StaticResource TextBrush}"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </DockPanel>
+                                    <ProgressBar Height="4" Margin="0,6,0,0" Maximum="100" Value="{Binding Percent, Mode=OneWay}"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+
+            <!-- Files -->
+            <Border Grid.Column="2" Style="{StaticResource Card}" Padding="0">
+                <DockPanel>
+                    <DockPanel DockPanel.Dock="Top" Margin="18,14,14,8">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button x:Name="RevealButton" Content="Open location" Click="Reveal_Click" Margin="0,0,8,0"
+                                    Padding="12,6" IsEnabled="False"/>
+                            <Button x:Name="DeleteButton" Content="Move to Recycle Bin" Style="{StaticResource DangerButton}"
+                                    Click="Delete_Click" Padding="12,6" IsEnabled="False"/>
+                        </StackPanel>
+                        <TextBlock Text="LARGEST FILES" Style="{StaticResource CardLabel}" VerticalAlignment="Center"/>
+                    </DockPanel>
+                    <DataGrid x:Name="FileGrid" SelectionChanged="FileGrid_SelectionChanged" SelectionMode="Extended">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="3*"/>
+                            <DataGridTextColumn Header="Size" Binding="{Binding SizeText}" SortMemberPath="Size" Width="90"/>
+                            <DataGridTextColumn Header="Modified" Binding="{Binding ModifiedText}" SortMemberPath="Modified" Width="95"/>
+                            <DataGridTextColumn Header="Folder" Binding="{Binding Folder}" Width="2*"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

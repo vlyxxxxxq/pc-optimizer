@@ -1,0 +1,64 @@
+<UserControl x:Class="PCOptimizer.Views.CleanerView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Margin="32,28,32,32">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition/>
+        </Grid.RowDefinitions>
+
+        <StackPanel>
+            <TextBlock Text="Junk Cleaner" Style="{StaticResource PageTitle}"/>
+            <TextBlock Style="{StaticResource PageSubtitle}"
+                       Text="Find and remove temporary files and caches. Files that are in use are skipped automatically."/>
+        </StackPanel>
+
+        <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,20,0,16">
+            <StackPanel>
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button x:Name="ScanButton" Content="Scan" Click="Scan_Click" Margin="0,0,10,0" MinWidth="90"/>
+                        <Button x:Name="CleanButton" Content="Clean selected" Style="{StaticResource PrimaryButton}"
+                                Click="Clean_Click" IsEnabled="False" MinWidth="120"/>
+                    </StackPanel>
+                    <StackPanel>
+                        <TextBlock x:Name="TotalText" Text="Ready to scan" FontSize="26" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="StatusText" Style="{StaticResource Muted}" Margin="0,2,0,0"
+                                   Text="Scanning only measures files. Nothing is deleted until you click Clean."/>
+                    </StackPanel>
+                </DockPanel>
+                <ProgressBar x:Name="Progress" Margin="0,14,0,0" Height="4"/>
+            </StackPanel>
+        </Border>
+
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+            <ItemsControl x:Name="CategoryList">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="{StaticResource CardBrush}" CornerRadius="8" Padding="16,12" Margin="0,0,0,8">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <CheckBox IsChecked="{Binding IsSelected}" VerticalAlignment="Center"/>
+                                <StackPanel Grid.Column="1" Margin="14,0,16,0">
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="14"/>
+                                    <TextBlock Text="{Binding Description}" Style="{StaticResource Muted}" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" VerticalAlignment="Center" MinWidth="110">
+                                    <TextBlock Text="{Binding SizeText}" FontSize="15" FontWeight="SemiBold"
+                                               HorizontalAlignment="Right"/>
+                                    <TextBlock Text="{Binding Status}" Style="{StaticResource Muted}"
+                                               HorizontalAlignment="Right" TextAlignment="Right"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

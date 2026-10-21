@@ -1,0 +1,11 @@
+# Build output
+bin/
+obj/
+# Published EXE (attach to a GitHub release instead)
+App/
+
+# IDE
+.vs/
+.vscode/
+*.user
+*.suo

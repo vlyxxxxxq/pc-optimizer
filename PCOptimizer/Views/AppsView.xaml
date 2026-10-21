@@ -1,0 +1,102 @@
+<UserControl x:Class="PCOptimizer.Views.AppsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="32,28,32,32">
+            <TextBlock Text="Apps" Style="{StaticResource PageTitle}"/>
+            <TextBlock Style="{StaticResource PageSubtitle}"
+                       Text="Keep your software up to date and install favourites in one go, using Windows' built-in package manager (winget)."/>
+
+            <TextBlock x:Name="NoWinget" Margin="0,16,0,0" Foreground="{StaticResource WarnBrush}" TextWrapping="Wrap"
+                       Visibility="Collapsed"
+                       Text="winget isn't available. Install or update &quot;App Installer&quot; from the Microsoft Store, then come back."/>
+
+            <!-- Updates -->
+            <Border Style="{StaticResource Card}" Margin="0,20,0,0">
+                <StackPanel>
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button x:Name="CheckButton" Content="Check for updates" Click="Check_Click" Margin="0,0,10,0"/>
+                            <Button x:Name="UpdateButton" Content="Update selected" Style="{StaticResource PrimaryButton}"
+                                    Click="Update_Click" IsEnabled="False"/>
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Text="Updates" FontSize="16" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="UpdateSummary" Style="{StaticResource Muted}" Margin="0,2,0,0"
+                                       Text="Outdated apps are a common cause of crashes and security holes."/>
+                        </StackPanel>
+                    </DockPanel>
+                    <ProgressBar x:Name="UpdateProgress" Height="3" Margin="0,12,0,0" Visibility="Collapsed" IsIndeterminate="True"/>
+                    <ItemsControl x:Name="UpdateList" Margin="0,8,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="0,1,0,0" Padding="0,10">
+                                    <DockPanel>
+                                        <TextBlock DockPanel.Dock="Right" Text="{Binding Status}" Style="{StaticResource Muted}"
+                                                   Width="220" TextAlignment="Right" VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <CheckBox IsChecked="{Binding IsSelected}" VerticalAlignment="Center"/>
+                                        <StackPanel Margin="12,0,0,0">
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                            <TextBlock Style="{StaticResource Muted}">
+                                                <Run Text="{Binding VersionText, Mode=OneWay}"/>
+                                                <Run Text="·" />
+                                                <Run Text="{Binding Id, Mode=OneWay}"/>
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </DockPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <!-- Catalog -->
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
+                    <DockPanel>
+                        <Button x:Name="InstallButton" DockPanel.Dock="Right" Content="Install selected"
+                                Style="{StaticResource PrimaryButton}" Click="Install_Click" IsEnabled="False"/>
+                        <StackPanel>
+                            <TextBlock Text="Install apps" FontSize="16" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="InstallSummary" Style="{StaticResource Muted}" Margin="0,2,0,0"
+                                       Text="Tick what you want. Installs run silently, one after another."/>
+                        </StackPanel>
+                    </DockPanel>
+                    <ItemsControl x:Name="CatalogList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="0,16,0,0">
+                                    <TextBlock Text="{Binding Name}" Style="{StaticResource CardLabel}"/>
+                                    <ItemsControl ItemsSource="{Binding Packages}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Width="196" Margin="0,8,8,0" Padding="12,9" CornerRadius="8"
+                                                        Background="{StaticResource InputBrush}">
+                                                    <DockPanel>
+                                                        <CheckBox DockPanel.Dock="Left" IsChecked="{Binding IsSelected}"
+                                                                  IsEnabled="{Binding CanInstall}" Click="Package_Click"
+                                                                  VerticalAlignment="Center"/>
+                                                        <StackPanel Margin="10,0,0,0">
+                                                            <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+                                                            <TextBlock Text="{Binding Status}" Style="{StaticResource Muted}"
+                                                                       FontSize="11" TextTrimming="CharacterEllipsis"/>
+                                                        </StackPanel>
+                                                    </DockPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
