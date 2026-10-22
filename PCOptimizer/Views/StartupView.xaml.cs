@@ -23,7 +23,7 @@ public partial class StartupView : UserControl
         if (!_loaded) Reload();
     }
 
-    void Reload()
+    async void Reload()
     {
         try
         {
@@ -36,6 +36,14 @@ public partial class StartupView : UserControl
         Grid.ItemsSource = _items;
         _loaded = true;
         UpdateCount();
+
+        // Scheduled tasks take a second or two to query, so they're added once ready.
+        var tasks = await StartupManager.LoadTasksAsync();
+        if (tasks.Count == 0) return;
+        _items = _items.Concat(tasks).OrderBy(i => i.Name, StringComparer.OrdinalIgnoreCase).ToList();
+        Grid.ItemsSource = _items;
+        UpdateCount();
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 
     void UpdateCount() =>
@@ -61,6 +69,11 @@ public partial class StartupView : UserControl
         try
         {
             StartupManager.SetEnabled(item, enable);
+        }
+        catch (InvalidOperationException ex)
+        {
+            MessageBox.Show($"Couldn't change \"{item.Name}\":\n{ex.Message}", "PC Optimizer",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
         }
         catch (Exception ex) when (ex is UnauthorizedAccessException or SecurityException)
         {

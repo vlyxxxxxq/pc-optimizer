@@ -7,12 +7,14 @@
     <!-- Only for the notification-area icon (NotifyIcon). -->
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
+    <!-- Disk benchmark uses aligned native buffers for unbuffered I/O. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>PCOptimizer</AssemblyName>
     <RootNamespace>PCOptimizer</RootNamespace>
     <Product>PC Optimizer</Product>
     <AssemblyTitle>PC Optimizer</AssemblyTitle>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
   </PropertyGroup>
 

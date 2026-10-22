@@ -37,14 +37,20 @@ The EXE isn't code-signed, so the first time you run it Windows SmartScreen may 
 - **Disk Space** – WizTree / WinDirStat style: a size-sorted folder tree with "% of parent", a colour treemap
   you can click to jump to a folder, a largest-files list and a duplicate file finder. Select anything and
   press **Del** to send it to the Recycle Bin (Windows and program folders are protected).
-- **Startup Apps** – icons and publishers; reversible enable/disable (same flags as Task Manager).
+- **Network** – live ping graph to any server with jitter and packet loss, DNS speed test across six
+  public providers with one-click switching (and back), Cloudflare download speed test. VPN-aware.
+- **Hardware** – full specs (CPU, RAM sticks and speed, GPU and VRAM, motherboard, BIOS, Windows), drive
+  health, and CPU / memory / unbuffered disk benchmarks with a history to compare before and after changes.
+- **Startup Apps** – icons and publishers; reversible enable/disable (same flags as Task Manager), plus
+  the scheduled tasks that launch at sign-in, which Task Manager doesn't show.
 - **Processes** – live CPU/memory, grouped by app, End task with critical processes protected.
 - **Tweaks** – 24 reversible gaming, privacy and Explorer tweaks showing their real current state,
   "Apply recommended", and restore point creation.
 - **Apps** – winget-powered: see and install updates for everything, or batch-install popular apps.
 - **Uninstaller** – every installed program with icon, size and install date; search, tick several and
   uninstall them in one go with each program's own uninstaller. Plus removable Windows extras (Clipchamp, News, Solitaire…).
-- **Tools** – graphics driver check (version, age, one click to AMD / NVIDIA / Intel downloads), power plans
+- **Tools** – graphics driver check (version, age, one click to AMD / NVIDIA / Intel downloads),
+  pause Windows Update for 1–5 weeks, power plans
   (+ add Ultimate Performance), flush DNS, restart Explorer, repair Windows (DISM/SFC, network reset,
   Windows Update fix, chkdsk), shortcuts to Windows tools.
 - **Settings** – start with Windows (in the tray), close to tray, notifications, automatic updates.

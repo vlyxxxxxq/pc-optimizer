@@ -15,6 +15,9 @@ public sealed class StartupItem : ObservableObject
     public System.Windows.Media.ImageSource? Icon { get; init; }
     public string Publisher { get; init; } = "";
     public string Subtitle => Publisher.Length > 0 ? Publisher : Location;
+    /// <summary>Set for scheduled tasks that run at sign-in/boot (toggled with Enable/Disable-ScheduledTask).</summary>
+    public string? TaskPath { get; init; }
+    public bool IsTask => TaskPath is not null;
 
     bool _isEnabled;
     public bool IsEnabled
@@ -132,9 +135,77 @@ public static class StartupManager
         return key?.GetValue(valueName) is not byte[] { Length: > 0 } data || (data[0] & 1) == 0;
     }
 
+    /// <summary>
+    /// Non-Microsoft scheduled tasks that start at sign-in or boot. Apps use these to launch
+    /// without appearing in Task Manager's Startup tab (updaters, vendor helpers, launchers).
+    /// </summary>
+    public static async Task<List<StartupItem>> LoadTasksAsync()
+    {
+        const string script =
+            "$ErrorActionPreference='SilentlyContinue'; @(Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\\Microsoft\\*' -and " +
+            "($_.Triggers | Where-Object { $_.CimClass.CimClassName -in 'MSFT_TaskLogonTrigger','MSFT_TaskBootTrigger' }) } | " +
+            "ForEach-Object { [pscustomobject]@{ Name=$_.TaskName; Path=$_.TaskPath; State=[string]$_.State; " +
+            "Exe=[string]$_.Actions[0].Execute; Args=[string]$_.Actions[0].Arguments } }) | ConvertTo-Json -Compress";
+        var (_, output) = await Shell.RunAsync("powershell", $"-NoProfile -Command \"{script.Replace("\"", "\\\"")}\"", System.Text.Encoding.UTF8);
+        var items = new List<StartupItem>();
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(output.Trim());
+            var root = doc.RootElement;
+            var list = root.ValueKind == System.Text.Json.JsonValueKind.Array ? root.EnumerateArray().ToList() : [root];
+            foreach (var t in list)
+            {
+                var name = t.GetProperty("Name").GetString() ?? "";
+                var exe = Environment.ExpandEnvironmentVariables((t.GetProperty("Exe").GetString() ?? "").Trim('"'));
+                var path = File.Exists(exe) ? exe : null;
+                items.Add(new StartupItem
+                {
+                    // Per-user tasks append the user's SID; drop it for readability.
+                    Name = System.Text.RegularExpressions.Regex.Replace(name, @"-S-1-5-21-[\d-]+$", ""),
+                    Command = $"{t.GetProperty("Exe").GetString()} {t.GetProperty("Args").GetString()}".Trim(),
+                    FilePath = path,
+                    Icon = FileIcons.For(path),
+                    Publisher = Publisher(path),
+                    Location = "Scheduled task",
+                    ApprovedHive = RegistryHive.CurrentUser,
+                    ApprovedKey = "",
+                    ValueName = name,
+                    TaskPath = t.GetProperty("Path").GetString() ?? "\\",
+                    IsEnabled = t.GetProperty("State").GetString() != "Disabled",
+                });
+            }
+        }
+        catch { /* no tasks, or PowerShell unavailable */ }
+        return items;
+    }
+
+    static void SetTaskEnabled(StartupItem item, bool enabled)
+    {
+        static string Q(string s) => s.Replace("'", "''");
+        var cmd = $"{(enabled ? "Enable" : "Disable")}-ScheduledTask -TaskPath '{Q(item.TaskPath!)}' -TaskName '{Q(item.ValueName)}' -ErrorAction Stop | Out-Null";
+        using var p = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("powershell", $"-NoProfile -Command \"{cmd}\"")
+        {
+            UseShellExecute = false, CreateNoWindow = true, RedirectStandardError = true,
+        })!;
+        var error = p.StandardError.ReadToEnd();
+        p.WaitForExit(15000);
+        if (p.ExitCode != 0)
+        {
+            if (error.Contains("Access is denied", StringComparison.OrdinalIgnoreCase) || error.Contains("0x80070005"))
+                throw new UnauthorizedAccessException(error);
+            throw new InvalidOperationException(error.Trim());
+        }
+    }
+
     /// <summary>Throws UnauthorizedAccessException for all-users items when not elevated.</summary>
     public static void SetEnabled(StartupItem item, bool enabled)
     {
+        if (item.IsTask)
+        {
+            SetTaskEnabled(item, enabled);
+            item.IsEnabled = enabled;
+            return;
+        }
         using var root = Base(item.ApprovedHive);
         using var key = root.CreateSubKey(ApprovedRoot + item.ApprovedKey, writable: true);
         var data = new byte[12];

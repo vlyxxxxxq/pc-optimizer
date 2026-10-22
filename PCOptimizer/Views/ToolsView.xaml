@@ -51,6 +51,23 @@
                 </StackPanel>
             </Border>
 
+            <!-- Pause Windows Update -->
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Content="1 week" Tag="1" Click="Pause_Click" Margin="0,0,6,0" Padding="12,6" x:Name="Pause1"/>
+                        <Button Content="2 weeks" Tag="2" Click="Pause_Click" Margin="0,0,6,0" Padding="12,6" x:Name="Pause2"/>
+                        <Button Content="5 weeks" Tag="5" Click="Pause_Click" Margin="0,0,10,0" Padding="12,6" x:Name="Pause5"/>
+                        <Button x:Name="ResumeButton" Content="Resume updates" Style="{StaticResource PrimaryButton}" Click="Resume_Click"
+                                Padding="12,6" Visibility="Collapsed"/>
+                    </StackPanel>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="Pause Windows Update" FontSize="15" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="PauseText" Style="{StaticResource Muted}" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
             <!-- Power plan -->
             <Border Style="{StaticResource Card}" Margin="0,16,0,0">
                 <StackPanel>

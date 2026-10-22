@@ -86,6 +86,10 @@
                                      Tag="&#xE74D;" Checked="Nav_Checked"/>
                         <RadioButton x:Name="NavDisk" Style="{StaticResource NavButton}" Content="Disk Space"
                                      Tag="&#xEDA2;" Checked="Nav_Checked"/>
+                        <RadioButton x:Name="NavNetwork" Style="{StaticResource NavButton}" Content="Network"
+                                     Tag="&#xE968;" Checked="Nav_Checked"/>
+                        <RadioButton x:Name="NavHardware" Style="{StaticResource NavButton}" Content="Hardware"
+                                     Tag="&#xE950;" Checked="Nav_Checked"/>
                         <RadioButton x:Name="NavStartup" Style="{StaticResource NavButton}" Content="Startup Apps"
                                      Tag="&#xE7E8;" Checked="Nav_Checked"/>
                         <RadioButton x:Name="NavProcesses" Style="{StaticResource NavButton}" Content="Processes"
@@ -120,6 +124,8 @@
             <views:GameModeView x:Name="GamePage" Visibility="Collapsed"/>
             <views:CleanerView x:Name="CleanerPage" Visibility="Collapsed"/>
             <views:DiskView x:Name="DiskPage" Visibility="Collapsed"/>
+            <views:NetworkView x:Name="NetworkPage" Visibility="Collapsed"/>
+            <views:HardwareView x:Name="HardwarePage" Visibility="Collapsed"/>
             <views:StartupView x:Name="StartupPage" Visibility="Collapsed"/>
             <views:ProcessesView x:Name="ProcessesPage" Visibility="Collapsed"/>
             <views:TweaksView x:Name="TweaksPage" Visibility="Collapsed"/>

@@ -28,6 +28,7 @@ public partial class MainWindow : Window
             [NavDashboard] = DashboardPage, [NavGame] = GamePage, [NavCleaner] = CleanerPage, [NavDisk] = DiskPage,
             [NavStartup] = StartupPage, [NavProcesses] = ProcessesPage, [NavTweaks] = TweaksPage,
             [NavApps] = AppsPage, [NavUninstall] = UninstallPage, [NavTools] = ToolsPage, [NavSettings] = SettingsPage,
+            [NavNetwork] = NetworkPage, [NavHardware] = HardwarePage,
         };
 
         AdminStatus.Text = Elevation.IsElevated ? "● Administrator mode" : "● Standard mode · some features need admin";
@@ -208,6 +209,8 @@ public partial class MainWindow : Window
         if (selected == NavTweaks) TweaksPage.EnsureLoaded();
         if (selected == NavApps) AppsPage.EnsureLoaded();
         if (selected == NavUninstall) UninstallPage.EnsureLoaded();
+        if (selected == NavNetwork) NetworkPage.EnsureLoaded();
+        if (selected == NavHardware) HardwarePage.EnsureLoaded();
     }
 
     /// <summary>Quick fade + slide up when a page opens.</summary>

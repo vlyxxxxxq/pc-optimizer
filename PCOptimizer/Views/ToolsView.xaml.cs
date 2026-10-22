@@ -23,7 +23,35 @@ public partial class ToolsView : UserControl
         if (_loaded) return;
         _loaded = true;
         GpuList.ItemsSource = GpuInfo.Load();
+        RenderPause();
         await LoadPlansAsync();
+    }
+
+    void RenderPause()
+    {
+        var until = UpdatePause.PausedUntil();
+        bool admin = Elevation.IsElevated;
+        Pause1.IsEnabled = Pause2.IsEnabled = Pause5.IsEnabled = ResumeButton.IsEnabled = admin;
+        ResumeButton.Visibility = until is null ? Visibility.Collapsed : Visibility.Visible;
+        PauseText.Text = until is { } u
+            ? $"Paused until {u:D}. Security fixes resume after that; don't stay paused forever."
+            : "Stop updates and surprise restarts during a tournament or launch week. Windows allows up to 5 weeks." +
+              (admin ? "" : " Needs administrator mode (button at the top).");
+    }
+
+    void Pause_Click(object sender, RoutedEventArgs e)
+    {
+        if (((Button)sender).Tag is not string w) return;
+        try { UpdatePause.Pause(int.Parse(w)); }
+        catch (Exception ex) { ShowOutput($"Couldn't pause updates: {ex.Message}"); }
+        RenderPause();
+    }
+
+    void Resume_Click(object sender, RoutedEventArgs e)
+    {
+        try { UpdatePause.Resume(); }
+        catch (Exception ex) { ShowOutput($"Couldn't resume updates: {ex.Message}"); }
+        RenderPause();
     }
 
     void Driver_Click(object sender, RoutedEventArgs e)
