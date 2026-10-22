@@ -82,7 +82,8 @@ internal static class Native
     }
 
     public const uint FO_DELETE = 3;
-    public const ushort FOF_SILENT = 0x4, FOF_NOCONFIRMATION = 0x10, FOF_ALLOWUNDO = 0x40, FOF_NOERRORUI = 0x400;
+    public const ushort FOF_SILENT = 0x4, FOF_NOCONFIRMATION = 0x10, FOF_ALLOWUNDO = 0x40, FOF_NOERRORUI = 0x400,
+        FOF_WANTNUKEWARNING = 0x4000; // warn instead of silently deleting when the Recycle Bin can't take it
 
     [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
     public static extern int SHFileOperation(ref SHFILEOPSTRUCT op);

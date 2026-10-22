@@ -97,6 +97,17 @@ public static class Health
             }
         }
 
+        try
+        {
+            if (GpuInfo.Load().FirstOrDefault() is { IsOld: true } gpu)
+            {
+                score -= 5;
+                findings.Add(new(Severity.Warn, $"{gpu.Vendor} graphics driver is {gpu.AgeDays / 30} months old",
+                    $"{gpu.Name}. Newer drivers often improve FPS and fix crashes in new games.", "Get driver", "drivers"));
+            }
+        }
+        catch { }
+
         return new HealthReport(Math.Clamp(score, 0, 100),
             findings.OrderByDescending(f => f.Severity).ToList());
     }

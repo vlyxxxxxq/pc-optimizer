@@ -22,7 +22,13 @@ public partial class ToolsView : UserControl
     {
         if (_loaded) return;
         _loaded = true;
+        GpuList.ItemsSource = GpuInfo.Load();
         await LoadPlansAsync();
+    }
+
+    void Driver_Click(object sender, RoutedEventArgs e)
+    {
+        if (((Button)sender).Tag is string url) Shell.Open(url);
     }
 
     async Task LoadPlansAsync()

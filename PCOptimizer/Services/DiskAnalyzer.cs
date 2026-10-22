@@ -1,4 +1,4 @@
-using System.Runtime.InteropServices;
+using System.Collections.Concurrent;
 
 namespace PCOptimizer.Services;
 
@@ -10,50 +10,56 @@ public sealed record FileEntry(string FullPath, long Size, DateTime Modified)
     public string ModifiedText => Modified.ToString("d");
 }
 
-public sealed record FolderEntry(string FullPath, string Name, long Size, double Percent)
+/// <summary>
+/// A folder (from the scan) or a file (loaded on demand when its folder is expanded).
+/// Folder sizes include everything below them.
+/// </summary>
+public sealed class DiskNode
 {
-    public string SizeText => Fmt.Bytes(Size);
-    public bool IsFolder => Directory.Exists(FullPath);
+    public required string Name { get; init; }
+    public required string FullPath { get; init; }
+    public bool IsDirectory { get; init; }
+    public DiskNode? Parent { get; set; }
+
+    public long Size { get; set; }
+    /// <summary>Files anywhere below (folders only).</summary>
+    public int FileCount { get; set; }
+    /// <summary>Files sitting directly in this folder.</summary>
+    public long LooseSize { get; set; }
+    public int LooseCount { get; set; }
+
+    /// <summary>Subfolders, largest first. Null when there are none.</summary>
+    public List<DiskNode>? Folders { get; set; }
+    /// <summary>Files directly in this folder, largest first; null until loaded.</summary>
+    public List<DiskNode>? Files { get; set; }
+
+    public bool HasChildren => Folders is { Count: > 0 } || LooseCount > 0;
 }
 
-public sealed record DiskScanResult(List<FolderEntry> Folders, List<FileEntry> Files, long TotalSize, int FileCount);
+public sealed record DiskScanResult(DiskNode Root, List<FileEntry> LargestFiles);
 
 public static class DiskAnalyzer
 {
     const int KeepLargest = 200;
 
-    static EnumerationOptions Options(bool recursive) => new()
+    static EnumerationOptions Options() => new()
     {
-        RecurseSubdirectories = recursive,
+        RecurseSubdirectories = false,
         IgnoreInaccessible = true,
-        AttributesToSkip = FileAttributes.ReparsePoint, // don't double-count via junctions
+        AttributesToSkip = FileAttributes.ReparsePoint, // don't double-count via junctions/symlinks
     };
 
     /// <summary>
-    /// Sizes every immediate subfolder of root and keeps the largest files found anywhere below it.
-    /// Directories are walked in parallel from a shared queue, so one huge folder (like AppData)
-    /// is split across all workers instead of pinning a single thread.
+    /// Builds the whole folder tree under root. Folders are walked in parallel from a shared queue,
+    /// so one huge folder is split across all workers. Progress reports files counted so far.
     /// </summary>
     public static DiskScanResult Scan(string root, IProgress<int> progress, CancellationToken ct)
     {
-        var dir = new DirectoryInfo(root);
-        var subdirs = dir.EnumerateDirectories("*", Options(false)).ToList();
-        // Slot n holds files sitting directly in root.
-        var sizes = new long[subdirs.Count + 1];
-        var queue = new System.Collections.Concurrent.ConcurrentQueue<(string Dir, int Slot)>();
-        for (int i = 0; i < subdirs.Count; i++) queue.Enqueue((subdirs[i].FullName, i));
-        int pending = subdirs.Count;
-        int count = 0;
+        var rootNode = new DiskNode { Name = root, FullPath = root, IsDirectory = true };
+        var queue = new ConcurrentQueue<DiskNode>();
+        queue.Enqueue(rootNode);
+        int pending = 1, count = 0;
         var heaps = new List<PriorityQueue<FileEntry, long>>();
-
-        var rootHeap = new PriorityQueue<FileEntry, long>();
-        foreach (var f in dir.EnumerateFiles("*", Options(false)))
-        {
-            Keep(rootHeap, f);
-            sizes[^1] += f.Length;
-            count++;
-        }
-        heaps.Add(rootHeap);
 
         void Worker()
         {
@@ -61,28 +67,40 @@ public static class DiskAnalyzer
             while (Volatile.Read(ref pending) > 0)
             {
                 ct.ThrowIfCancellationRequested();
-                if (!queue.TryDequeue(out var item)) { Thread.Sleep(1); continue; }
+                if (!queue.TryDequeue(out var node)) { Thread.Sleep(1); continue; }
                 try
                 {
-                    long sum = 0;
-                    foreach (var entry in new DirectoryInfo(item.Dir).EnumerateFileSystemInfos("*", Options(false)))
+                    long loose = 0;
+                    int looseCount = 0;
+                    List<DiskNode>? folders = null;
+                    foreach (var entry in new DirectoryInfo(node.FullPath).EnumerateFileSystemInfos("*", Options()))
                     {
                         if (entry is FileInfo f)
                         {
-                            Keep(heap, f);
-                            sum += f.Length;
+                            long len = f.Length;
+                            loose += len;
+                            looseCount++;
+                            if (heap.Count < KeepLargest || len > heap.Peek().Size)
+                            {
+                                heap.Enqueue(new FileEntry(f.FullName, len, f.LastWriteTime), len);
+                                if (heap.Count > KeepLargest) heap.Dequeue();
+                            }
                             int c = Interlocked.Increment(ref count);
                             if (c % 5000 == 0) progress.Report(c);
                         }
                         else
                         {
+                            var child = new DiskNode { Name = entry.Name, FullPath = entry.FullName, IsDirectory = true, Parent = node };
+                            (folders ??= []).Add(child);
                             Interlocked.Increment(ref pending); // before enqueue, so pending never hits 0 early
-                            queue.Enqueue((entry.FullName, item.Slot));
+                            queue.Enqueue(child);
                         }
                     }
-                    Interlocked.Add(ref sizes[item.Slot], sum);
+                    node.LooseSize = loose;
+                    node.LooseCount = looseCount;
+                    node.Folders = folders;
                 }
-                catch { /* folder vanished or access denied */ }
+                catch { /* access denied or vanished: counts as empty */ }
                 finally { Interlocked.Decrement(ref pending); }
             }
             lock (heaps) heaps.Add(heap);
@@ -97,27 +115,113 @@ public static class DiskAnalyzer
             throw new OperationCanceledException(ct);
         }
 
-        var folders = subdirs.Select((d, i) => (Path: d.FullName, d.Name, Size: sizes[i])).ToList();
-        if (sizes[^1] > 0) folders.Add((root, "(files in this folder)", sizes[^1]));
-        long max = Math.Max(1, folders.Count == 0 ? 1 : folders.Max(f => f.Size));
+        Aggregate(rootNode);
         progress.Report(count);
-
-        return new DiskScanResult(
-            folders.OrderByDescending(f => f.Size).Select(f => new FolderEntry(f.Path, f.Name, f.Size, 100.0 * f.Size / max)).ToList(),
+        return new DiskScanResult(rootNode,
             heaps.SelectMany(h => h.UnorderedItems.Select(i => i.Element))
-                 .OrderByDescending(f => f.Size).Take(KeepLargest).ToList(),
-            sizes.Sum(), count);
+                 .OrderByDescending(f => f.Size).Take(KeepLargest).ToList());
     }
 
-    static void Keep(PriorityQueue<FileEntry, long> heap, FileInfo f)
+    /// <summary>Totals sizes bottom-up and sorts every folder's subfolders largest first.</summary>
+    static void Aggregate(DiskNode root)
     {
-        long len = f.Length;
-        if (heap.Count >= KeepLargest && len <= heap.Peek().Size) return; // too small to matter
-        heap.Enqueue(new FileEntry(f.FullName, len, f.LastWriteTime), len);
-        if (heap.Count > KeepLargest) heap.Dequeue(); // min-heap: drops the smallest
+        // Iterative post-order so very deep trees can't overflow the stack.
+        var stack = new Stack<(DiskNode Node, bool Done)>();
+        stack.Push((root, false));
+        while (stack.Count > 0)
+        {
+            var (node, done) = stack.Pop();
+            if (!done)
+            {
+                stack.Push((node, true));
+                if (node.Folders is { } fs) foreach (var f in fs) stack.Push((f, false));
+                continue;
+            }
+            node.Size = node.LooseSize;
+            node.FileCount = node.LooseCount;
+            if (node.Folders is { } folders)
+            {
+                foreach (var f in folders) { node.Size += f.Size; node.FileCount += f.FileCount; }
+                folders.Sort((a, b) => b.Size.CompareTo(a.Size));
+            }
+        }
     }
 
-    static readonly string[] ProtectedRoots =
+    /// <summary>Lists the files directly in a folder (on demand, when it's expanded).</summary>
+    public static void LoadFiles(DiskNode folder)
+    {
+        if (folder.Files is not null) return;
+        var files = new List<DiskNode>();
+        try
+        {
+            foreach (var f in new DirectoryInfo(folder.FullPath).EnumerateFiles("*", Options()))
+            {
+                try { files.Add(new DiskNode { Name = f.Name, FullPath = f.FullName, Size = f.Length, Parent = folder }); }
+                catch { }
+            }
+        }
+        catch { }
+        files.Sort((a, b) => b.Size.CompareTo(a.Size));
+        folder.Files = files;
+    }
+
+    /// <summary>Finds the scanned folder for a path, or null if it's outside the scan.</summary>
+    public static DiskNode? FindFolder(DiskNode root, string path)
+    {
+        var rootPath = root.FullPath.TrimEnd('\\');
+        path = path.TrimEnd('\\');
+        if (path.Equals(rootPath, StringComparison.OrdinalIgnoreCase)) return root;
+        if (!path.StartsWith(rootPath + "\\", StringComparison.OrdinalIgnoreCase)) return null;
+        var node = root;
+        foreach (var part in path[(rootPath.Length + 1)..].Split('\\'))
+        {
+            node = node.Folders?.FirstOrDefault(f => f.Name.Equals(part, StringComparison.OrdinalIgnoreCase));
+            if (node is null) return null;
+        }
+        return node;
+    }
+
+    /// <summary>Takes a deleted file or folder out of the tree and shrinks every parent's totals.</summary>
+    public static void Remove(DiskNode node)
+    {
+        var parent = node.Parent;
+        if (parent is null) return;
+        long size = node.Size;
+        int files = node.IsDirectory ? node.FileCount : 1;
+        if (node.IsDirectory) parent.Folders?.Remove(node);
+        else
+        {
+            parent.Files?.Remove(node);
+            parent.LooseSize -= size;
+            parent.LooseCount -= 1;
+        }
+        for (var p = parent; p is not null; p = p.Parent)
+        {
+            p.Size -= size;
+            p.FileCount -= files;
+        }
+    }
+
+    /// <summary>Removes a deleted file known only by path (e.g. from the Largest files or Duplicates lists).</summary>
+    public static void RemoveFile(DiskNode root, string path, long size)
+    {
+        var folder = FindFolder(root, Path.GetDirectoryName(path) ?? "");
+        if (folder is null) return;
+        if (folder.Files?.FirstOrDefault(f => f.FullPath.Equals(path, StringComparison.OrdinalIgnoreCase)) is { } node)
+        {
+            Remove(node);
+            return;
+        }
+        folder.LooseSize -= size;
+        folder.LooseCount -= 1;
+        for (var p = folder; p is not null; p = p.Parent)
+        {
+            p.Size -= size;
+            p.FileCount -= 1;
+        }
+    }
+
+    static readonly string[] ProtectedTrees =
     [
         Environment.GetFolderPath(Environment.SpecialFolder.Windows),
         Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
@@ -125,20 +229,55 @@ public static class DiskAnalyzer
         Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
     ];
 
-    /// <summary>System and installed-program files must be removed by uninstalling, not by deleting.</summary>
-    public static bool IsProtected(string path) =>
-        ProtectedRoots.Any(r => r.Length > 0 && path.StartsWith(r + "\\", StringComparison.OrdinalIgnoreCase))
-        || (Path.GetDirectoryName(path)?.Length <= 3 && (File.GetAttributes(path) & FileAttributes.System) != 0);
+    // Folders that may be emptied but must never be deleted themselves.
+    static readonly string[] ProtectedFolders =
+    [
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), @"AppData\LocalLow"),
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "AppData"),
+        Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
+        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+        Environment.GetFolderPath(Environment.SpecialFolder.MyPictures),
+        Environment.GetFolderPath(Environment.SpecialFolder.MyMusic),
+        Environment.GetFolderPath(Environment.SpecialFolder.MyVideos),
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads"),
+        Path.GetDirectoryName(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)) ?? "", // C:\Users
+    ];
 
-    /// <summary>Sends a file to the Recycle Bin so the user can restore it.</summary>
-    public static bool Recycle(string path)
+    /// <summary>Why a path can't be deleted here, or null if it can.</summary>
+    public static string? WhyProtected(string path)
+    {
+        var p = path.TrimEnd('\\');
+        if (p.Length <= 2) return "it's a whole drive";
+        if (ProtectedTrees.Any(r => r.Length > 0 &&
+                (p.Equals(r, StringComparison.OrdinalIgnoreCase) || p.StartsWith(r + "\\", StringComparison.OrdinalIgnoreCase))))
+            return "it's part of Windows or an installed program (uninstall the program instead)";
+        if (ProtectedFolders.Any(r => r.Length > 0 && p.Equals(r.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase)))
+            return "it's a Windows user folder (you can delete what's inside it)";
+        try
+        {
+            if (File.Exists(p) && (File.GetAttributes(p) & FileAttributes.System) != 0 && Path.GetDirectoryName(p)?.Length <= 3)
+                return "it's a Windows system file";
+        }
+        catch { }
+        return null;
+    }
+
+    /// <summary>
+    /// Sends files or folders to the Recycle Bin with Windows' progress dialog. Windows warns before
+    /// anything too big for the Recycle Bin would be permanently deleted. Returns false if aborted.
+    /// </summary>
+    public static bool Recycle(IntPtr owner, IEnumerable<string> paths)
     {
         var op = new Native.SHFILEOPSTRUCT
         {
+            hwnd = owner,
             wFunc = Native.FO_DELETE,
-            pFrom = path + '\0',
-            fFlags = (ushort)(Native.FOF_ALLOWUNDO | Native.FOF_NOCONFIRMATION | Native.FOF_SILENT | Native.FOF_NOERRORUI),
+            pFrom = string.Join('\0', paths) + '\0',
+            fFlags = (ushort)(Native.FOF_ALLOWUNDO | Native.FOF_NOCONFIRMATION | Native.FOF_WANTNUKEWARNING),
         };
-        return Native.SHFileOperation(ref op) == 0 && !op.fAnyOperationsAborted && !File.Exists(path);
+        return Native.SHFileOperation(ref op) == 0 && !op.fAnyOperationsAborted;
     }
 }

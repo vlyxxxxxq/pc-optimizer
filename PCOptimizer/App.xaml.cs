@@ -11,9 +11,13 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
-        // One copy only: a second launch just brings the running one to the front.
-        _instanceLock = new Mutex(true, @"Local\PCOptimizer.Instance", out bool first);
-        _showSignal = new EventWaitHandle(false, EventResetMode.AutoReset, @"Local\PCOptimizer.Show");
+        // One copy per settings profile: a second launch just brings the running one to the front.
+        // A separate profile (PCOPTIMIZER_SETTINGS) runs alongside, so testing never touches the real app.
+        var profile = Environment.GetEnvironmentVariable("PCOPTIMIZER_SETTINGS") is { Length: > 0 } p
+            ? "." + Convert.ToHexString(System.Security.Cryptography.SHA1.HashData(System.Text.Encoding.UTF8.GetBytes(p.ToLowerInvariant())))[..12]
+            : "";
+        _instanceLock = new Mutex(true, $@"Local\PCOptimizer.Instance{profile}", out bool first);
+        _showSignal = new EventWaitHandle(false, EventResetMode.AutoReset, $@"Local\PCOptimizer.Show{profile}");
         if (!first)
         {
             _showSignal.Set();

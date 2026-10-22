@@ -3,6 +3,7 @@ bin/
 obj/
 # Published EXE (attach to a GitHub release instead)
 App/
+Release/
 
 # IDE
 .vs/

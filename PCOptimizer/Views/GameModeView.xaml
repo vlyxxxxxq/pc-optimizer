@@ -48,8 +48,60 @@
                         <TextBlock x:Name="StatusTitle" Text="Game Mode is off" FontSize="20" FontWeight="SemiBold"/>
                         <TextBlock x:Name="StatusDetail" Style="{StaticResource Muted}" FontSize="13" Margin="0,3,0,0"/>
                         <TextBlock x:Name="BoostDetail" Style="{StaticResource Muted}" Margin="0,3,0,0"/>
+                        <!-- Live numbers while a game is running -->
+                        <StackPanel x:Name="LiveStats" Orientation="Horizontal" Margin="0,12,0,0" Visibility="Collapsed">
+                            <Border Style="{StaticResource Badge}" Margin="0,0,8,0" Padding="10,4">
+                                <TextBlock><Run Text="CPU " Foreground="{StaticResource MutedBrush}"/><Run x:Name="LiveCpu" Text="–" FontWeight="SemiBold"/></TextBlock>
+                            </Border>
+                            <Border Style="{StaticResource Badge}" Margin="0,0,8,0" Padding="10,4">
+                                <TextBlock><Run Text="GPU " Foreground="{StaticResource MutedBrush}"/><Run x:Name="LiveGpu" Text="–" FontWeight="SemiBold"/></TextBlock>
+                            </Border>
+                            <Border Style="{StaticResource Badge}" Margin="0" Padding="10,4">
+                                <TextBlock><Run Text="Game RAM " Foreground="{StaticResource MutedBrush}"/><Run x:Name="LiveRam" Text="–" FontWeight="SemiBold"/></TextBlock>
+                            </Border>
+                        </StackPanel>
                     </StackPanel>
                 </DockPanel>
+            </Border>
+
+            <!-- Play history -->
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
+                    <TextBlock Text="PLAY HISTORY" Style="{StaticResource CardLabel}"/>
+                    <TextBlock x:Name="NoHistory" Style="{StaticResource Muted}" Margin="0,8,0,0"
+                               Text="Sessions show up here after you play a game for at least a minute with Game Mode on."/>
+                    <Grid x:Name="HistoryGrid" Margin="0,4,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="24"/>
+                            <ColumnDefinition Width="3*"/>
+                        </Grid.ColumnDefinitions>
+                        <ItemsControl x:Name="TotalsList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <DockPanel Margin="0,8,0,0">
+                                        <TextBlock DockPanel.Dock="Right" Text="{Binding Text}" Style="{StaticResource Muted}"/>
+                                        <TextBlock Text="{Binding Game}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                    </DockPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <ItemsControl x:Name="SessionList" Grid.Column="2">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="0,8,0,0">
+                                        <TextBlock>
+                                            <Run Text="{Binding Game, Mode=OneWay}" FontWeight="SemiBold"/>
+                                            <Run Text="{Binding DurationText, Mode=OneWay}" Foreground="{StaticResource AccentBrush}"/>
+                                            <Run Text="{Binding When, Mode=OneWay}" Foreground="{StaticResource MutedBrush}"/>
+                                        </TextBlock>
+                                        <TextBlock Text="{Binding Summary}" Style="{StaticResource Muted}"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Grid>
+                </StackPanel>
             </Border>
 
             <Grid Margin="0,16,0,0">

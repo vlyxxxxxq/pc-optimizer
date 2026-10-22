@@ -35,7 +35,38 @@ public sealed class GameModeService
     /// <summary>(title, message) for a user-facing notification.</summary>
     public event Action<string, string>? Notify;
 
-    public GameModeService(AppSettings settings) => _settings = settings;
+    /// <summary>Live CPU/GPU/RAM numbers for the game being played, sampled every 2 seconds.</summary>
+    public GameStats Stats { get; } = new();
+    public event EventHandler? StatsUpdated;
+    public event Action<GameSession>? SessionEnded;
+    readonly DispatcherTimer _statsTimer = new() { Interval = TimeSpan.FromSeconds(2) };
+
+    public GameModeService(AppSettings settings)
+    {
+        _settings = settings;
+        _statsTimer.Tick += async (_, _) =>
+        {
+            if (!Stats.Running) return;
+            await Task.Run(Stats.Sample);
+            StatsUpdated?.Invoke(this, EventArgs.Empty);
+        };
+    }
+
+    void BeginSession(DetectedGame game)
+    {
+        Stats.Start(game.Name, game.Pid);
+        _statsTimer.Start();
+    }
+
+    void EndSession()
+    {
+        _statsTimer.Stop();
+        if (Stats.Stop() is { } session)
+        {
+            Log($"Played {session.Game} for {session.DurationText} — {session.Summary}");
+            SessionEnded?.Invoke(session);
+        }
+    }
 
     public void Start()
     {
@@ -67,6 +98,7 @@ public sealed class GameModeService
                 if (Game is { } game && !GameDetector.IsAlive(game.Pid))
                 {
                     if (IsAuto) { await DeactivateAsync($"{game.Name} closed"); return; }
+                    EndSession();
                     Game = null; // manual mode keeps running without a game
                     Changed();
                 }
@@ -77,6 +109,7 @@ public sealed class GameModeService
                     if (later is not null && IsActive && Game is null)
                     {
                         Game = later;
+                        BeginSession(later);
                         if (_settings.BoostPriority) SetPriority(later.Pid, ProcessPriorityClass.High);
                         Log($"Detected {later.Name}");
                         Changed();
@@ -133,6 +166,7 @@ public sealed class GameModeService
         IsAuto = auto;
         Game = game;
         Since = DateTime.Now;
+        if (game is not null) BeginSession(game);
         var boosts = new List<string>();
 
         if (_settings.BoostPowerPlan)
@@ -213,6 +247,7 @@ public sealed class GameModeService
             _toReopen.Clear();
         }
 
+        EndSession();
         var played = Since is { } s ? Fmt.Duration(DateTime.Now - s) : null;
         IsActive = false;
         IsAuto = false;
@@ -232,6 +267,7 @@ public sealed class GameModeService
     {
         _timer.Stop();
         if (!IsActive) return;
+        EndSession(); // keep the session in history even when the app exits mid-game
         if (_restorePlan is not null && PowerPlans.SetActive(_restorePlan))
         {
             _settings.PendingRestorePlan = null;

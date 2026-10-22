@@ -24,6 +24,13 @@ public sealed class AppSettings
     /// <summary>Game folders or exe names the user marked "Not a game".</summary>
     public List<string> IgnoredGames { get; set; } = [];
 
+    public bool AutoCheckUpdates { get; set; } = true;
+
+    // Scheduled cleaning
+    public bool AutoClean { get; set; }
+    public int AutoCleanDays { get; set; } = 7;
+    public DateTime? LastAutoClean { get; set; }
+
     /// <summary>Power plan to restore if the app exited while Game Mode was on.</summary>
     public string? PendingRestorePlan { get; set; }
 

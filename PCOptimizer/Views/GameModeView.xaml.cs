@@ -43,9 +43,31 @@ public partial class GameModeView : UserControl
             NoActivity.Visibility = service.Activity.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         service.StateChanged += (_, _) => Render();
         service.IgnoredChanged += (_, _) => { RenderIgnored(); _games.Clear(); foreach (var g in settings.CustomGames) _games.Add(g); };
+        service.StatsUpdated += (_, _) => RenderStats();
+        service.SessionEnded += _ => RenderHistory();
         RenderLibraries();
         RenderIgnored();
+        RenderHistory();
         Render();
+    }
+
+    void RenderStats()
+    {
+        if (_service is null) return;
+        var s = _service.Stats;
+        LiveStats.Visibility = s.Running ? Visibility.Visible : Visibility.Collapsed;
+        LiveCpu.Text = $"{s.LastCpu:0}%";
+        LiveGpu.Text = $"{s.LastGpu:0}%";
+        LiveRam.Text = s.LastGameRam > 0 ? Fmt.Bytes(s.LastGameRam) : "–";
+    }
+
+    void RenderHistory()
+    {
+        var sessions = GameStats.Load();
+        TotalsList.ItemsSource = GameStats.Totals(sessions).Take(6).ToList();
+        SessionList.ItemsSource = sessions.Take(6).ToList();
+        NoHistory.Visibility = sessions.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        HistoryGrid.Visibility = sessions.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
     }
 
     sealed record IgnoredItem(string Value, string Display);
@@ -83,6 +105,7 @@ public partial class GameModeView : UserControl
         ToggleButton.Content = on ? "Turn off" : "Turn on";
         ToggleButton.Style = (Style)FindResource(on ? "DangerButton" : "PrimaryButton");
         NotGameButton.Visibility = on && _service.Game is not null ? Visibility.Visible : Visibility.Collapsed;
+        RenderStats();
 
         if (on)
         {

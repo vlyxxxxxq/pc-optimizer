@@ -17,10 +17,50 @@ public partial class CleanerView : UserControl
     /// <summary>Removable junk in the categories that are ticked by default-safe selection.</summary>
     public long JunkBytes => _categories.Where(c => c.IsSelected).Sum(c => c.SizeBytes);
 
+    AppSettings? _settings;
+    AutoCleaner? _auto;
+
     public CleanerView()
     {
         InitializeComponent();
         CategoryList.ItemsSource = _categories;
+    }
+
+    public void Attach(AppSettings settings, AutoCleaner auto)
+    {
+        _settings = settings;
+        _auto = auto;
+        auto.Ran += (_, _) => RenderAuto();
+        RenderAuto();
+    }
+
+    void RenderAuto()
+    {
+        if (_settings is null || _auto is null) return;
+        AutoSwitch.IsChecked = _settings.AutoClean;
+        EveryDay.IsChecked = _settings.AutoCleanDays == 1;
+        EveryWeek.IsChecked = _settings.AutoCleanDays == 7;
+        EveryMonth.IsChecked = _settings.AutoCleanDays == 30;
+        var last = _settings.LastAutoClean is { } l ? $"Last run {l:g}." : "Hasn't run yet.";
+        AutoText.Text = _settings.AutoClean
+            ? $"{last} Next run {(_auto.NextRun is { } n && n > DateTime.Now ? n.ToString("g") : "within the hour")}. Skipped while you're gaming."
+            : "Runs in the background on the categories ticked by default (never the Recycle Bin), and never during a game.";
+    }
+
+    void Auto_Click(object sender, RoutedEventArgs e)
+    {
+        if (_settings is null) return;
+        _settings.AutoClean = AutoSwitch.IsChecked == true;
+        _settings.Save();
+        RenderAuto();
+    }
+
+    void Interval_Click(object sender, RoutedEventArgs e)
+    {
+        if (_settings is null || ((FrameworkElement)sender).Tag is not string days) return;
+        _settings.AutoCleanDays = int.Parse(days);
+        _settings.Save();
+        RenderAuto();
     }
 
     async void Scan_Click(object sender, RoutedEventArgs e) => await ScanAsync();

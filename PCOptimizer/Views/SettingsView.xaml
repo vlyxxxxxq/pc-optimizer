@@ -38,12 +38,35 @@
                 </StackPanel>
             </Border>
 
+            <!-- Updates -->
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
+                    <TextBlock Text="UPDATES" Style="{StaticResource CardLabel}"/>
+                    <DockPanel Margin="0,12,0,0">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button x:Name="CheckUpdateButton" Content="Check now" Click="CheckUpdate_Click" Margin="0,0,8,0"/>
+                            <Button x:Name="InstallUpdateButton" Content="Update now" Style="{StaticResource PrimaryButton}"
+                                    Click="InstallUpdate_Click" Visibility="Collapsed"/>
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock x:Name="UpdateTitle" Text="You're up to date" FontSize="14"/>
+                            <TextBlock x:Name="UpdateText" Style="{StaticResource Muted}" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <ProgressBar x:Name="UpdateProgress" Height="4" Margin="0,10,0,0" Maximum="1" Visibility="Collapsed"/>
+                    <DockPanel Margin="0,14,0,0">
+                        <CheckBox DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding AutoCheckUpdates}" Click="Save_Click"/>
+                        <TextBlock Text="Check for updates automatically (once a day)" FontSize="14" VerticalAlignment="Center"/>
+                    </DockPanel>
+                </StackPanel>
+            </Border>
+
             <Border Style="{StaticResource Card}" Margin="0,16,0,0">
                 <StackPanel>
                     <TextBlock Text="ABOUT" Style="{StaticResource CardLabel}"/>
                     <TextBlock x:Name="VersionText" Margin="0,10,0,0" FontSize="14"/>
                     <TextBlock Style="{StaticResource Muted}" Margin="0,4,0,0"
-                               Text="Everything runs locally. PC Optimizer never sends data anywhere; app installs and updates go through winget."/>
+                               Text="Everything runs locally. The only network calls are update checks to GitHub and app installs through winget."/>
                     <TextBlock x:Name="SettingsPath" Style="{StaticResource Muted}" Margin="0,4,0,0"/>
                 </StackPanel>
             </Border>

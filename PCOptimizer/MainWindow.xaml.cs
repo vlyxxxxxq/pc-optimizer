@@ -12,6 +12,9 @@ public partial class MainWindow : Window
 {
     readonly AppSettings _settings = AppSettings.Load();
     readonly GameModeService _gameMode;
+    readonly AutoCleaner _autoCleaner;
+    readonly System.Windows.Threading.DispatcherTimer _updateTimer = new() { Interval = TimeSpan.FromSeconds(20) };
+    Version? _notifiedUpdate;
     readonly TrayIcon _tray = new();
     readonly Dictionary<RadioButton, UIElement> _pages;
     bool _exiting, _cleanedUp, _healthChecked;
@@ -42,6 +45,30 @@ public partial class MainWindow : Window
         AppsPage.Notify += Notify;
         RenderGameChip();
 
+        _autoCleaner = new AutoCleaner(_settings, () => _gameMode.IsActive);
+        _autoCleaner.Notify += Notify;
+        CleanerPage.Attach(_settings, _autoCleaner);
+        _autoCleaner.Start();
+
+        // Updates: clean up after a previous update, then check shortly after start and once a day.
+        Updater.CleanUpOld();
+        SettingsPage.UpdateFound += info =>
+        {
+            UpdateChipTitle.Text = $"Version {info.Version.ToString(3)} available";
+            UpdateChip.Visibility = Visibility.Visible;
+            if (_notifiedUpdate != info.Version)
+            {
+                _notifiedUpdate = info.Version;
+                Notify("Update available", $"PC Optimizer {info.Version.ToString(3)} is out. Open the app to update in one click.");
+            }
+        };
+        _updateTimer.Tick += async (_, _) =>
+        {
+            _updateTimer.Interval = TimeSpan.FromHours(24);
+            if (_settings.AutoCheckUpdates) await SettingsPage.CheckForUpdateAsync(quiet: true);
+        };
+        _updateTimer.Start();
+
         _tray.OpenRequested += (_, _) => ShowFromTray();
         _tray.GameModeRequested += async (_, _) => await _gameMode.ToggleAsync();
         _tray.ExitRequested += (_, _) => ExitApp();
@@ -54,6 +81,7 @@ public partial class MainWindow : Window
                 case "startup": NavStartup.IsChecked = true; break;
                 case "disk": NavDisk.IsChecked = true; break;
                 case "processes": NavProcesses.IsChecked = true; break;
+                case "drivers": NavTools.IsChecked = true; break;
             }
         };
         DashboardPage.RecheckRequested += async (_, _) => await RunHealthCheckAsync();
@@ -90,6 +118,8 @@ public partial class MainWindow : Window
     }
 
     async void GameChip_Click(object sender, MouseButtonEventArgs e) => await _gameMode.ToggleAsync();
+
+    void UpdateChip_Click(object sender, MouseButtonEventArgs e) => NavSettings.IsChecked = true;
 
     /// <summary>Dark caption bar that matches the sidebar (Windows 11; ignored on older builds).</summary>
     protected override void OnSourceInitialized(EventArgs e)
@@ -171,11 +201,23 @@ public partial class MainWindow : Window
         var selected = (RadioButton)sender;
         foreach (var (nav, page) in _pages)
             page.Visibility = nav == selected ? Visibility.Visible : Visibility.Collapsed;
+        AnimateIn(_pages[selected]);
 
         if (selected == NavStartup) StartupPage.EnsureLoaded();
         if (selected == NavTools) ToolsPage.EnsureLoaded();
         if (selected == NavTweaks) TweaksPage.EnsureLoaded();
         if (selected == NavApps) AppsPage.EnsureLoaded();
         if (selected == NavUninstall) UninstallPage.EnsureLoaded();
+    }
+
+    /// <summary>Quick fade + slide up when a page opens.</summary>
+    static void AnimateIn(UIElement page)
+    {
+        var ease = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut };
+        var duration = TimeSpan.FromMilliseconds(220);
+        var shift = new TranslateTransform(0, 12);
+        page.RenderTransform = shift;
+        page.BeginAnimation(OpacityProperty, new System.Windows.Media.Animation.DoubleAnimation(0, 1, duration) { EasingFunction = ease });
+        shift.BeginAnimation(TranslateTransform.YProperty, new System.Windows.Media.Animation.DoubleAnimation(12, 0, duration) { EasingFunction = ease });
     }
 }

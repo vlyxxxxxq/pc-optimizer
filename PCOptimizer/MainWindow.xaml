@@ -39,6 +39,24 @@
                 </StackPanel>
 
                 <StackPanel DockPanel.Dock="Bottom" Margin="16,8,16,16">
+                    <!-- Shown when a newer release is on GitHub -->
+                    <Border x:Name="UpdateChip" CornerRadius="8" Padding="12,10" Cursor="Hand" Margin="0,0,0,8"
+                            Visibility="Collapsed" MouseLeftButtonUp="UpdateChip_Click" ToolTip="Open Settings to update">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#2F5FD0" Offset="0"/>
+                                <GradientStop Color="#4F8CFF" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Border.Background>
+                        <DockPanel>
+                            <TextBlock Text="&#xE896;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="16"
+                                       Foreground="White" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <StackPanel>
+                                <TextBlock x:Name="UpdateChipTitle" Text="Update available" FontSize="12" FontWeight="SemiBold" Foreground="White"/>
+                                <TextBlock Text="Click to update" FontSize="11" Foreground="#DDE6FF"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
                     <!-- Game Mode quick toggle -->
                     <Border x:Name="GameChip" CornerRadius="8" Padding="12,10" Background="#1B1F2A" Cursor="Hand"
                             BorderThickness="1" BorderBrush="{StaticResource CardBorderBrush}"
@@ -85,6 +103,16 @@
                     </StackPanel>
                 </ScrollViewer>
             </DockPanel>
+        </Border>
+
+        <!-- Faint accent glow in the top-right corner of the content area -->
+        <Border Grid.Column="1" IsHitTestVisible="False">
+            <Border.Background>
+                <RadialGradientBrush Center="1,0" GradientOrigin="1,0" RadiusX="0.7" RadiusY="0.6">
+                    <GradientStop Color="#1A4F8CFF" Offset="0"/>
+                    <GradientStop Color="#004F8CFF" Offset="1"/>
+                </RadialGradientBrush>
+            </Border.Background>
         </Border>
 
         <Grid Grid.Column="1" x:Name="Pages">

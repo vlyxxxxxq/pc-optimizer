@@ -29,6 +29,22 @@
                     </StackPanel>
                 </DockPanel>
                 <ProgressBar x:Name="Progress" Margin="0,14,0,0" Height="4"/>
+                <!-- Automatic cleaning -->
+                <Border BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="0,1,0,0" Margin="0,16,0,0" Padding="0,14,0,0">
+                    <DockPanel>
+                        <CheckBox x:Name="AutoSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" Click="Auto_Click"/>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="0,0,16,0" VerticalAlignment="Center">
+                            <RadioButton x:Name="EveryDay" Content="Daily" GroupName="Every" Click="Interval_Click" Tag="1" Margin="0,0,12,0" Foreground="{StaticResource TextBrush}"/>
+                            <RadioButton x:Name="EveryWeek" Content="Weekly" GroupName="Every" Click="Interval_Click" Tag="7" Margin="0,0,12,0" Foreground="{StaticResource TextBrush}"/>
+                            <RadioButton x:Name="EveryMonth" Content="Monthly" GroupName="Every" Click="Interval_Click" Tag="30" Foreground="{StaticResource TextBrush}"/>
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Text="Clean automatically" FontSize="14"/>
+                            <TextBlock x:Name="AutoText" Style="{StaticResource Muted}"
+                                       Text="Runs in the background on the categories ticked by default (never the Recycle Bin), and never during a game."/>
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
             </StackPanel>
         </Border>
 

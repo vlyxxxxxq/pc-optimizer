@@ -19,6 +19,38 @@
                 </DockPanel>
             </Border>
 
+            <!-- Graphics drivers -->
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
+                    <TextBlock Text="Graphics drivers" FontSize="15" FontWeight="SemiBold"/>
+                    <TextBlock Style="{StaticResource Muted}" Margin="0,2,0,4"
+                               Text="New GPU drivers often bring big FPS gains and fixes for new games. Windows doesn't say what the newest version is, so check your vendor's page if yours is a few months old."/>
+                    <ItemsControl x:Name="GpuList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource InputBrush}" CornerRadius="8" Padding="14,10" Margin="0,8,0,0">
+                                    <DockPanel>
+                                        <Button DockPanel.Dock="Right" Content="Get latest driver" Tag="{Binding DownloadUrl}"
+                                                Click="Driver_Click" Padding="12,5" VerticalAlignment="Center"/>
+                                        <Border DockPanel.Dock="Right" Style="{StaticResource Badge}" Margin="0,0,12,0" Background="#2B2617"
+                                                Visibility="{Binding IsOld, Converter={StaticResource BoolToVis}}">
+                                            <TextBlock Text="Update recommended" FontSize="11" Foreground="{StaticResource WarnBrush}"/>
+                                        </Border>
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold"/>
+                                            <TextBlock Style="{StaticResource Muted}">
+                                                <Run Text="Driver"/> <Run Text="{Binding Version, Mode=OneWay}"/>
+                                                <Run Text="· released"/> <Run Text="{Binding AgeText, Mode=OneWay}"/>
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </DockPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
             <!-- Power plan -->
             <Border Style="{StaticResource Card}" Margin="0,16,0,0">
                 <StackPanel>
