@@ -64,6 +64,58 @@
                 </DockPanel>
             </Border>
 
+            <!-- Per-game profiles -->
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
+                    <TextBlock Text="PER-GAME PROFILES" Style="{StaticResource CardLabel}"/>
+                    <TextBlock Style="{StaticResource Muted}" Margin="0,4,0,0"
+                               Text="Give a game its own boosts, e.g. close background apps only for ranked shooters. Games without a profile use the defaults below."/>
+                    <ItemsControl x:Name="ProfileList" Margin="0,4,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource InputBrush}" CornerRadius="8" Padding="14,10" Margin="0,8,0,0">
+                                    <DockPanel>
+                                        <Button DockPanel.Dock="Right" Tag="{Binding}" Click="RemoveProfile_Click" Background="Transparent"
+                                                Padding="8,4" ToolTip="Remove profile" Margin="12,0,0,0">
+                                            <TextBlock Text="&#xE74D;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                                       Foreground="{StaticResource MutedBrush}"/>
+                                        </Button>
+                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding PowerPlan}" Click="Profile_Click"/>
+                                            <TextBlock Text="Power" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="6,0,14,0"/>
+                                            <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding Priority}" Click="Profile_Click"/>
+                                            <TextBlock Text="Priority" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="6,0,14,0"/>
+                                            <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding KeepAwake}" Click="Profile_Click"/>
+                                            <TextBlock Text="No sleep" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="6,0,14,0"/>
+                                            <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding CloseApps}" Click="Profile_Click"/>
+                                            <TextBlock Text="Close apps" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                                        </StackPanel>
+                                        <TextBlock Text="{Binding Game}" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                    </DockPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <WrapPanel Margin="0,10,0,0">
+                        <TextBlock x:Name="ProfileHint" Text="Add a profile for:" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="0,8,8,0"/>
+                        <ItemsControl x:Name="ProfileSuggestions">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Content="{Binding}" ContentStringFormat="+ {0}" Tag="{Binding}" Click="AddProfile_Click"
+                                            Padding="10,3" Margin="0,8,8,0" FontSize="12"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBox x:Name="ProfileBox" Width="180" Margin="0,8,8,0" KeyDown="ProfileBox_KeyDown"
+                                 ToolTip="Game name as Game Mode shows it, e.g. VALORANT"/>
+                        <Button Content="Add" Click="AddTypedProfile_Click" Padding="12,4" Margin="0,8,0,0"/>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+
             <!-- Play history -->
             <Border Style="{StaticResource Card}" Margin="0,16,0,0">
                 <StackPanel>

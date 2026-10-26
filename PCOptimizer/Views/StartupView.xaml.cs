@@ -39,11 +39,18 @@ public partial class StartupView : UserControl
 
         // Scheduled tasks take a second or two to query, so they're added once ready.
         var tasks = await StartupManager.LoadTasksAsync();
-        if (tasks.Count == 0) return;
-        _items = _items.Concat(tasks).OrderBy(i => i.Name, StringComparer.OrdinalIgnoreCase).ToList();
-        Grid.ItemsSource = _items;
-        UpdateCount();
-        Changed?.Invoke(this, EventArgs.Empty);
+        if (tasks.Count > 0)
+        {
+            _items = _items.Concat(tasks).OrderBy(i => i.Name, StringComparer.OrdinalIgnoreCase).ToList();
+            Grid.ItemsSource = _items;
+            UpdateCount();
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
+
+        var all = _items.ToList();
+        await Task.Run(() => StartupManager.MeasureUsage(all));
+        var heavy = all.Count(i => i.IsEnabled && i.Impact == "High");
+        if (heavy > 0) CountText.Text += $" · {heavy} high-impact (sort by Impact to see them)";
     }
 
     void UpdateCount() =>

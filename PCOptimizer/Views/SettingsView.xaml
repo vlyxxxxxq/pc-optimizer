@@ -38,6 +38,24 @@
                 </StackPanel>
             </Border>
 
+            <!-- Backup & share -->
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
+                    <TextBlock Text="BACKUP &amp; SHARE" Style="{StaticResource CardLabel}"/>
+                    <DockPanel Margin="0,12,0,0">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button x:Name="ExportButton" Content="Export setup…" Click="Export_Click" Margin="0,0,8,0"/>
+                            <Button Content="Import setup…" Style="{StaticResource PrimaryButton}" Click="Import_Click"/>
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Text="Move your setup to another PC, or send it to a friend" FontSize="14"/>
+                            <TextBlock x:Name="BackupText" Style="{StaticResource Muted}" TextWrapping="Wrap"
+                                       Text="One file with your settings, Game Mode games and profiles, applied tweaks and installed apps. It has no personal files or passwords."/>
+                        </StackPanel>
+                    </DockPanel>
+                </StackPanel>
+            </Border>
+
             <!-- Updates -->
             <Border Style="{StaticResource Card}" Margin="0,16,0,0">
                 <StackPanel>

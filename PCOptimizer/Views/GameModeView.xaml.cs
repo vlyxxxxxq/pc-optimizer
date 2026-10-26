@@ -44,10 +44,12 @@ public partial class GameModeView : UserControl
         service.StateChanged += (_, _) => Render();
         service.IgnoredChanged += (_, _) => { RenderIgnored(); _games.Clear(); foreach (var g in settings.CustomGames) _games.Add(g); };
         service.StatsUpdated += (_, _) => RenderStats();
-        service.SessionEnded += _ => RenderHistory();
+        service.SessionEnded += _ => { RenderHistory(); RenderProfiles(); };
+        service.StateChanged += (_, _) => RenderProfiles();
         RenderLibraries();
         RenderIgnored();
         RenderHistory();
+        RenderProfiles();
         Render();
     }
 
@@ -59,6 +61,59 @@ public partial class GameModeView : UserControl
         LiveCpu.Text = $"{s.LastCpu:0}%";
         LiveGpu.Text = $"{s.LastGpu:0}%";
         LiveRam.Text = s.LastGameRam > 0 ? Fmt.Bytes(s.LastGameRam) : "–";
+    }
+
+    void RenderProfiles()
+    {
+        if (_settings is null) return;
+        ProfileList.ItemsSource = null;
+        ProfileList.ItemsSource = _settings.GameProfiles.ToList();
+        // Suggest games you've played (or the one running now) that don't have a profile yet.
+        var known = GameStats.Load().Select(s => s.Game)
+            .Concat(_service?.Game is { } g ? [g.Name] : [])
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Where(n => _settings.ProfileFor(n) is null)
+            .Take(8).ToList();
+        ProfileSuggestions.ItemsSource = known;
+        ProfileHint.Text = known.Count > 0 ? "Add a profile for:" : "Add a profile for a game:";
+    }
+
+    void AddProfile(string name)
+    {
+        name = name.Trim();
+        if (_settings is null || name.Length == 0 || _settings.ProfileFor(name) is not null) return;
+        // Start from the current defaults so nothing changes until the user flips a switch.
+        _settings.GameProfiles.Add(new GameProfile
+        {
+            Game = name, PowerPlan = _settings.BoostPowerPlan, Priority = _settings.BoostPriority,
+            KeepAwake = _settings.KeepAwake, CloseApps = _settings.CloseApps,
+        });
+        _settings.Save();
+        RenderProfiles();
+    }
+
+    void AddProfile_Click(object sender, RoutedEventArgs e)
+    {
+        if (((Button)sender).Tag is string name) AddProfile(name);
+    }
+
+    void AddTypedProfile_Click(object sender, RoutedEventArgs e) { AddProfile(ProfileBox.Text); ProfileBox.Clear(); }
+
+    void ProfileBox_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter) return;
+        AddProfile(ProfileBox.Text);
+        ProfileBox.Clear();
+    }
+
+    void Profile_Click(object sender, RoutedEventArgs e) => _settings?.Save();
+
+    void RemoveProfile_Click(object sender, RoutedEventArgs e)
+    {
+        if (_settings is null || ((Button)sender).Tag is not GameProfile p) return;
+        _settings.GameProfiles.Remove(p);
+        _settings.Save();
+        RenderProfiles();
     }
 
     void RenderHistory()

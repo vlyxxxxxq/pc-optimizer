@@ -4,13 +4,24 @@ A native Windows desktop app (C# / WPF, .NET 10, no third-party packages). Runs 
 area so Game Mode can kick in automatically. Inspired by Chris Titus Tech's WinUtil, game boosters
 like Razer Cortex and Process Lasso, and Windows' own maintenance tools.
 
+![Dashboard](docs/screenshots/dashboard.png)
+
+| | |
+|---|---|
+| ![Game Mode](docs/screenshots/game-mode.png) | ![Disk Space](docs/screenshots/disk-space.png) |
+| **Game Mode**: boosts your PC while you play, then undoes everything | **Disk Space**: WizTree-style tree and treemap, Del to recycle |
+| ![Junk Cleaner](docs/screenshots/junk-cleaner.png) | ![Hardware](docs/screenshots/hardware.png) |
+| **Junk Cleaner**: caches, temp files, automatic cleaning | **Hardware**: specs, drive health, benchmarks |
+| ![Tweaks](docs/screenshots/tweaks.png) | |
+| **Tweaks**: reversible gaming, privacy and Windows tweaks | |
+
 ## Download
 
 Grab an EXE from the [latest release](../../releases/latest). Both are single files with no installer,
 for 64-bit Windows 10 and 11:
 
 - **`PCOptimizer.exe`** (~72 MB): everything built in. Pick this if you're not sure.
-- **`PCOptimizer-lite.exe`** (~3 MB): needs the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) installed.
+- **`PCOptimizer-lite.exe`** (under 1 MB): needs the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) installed.
 
 The app updates itself: when a new release is out, Settings → Updates (or the sidebar) offers a one-click update.
 
@@ -31,18 +42,23 @@ The EXE isn't code-signed, so the first time you run it Windows SmartScreen may 
     with a reason for each, plus one-click adding of any other open app.
   - Everything is undone when the game closes, including after a crash (the old power plan is restored on next launch).
   - Live CPU / GPU / game RAM while you play, and a play history: time per game plus average and peak load per session.
+  - Per-game profiles: different boosts for different games.
   - Windows notifications when Game Mode turns on or off.
 - **Junk Cleaner** – temp files, browser caches, Recycle Bin, thumbnails, shader cache, crash dumps.
-  Optional automatic cleaning (daily / weekly / monthly), skipped while you're gaming.
+  Optional automatic cleaning (daily / weekly / monthly), skipped while you're gaming. Browser privacy:
+  cookies and history per browser (never passwords, autofill or bookmarks).
 - **Disk Space** – WizTree / WinDirStat style: a size-sorted folder tree with "% of parent", a colour treemap
-  you can click to jump to a folder, a largest-files list and a duplicate file finder. Select anything and
-  press **Del** to send it to the Recycle Bin (Windows and program folders are protected).
+  you can click to jump to a folder, a largest-files list, a duplicate file finder, and a "Tidy up" tab for
+  empty folders and broken shortcuts. Select anything and press **Del** to send it to the Recycle Bin
+  (Windows and program folders are protected).
 - **Network** – live ping graph to any server with jitter and packet loss, DNS speed test across six
   public providers with one-click switching (and back), Cloudflare download speed test. VPN-aware.
 - **Hardware** – full specs (CPU, RAM sticks and speed, GPU and VRAM, motherboard, BIOS, Windows), drive
   health, and CPU / memory / unbuffered disk benchmarks with a history to compare before and after changes.
 - **Startup Apps** – icons and publishers; reversible enable/disable (same flags as Task Manager), plus
-  the scheduled tasks that launch at sign-in, which Task Manager doesn't show.
+  the scheduled tasks that launch at sign-in, which Task Manager doesn't show. Each item's impact
+  (memory and average CPU) is measured so you can see what's worth turning off.
+- **Right-click Menu** – switch off the clutter apps add to Explorer's context menu, reversibly.
 - **Processes** – live CPU/memory, grouped by app, End task with critical processes protected.
 - **Tweaks** – 24 reversible gaming, privacy and Explorer tweaks showing their real current state,
   "Apply recommended", and restore point creation.
@@ -53,7 +69,8 @@ The EXE isn't code-signed, so the first time you run it Windows SmartScreen may 
   pause Windows Update for 1–5 weeks, power plans
   (+ add Ultimate Performance), flush DNS, restart Explorer, repair Windows (DISM/SFC, network reset,
   Windows Update fix, chkdsk), shortcuts to Windows tools.
-- **Settings** – start with Windows (in the tray), close to tray, notifications, automatic updates.
+- **Settings** – start with Windows (in the tray), close to tray, notifications, automatic updates, and
+  backup & share: export your whole setup to one file and import it on another PC or a friend's.
 
 Deliberately left out: "RAM cleaners" (trimming other apps' memory just makes them page back in from disk)
 and registry cleaners (no measurable benefit, real risk).

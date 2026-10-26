@@ -32,6 +32,22 @@ public partial class AppsView : UserControl
             return;
         }
         await Task.WhenAll(CheckUpdatesAsync(), RefreshInstalledAsync());
+        if (_preselect.Count > 0)
+        {
+            foreach (var p in _catalog.SelectMany(g => g.Packages).Where(p => !p.IsInstalled && _preselect.Contains(p.Id)))
+                p.IsSelected = true;
+            InstallSummary.Text = $"{_catalog.SelectMany(g => g.Packages).Count(p => p.IsSelected)} apps from the imported setup are ticked. Click Install when ready.";
+            _preselect.Clear();
+            UpdateInstallButton();
+        }
+    }
+
+    readonly HashSet<string> _preselect = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Ticks these catalog apps (if not installed) once the page has loaded, e.g. after importing a setup.</summary>
+    public void Preselect(IEnumerable<string> ids)
+    {
+        foreach (var id in ids) _preselect.Add(id);
     }
 
     async Task RefreshInstalledAsync()

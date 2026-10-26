@@ -79,6 +79,7 @@
                     <RadioButton x:Name="TabTree" Style="{StaticResource Tab}" Content="Folders" IsChecked="True" Checked="Tab_Checked"/>
                     <RadioButton x:Name="TabFiles" Style="{StaticResource Tab}" Content="Largest files" Checked="Tab_Checked"/>
                     <RadioButton x:Name="TabDupes" Style="{StaticResource Tab}" Content="Duplicates" Checked="Tab_Checked"/>
+                    <RadioButton x:Name="TabTidy" Style="{StaticResource Tab}" Content="Tidy up" Checked="Tab_Checked"/>
                 </StackPanel>
             </Border>
         </DockPanel>
@@ -214,6 +215,42 @@
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
                                     </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+        </Border>
+        <!-- Tidy up: empty folders + broken shortcuts -->
+        <Border x:Name="TidyPanel" Grid.Row="4" Style="{StaticResource Card}" Padding="0" Visibility="Collapsed">
+            <DockPanel>
+                <DockPanel DockPanel.Dock="Top" Margin="18,12,14,10">
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                        <Button x:Name="FindTidyButton" Content="Find" Style="{StaticResource PrimaryButton}" Click="FindTidy_Click"
+                                Padding="14,6" Margin="0,0,8,0"/>
+                        <Button x:Name="RecycleTidyButton" Content="Recycle ticked" Style="{StaticResource DangerButton}"
+                                Click="RecycleTidy_Click" Padding="12,6" IsEnabled="False"/>
+                    </StackPanel>
+                    <TextBlock x:Name="TidyText" Style="{StaticResource Muted}" VerticalAlignment="Center" TextWrapping="Wrap"
+                               Text="Finds empty folders in the scanned folder and shortcuts on your desktop or Start menu that point to things that no longer exist."/>
+                </DockPanel>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ItemsControl x:Name="TidyList" Margin="14,0,14,14">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{StaticResource InputBrush}" CornerRadius="8" Padding="12,8" Margin="0,0,0,6">
+                                    <DockPanel>
+                                        <CheckBox DockPanel.Dock="Left" IsChecked="{Binding IsChecked}" Click="TidyCheck_Click"
+                                                  VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                        <Border DockPanel.Dock="Right" Style="{StaticResource Badge}">
+                                            <TextBlock Text="{Binding Kind}" FontSize="11" Foreground="{StaticResource MutedBrush}"/>
+                                        </Border>
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding FullPath}" TextTrimming="CharacterEllipsis" ToolTip="{Binding FullPath}"/>
+                                            <TextBlock Text="{Binding Detail}" Style="{StaticResource Muted}" TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </DockPanel>
                                 </Border>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>

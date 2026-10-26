@@ -20,7 +20,7 @@ public sealed class GameModeService
     bool _checking;
     int? _suppressedPid;              // user switched off while this game was running
     string? _restorePlan, _restorePlanName;
-    bool _keptAwake;
+    bool _keptAwake, _boostedPriority;
     readonly List<string> _toReopen = [];
 
     public GameDetector Detector { get; } = new();
@@ -110,7 +110,7 @@ public sealed class GameModeService
                     {
                         Game = later;
                         BeginSession(later);
-                        if (_settings.BoostPriority) SetPriority(later.Pid, ProcessPriorityClass.High);
+                        if (_settings.ProfileFor(later.Name)?.Priority ?? _settings.BoostPriority) _boostedPriority = SetPriority(later.Pid, ProcessPriorityClass.High);
                         Log($"Detected {later.Name}");
                         Changed();
                     }
@@ -168,8 +168,17 @@ public sealed class GameModeService
         Since = DateTime.Now;
         if (game is not null) BeginSession(game);
         var boosts = new List<string>();
+        _boostedPriority = false;
 
-        if (_settings.BoostPowerPlan)
+        // A game's own profile replaces the default boosts.
+        var profile = _settings.ProfileFor(game?.Name);
+        bool wantPlan = profile?.PowerPlan ?? _settings.BoostPowerPlan;
+        bool wantPriority = profile?.Priority ?? _settings.BoostPriority;
+        bool wantAwake = profile?.KeepAwake ?? _settings.KeepAwake;
+        bool wantClose = profile?.CloseApps ?? _settings.CloseApps;
+        if (profile is not null) boosts.Add($"{game!.Name} profile");
+
+        if (wantPlan)
         {
             try
             {
@@ -192,17 +201,17 @@ public sealed class GameModeService
             catch (Exception ex) { Log($"Power plan: {ex.Message}"); }
         }
 
-        if (_settings.BoostPriority && game is not null && SetPriority(game.Pid, ProcessPriorityClass.High))
+        if (wantPriority && game is not null && (_boostedPriority = SetPriority(game.Pid, ProcessPriorityClass.High)))
             boosts.Add("high CPU priority");
 
-        if (_settings.KeepAwake)
+        if (wantAwake)
         {
             Native.SetThreadExecutionState(Native.ES_CONTINUOUS | Native.ES_SYSTEM_REQUIRED | Native.ES_DISPLAY_REQUIRED);
             _keptAwake = true;
             boosts.Add("sleep blocked");
         }
 
-        if (_settings.CloseApps && _settings.AppsToClose.Count > 0)
+        if (wantClose && _settings.AppsToClose.Count > 0)
         {
             var names = _settings.AppsToClose.ToList();
             var closed = await Task.Run(() => CloseApps(names));
@@ -230,7 +239,7 @@ public sealed class GameModeService
             _settings.Save();
         }
 
-        if (Game is { } game && GameDetector.IsAlive(game.Pid) && _settings.BoostPriority)
+        if (Game is { } game && GameDetector.IsAlive(game.Pid) && _boostedPriority)
             SetPriority(game.Pid, ProcessPriorityClass.Normal);
 
         RestoreSleep();
@@ -273,7 +282,7 @@ public sealed class GameModeService
             _settings.PendingRestorePlan = null;
             _settings.Save();
         }
-        if (Game is { } game && _settings.BoostPriority) SetPriority(game.Pid, ProcessPriorityClass.Normal);
+        if (Game is { } game && _boostedPriority) SetPriority(game.Pid, ProcessPriorityClass.Normal);
         RestoreSleep();
     }
 

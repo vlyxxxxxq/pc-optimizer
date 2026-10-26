@@ -28,7 +28,7 @@ public partial class MainWindow : Window
             [NavDashboard] = DashboardPage, [NavGame] = GamePage, [NavCleaner] = CleanerPage, [NavDisk] = DiskPage,
             [NavStartup] = StartupPage, [NavProcesses] = ProcessesPage, [NavTweaks] = TweaksPage,
             [NavApps] = AppsPage, [NavUninstall] = UninstallPage, [NavTools] = ToolsPage, [NavSettings] = SettingsPage,
-            [NavNetwork] = NetworkPage, [NavHardware] = HardwarePage,
+            [NavNetwork] = NetworkPage, [NavHardware] = HardwarePage, [NavMenu] = MenuPage,
         };
 
         AdminStatus.Text = Elevation.IsElevated ? "● Administrator mode" : "● Standard mode · some features need admin";
@@ -69,6 +69,15 @@ public partial class MainWindow : Window
             if (_settings.AutoCheckUpdates) await SettingsPage.CheckForUpdateAsync(quiet: true);
         };
         _updateTimer.Start();
+
+        // Just imported a setup: open Apps with its programs ticked.
+        if (_settings.PendingInstallIds.Count > 0)
+        {
+            AppsPage.Preselect(_settings.PendingInstallIds);
+            _settings.PendingInstallIds = [];
+            _settings.Save();
+            Loaded += (_, _) => NavApps.IsChecked = true;
+        }
 
         _tray.OpenRequested += (_, _) => ShowFromTray();
         _tray.GameModeRequested += async (_, _) => await _gameMode.ToggleAsync();
@@ -211,6 +220,7 @@ public partial class MainWindow : Window
         if (selected == NavUninstall) UninstallPage.EnsureLoaded();
         if (selected == NavNetwork) NetworkPage.EnsureLoaded();
         if (selected == NavHardware) HardwarePage.EnsureLoaded();
+        if (selected == NavMenu) MenuPage.EnsureLoaded();
     }
 
     /// <summary>Quick fade + slide up when a page opens.</summary>

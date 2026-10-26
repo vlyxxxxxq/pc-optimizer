@@ -49,6 +49,7 @@
         </Border>
 
         <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
             <ItemsControl x:Name="CategoryList">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
@@ -75,6 +76,41 @@
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
+            <!-- Browser privacy -->
+            <Border Style="{StaticResource Card}" Margin="0,8,0,0">
+                <StackPanel>
+                    <DockPanel>
+                        <Button x:Name="PrivacyButton" DockPanel.Dock="Right" Content="Clear selected" Style="{StaticResource DangerButton}"
+                                Click="ClearPrivacy_Click" IsEnabled="False" VerticalAlignment="Top"/>
+                        <StackPanel>
+                            <TextBlock Text="Browser privacy" FontSize="15" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="PrivacyText" Style="{StaticResource Muted}" Margin="0,2,0,0" TextWrapping="Wrap"
+                                       Text="Cookies and browsing history. Separate from the cache above because clearing cookies signs you out. Passwords, autofill and bookmarks are never touched."/>
+                        </StackPanel>
+                    </DockPanel>
+                    <ItemsControl x:Name="PrivacyList" Margin="0,6,0,0">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Width="250" Background="{StaticResource InputBrush}" CornerRadius="8" Padding="12,9" Margin="0,8,8,0">
+                                    <DockPanel>
+                                        <CheckBox DockPanel.Dock="Left" IsChecked="{Binding IsSelected}" Click="Privacy_Click"
+                                                  VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding Effect}" Style="{StaticResource Muted}" FontSize="11"/>
+                                            <TextBlock Text="{Binding Status}" FontSize="11" Foreground="{StaticResource AccentBrush}"/>
+                                        </StackPanel>
+                                    </DockPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+            </StackPanel>
         </ScrollViewer>
     </Grid>
 </UserControl>

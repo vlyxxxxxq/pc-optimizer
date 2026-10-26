@@ -74,7 +74,28 @@
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
-                    <DataGridTextColumn Header="Location" Binding="{Binding Location}" Width="200"/>
+                    <DataGridTemplateColumn Header="Impact" Width="170" SortMemberPath="ImpactRank">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock x:Name="impact" Text="{Binding Impact}" FontWeight="SemiBold" Foreground="{StaticResource MutedBrush}"/>
+                                    <TextBlock Text="{Binding ImpactDetail}" Style="{StaticResource Muted}" FontSize="11"/>
+                                </StackPanel>
+                                <DataTemplate.Triggers>
+                                    <DataTrigger Binding="{Binding Impact}" Value="High">
+                                        <Setter TargetName="impact" Property="Foreground" Value="{StaticResource DangerBrush}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Impact}" Value="Medium">
+                                        <Setter TargetName="impact" Property="Foreground" Value="{StaticResource WarnBrush}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Impact}" Value="Low">
+                                        <Setter TargetName="impact" Property="Foreground" Value="{StaticResource GoodBrush}"/>
+                                    </DataTrigger>
+                                </DataTemplate.Triggers>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTextColumn Header="Location" Binding="{Binding Location}" Width="160"/>
                     <DataGridTextColumn Header="Command" Binding="{Binding Command}" Width="*"/>
                 </DataGrid.Columns>
             </DataGrid>

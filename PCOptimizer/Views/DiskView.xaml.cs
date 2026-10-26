@@ -154,6 +154,52 @@ public partial class DiskView : UserControl
         TreePanel.Visibility = TabTree.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         FilesPanel.Visibility = TabFiles.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         DupesPanel.Visibility = TabDupes.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        TidyPanel.Visibility = TabTidy.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    // ---------- Tidy up ----------
+
+    List<TidyItem> _tidy = [];
+
+    async void FindTidy_Click(object sender, RoutedEventArgs e)
+    {
+        FindTidyButton.IsEnabled = false;
+        TidyText.Text = "Looking…";
+        var root = _root;
+        _tidy = await Task.Run(() => (root is null ? [] : Tidy.EmptyFolders(root)).Concat(Tidy.BrokenShortcuts()).ToList());
+        TidyList.ItemsSource = _tidy;
+        int empty = _tidy.Count(t => t.Kind == "Empty folder"), broken = _tidy.Count - empty;
+        TidyText.Text = (root is null ? "Scan a folder first to find empty folders. " : $"{empty} empty folder(s) under {root.FullPath}. ") +
+                        $"{broken} broken shortcut(s).";
+        FindTidyButton.IsEnabled = true;
+        TidyCheck_Click(this, null!);
+    }
+
+    void TidyCheck_Click(object sender, RoutedEventArgs e)
+    {
+        int n = _tidy.Count(t => t.IsChecked);
+        RecycleTidyButton.IsEnabled = n > 0;
+        RecycleTidyButton.Content = n > 0 ? $"Recycle {n} ticked" : "Recycle ticked";
+    }
+
+    async void RecycleTidy_Click(object sender, RoutedEventArgs e)
+    {
+        var ticked = _tidy.Where(t => t.IsChecked).ToList();
+        var gone = (await RecycleAsync(ticked.Select(t => (t.FullPath, 0L)).ToList())).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var t in ticked.Where(t => gone.Contains(t.FullPath)))
+        {
+            _tidy.Remove(t);
+            if (t.Node is { } node)
+            {
+                var row = _rows.FirstOrDefault(r => ReferenceEquals(r.Node, node));
+                if (row is not null) { Collapse(row); _rows.Remove(row); }
+                DiskAnalyzer.Remove(node);
+            }
+        }
+        TidyList.ItemsSource = null;
+        TidyList.ItemsSource = _tidy;
+        TidyCheck_Click(this, null!);
+        if (_root is not null) AfterTreeChanged();
     }
 
     // ---------- Tree ----------

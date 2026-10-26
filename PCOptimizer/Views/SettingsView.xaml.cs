@@ -97,6 +97,54 @@ public partial class SettingsView : UserControl
 
     void Save_Click(object sender, RoutedEventArgs e) => _settings?.Save();
 
+    async void Export_Click(object sender, RoutedEventArgs e)
+    {
+        if (_settings is null) return;
+        var dialog = new Microsoft.Win32.SaveFileDialog
+        {
+            Filter = Backup.Filter,
+            FileName = $"{Environment.UserName}-pc-optimizer-setup.pcopt",
+        };
+        if (dialog.ShowDialog() != true) return;
+        ExportButton.IsEnabled = false;
+        try
+        {
+            await Backup.ExportAsync(dialog.FileName, _settings, new Progress<string>(s => BackupText.Text = s));
+            BackupText.Text = $"Saved {Path.GetFileName(dialog.FileName)}. Send it to a friend, or keep it as a backup.";
+            Shell.Reveal(dialog.FileName);
+        }
+        catch (Exception ex) { BackupText.Text = $"Couldn't export: {ex.Message}"; }
+        finally { ExportButton.IsEnabled = true; }
+    }
+
+    void Import_Click(object sender, RoutedEventArgs e)
+    {
+        if (_settings is null) return;
+        var dialog = new Microsoft.Win32.OpenFileDialog { Filter = Backup.Filter };
+        if (dialog.ShowDialog() != true) return;
+
+        BackupFile backup;
+        try { backup = Backup.Read(dialog.FileName); }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"That file couldn't be read:\n{ex.Message}", "Import setup", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+        if (MessageBox.Show(Backup.Describe(backup) +
+                            "\n\nThis replaces your current Game Mode and app settings. Tweaks are switched on (you can turn any off later). Continue?",
+                "Import setup", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+            return;
+
+        var skipped = Backup.Apply(backup, _settings);
+        MessageBox.Show("Setup imported. PC Optimizer will restart to load it" +
+                        (_settings.PendingInstallIds.Count > 0 ? ", then show the apps to install." : ".") +
+                        (skipped.Count > 0
+                            ? $"\n\nThese tweaks need administrator mode, so they weren't applied:\n  • {string.Join("\n  • ", skipped)}"
+                            : ""),
+            "Import setup", MessageBoxButton.OK, MessageBoxImage.Information);
+        App.Restart();
+    }
+
     void TestNotification_Click(object sender, RoutedEventArgs e) =>
         TestNotificationRequested?.Invoke(this, EventArgs.Empty);
 }

@@ -20,10 +20,57 @@ public partial class CleanerView : UserControl
     AppSettings? _settings;
     AutoCleaner? _auto;
 
+    List<BrowserItem> _privacy = [];
+
     public CleanerView()
     {
         InitializeComponent();
         CategoryList.ItemsSource = _categories;
+        IsVisibleChanged += (_, _) => { if (IsVisible) LoadPrivacy(); };
+    }
+
+    void LoadPrivacy()
+    {
+        _privacy = BrowserData.Find();
+        foreach (var p in _privacy) p.Status = p.IsRunning ? $"{p.Browser} is open: close it first" : Fmt.Bytes(p.Size);
+        PrivacyList.ItemsSource = _privacy;
+        Privacy_Click(this, null!);
+    }
+
+    void Privacy_Click(object sender, RoutedEventArgs e)
+    {
+        int n = _privacy.Count(p => p.IsSelected);
+        PrivacyButton.IsEnabled = n > 0;
+        PrivacyButton.Content = n > 0 ? $"Clear {n} selected" : "Clear selected";
+    }
+
+    void ClearPrivacy_Click(object sender, RoutedEventArgs e)
+    {
+        var selected = _privacy.Where(p => p.IsSelected).ToList();
+        var open = selected.Where(p => p.IsRunning).Select(p => p.Browser).Distinct().ToList();
+        if (open.Count > 0)
+        {
+            MessageBox.Show($"Close {string.Join(" and ", open)} first. Browsers lock these files while they're open.",
+                "Browser privacy", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        bool cookies = selected.Any(p => p.Kind == "Cookies");
+        if (MessageBox.Show("Permanently clear:\n\n" + string.Join("\n", selected.Select(p => "  • " + p.Title)) +
+                            (cookies ? "\n\nClearing cookies signs you out of websites in those browsers." : "") +
+                            "\n\nThis can't be undone.",
+                "Browser privacy", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+            return;
+
+        int failed = 0;
+        foreach (var item in selected)
+        {
+            var (_, f) = BrowserData.Clear(item);
+            failed += f;
+            item.Status = f == 0 ? "Cleared" : "Some files were locked";
+            item.IsSelected = false;
+        }
+        PrivacyText.Text = failed == 0 ? "Done. Browsers rebuild these files the next time they start." : "Some files were in use and were skipped.";
+        Privacy_Click(this, null!);
     }
 
     public void Attach(AppSettings settings, AutoCleaner auto)

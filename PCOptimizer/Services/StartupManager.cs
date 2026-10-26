@@ -19,6 +19,26 @@ public sealed class StartupItem : ObservableObject
     public string? TaskPath { get; init; }
     public bool IsTask => TaskPath is not null;
 
+    // Resource use of the running app (all its processes), filled in after loading.
+    long _memory = -1;
+    double _cpuPercent;
+    public long Memory => _memory;
+    /// <summary>Memory now plus average CPU since the app started (a long uptime doesn't inflate it).</summary>
+    public string Impact => _memory < 0 ? "" : _memory == 0 ? "Not running"
+        : _memory > 300L << 20 || _cpuPercent > 2 ? "High"
+        : _memory > 80L << 20 || _cpuPercent > 0.5 ? "Medium" : "Low";
+    public int ImpactRank => Impact switch { "High" => 3, "Medium" => 2, "Low" => 1, _ => 0 };
+    public string ImpactDetail => _memory > 0 ? $"{Fmt.Bytes(_memory)} RAM · {_cpuPercent:0.0}% CPU avg" : "";
+
+    public void SetUsage(long memory, double cpuPercent)
+    {
+        _memory = memory;
+        _cpuPercent = cpuPercent;
+        OnPropertyChanged(nameof(Impact));
+        OnPropertyChanged(nameof(ImpactRank));
+        OnPropertyChanged(nameof(ImpactDetail));
+    }
+
     bool _isEnabled;
     public bool IsEnabled
     {
@@ -177,6 +197,41 @@ public static class StartupManager
         }
         catch { /* no tasks, or PowerShell unavailable */ }
         return items;
+    }
+
+    /// <summary>Measures what each startup item's program is using right now (memory, CPU time since it started).</summary>
+    public static void MeasureUsage(IEnumerable<StartupItem> items)
+    {
+        // Per program: total memory now, CPU seconds used, and the earliest start (for an average CPU %).
+        var byPath = new Dictionary<string, (long Mem, double Cpu, DateTime Start)>(StringComparer.OrdinalIgnoreCase);
+        foreach (var p in System.Diagnostics.Process.GetProcesses())
+        {
+            using (p)
+            {
+                try
+                {
+                    var path = Native.ProcessPath(p.Id);
+                    if (path is null) continue;
+                    var (mem, cpu, start) = byPath.GetValueOrDefault(path, (0, 0, DateTime.MaxValue));
+                    double seconds = 0;
+                    DateTime started = DateTime.Now;
+                    try { seconds = p.TotalProcessorTime.TotalSeconds; started = p.StartTime; } catch { }
+                    byPath[path] = (mem + p.WorkingSet64, cpu + seconds, started < start ? started : start);
+                }
+                catch { }
+            }
+        }
+        foreach (var item in items)
+        {
+            if (item.FilePath is null || !item.FilePath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) continue;
+            if (!byPath.TryGetValue(item.FilePath, out var u))
+            {
+                System.Windows.Application.Current.Dispatcher.Invoke(() => item.SetUsage(0, 0));
+                continue;
+            }
+            double alive = Math.Max(60, (DateTime.Now - u.Start).TotalSeconds) * Environment.ProcessorCount;
+            System.Windows.Application.Current.Dispatcher.Invoke(() => item.SetUsage(u.Mem, 100 * u.Cpu / alive));
+        }
     }
 
     static void SetTaskEnabled(StartupItem item, bool enabled)

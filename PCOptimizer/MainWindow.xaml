@@ -14,7 +14,7 @@
 
         <Border Background="{StaticResource SidebarBrush}">
             <DockPanel>
-                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="24,20,20,20">
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="24,20,20,16">
                     <!-- Vector copy of the app icon so it stays sharp at any DPI (an .ico gets scaled and blurs). -->
                     <Border Width="36" Height="36" CornerRadius="9">
                         <Border.Background>
@@ -77,29 +77,37 @@
                 </StackPanel>
 
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel>
+                    <StackPanel Margin="0,0,0,8">
                         <RadioButton x:Name="NavDashboard" Style="{StaticResource NavButton}" Content="Dashboard"
                                      Tag="&#xE80F;" IsChecked="True" Checked="Nav_Checked"/>
                         <RadioButton x:Name="NavGame" Style="{StaticResource NavButton}" Content="Game Mode"
                                      Tag="&#xE7FC;" Checked="Nav_Checked"/>
+
+                        <TextBlock Text="CLEAN UP" Style="{StaticResource NavSection}"/>
                         <RadioButton x:Name="NavCleaner" Style="{StaticResource NavButton}" Content="Junk Cleaner"
                                      Tag="&#xE74D;" Checked="Nav_Checked"/>
                         <RadioButton x:Name="NavDisk" Style="{StaticResource NavButton}" Content="Disk Space"
                                      Tag="&#xEDA2;" Checked="Nav_Checked"/>
-                        <RadioButton x:Name="NavNetwork" Style="{StaticResource NavButton}" Content="Network"
-                                     Tag="&#xE968;" Checked="Nav_Checked"/>
-                        <RadioButton x:Name="NavHardware" Style="{StaticResource NavButton}" Content="Hardware"
-                                     Tag="&#xE950;" Checked="Nav_Checked"/>
-                        <RadioButton x:Name="NavStartup" Style="{StaticResource NavButton}" Content="Startup Apps"
-                                     Tag="&#xE7E8;" Checked="Nav_Checked"/>
-                        <RadioButton x:Name="NavProcesses" Style="{StaticResource NavButton}" Content="Processes"
-                                     Tag="&#xE9D9;" Checked="Nav_Checked"/>
-                        <RadioButton x:Name="NavTweaks" Style="{StaticResource NavButton}" Content="Tweaks"
-                                     Tag="&#xE9E9;" Checked="Nav_Checked"/>
-                        <RadioButton x:Name="NavApps" Style="{StaticResource NavButton}" Content="Apps"
-                                     Tag="&#xE719;" Checked="Nav_Checked"/>
                         <RadioButton x:Name="NavUninstall" Style="{StaticResource NavButton}" Content="Uninstaller"
                                      Tag="&#xE7B8;" Checked="Nav_Checked"/>
+
+                        <TextBlock Text="SPEED UP" Style="{StaticResource NavSection}"/>
+                        <RadioButton x:Name="NavStartup" Style="{StaticResource NavButton}" Content="Startup Apps"
+                                     Tag="&#xE7E8;" Checked="Nav_Checked"/>
+                        <RadioButton x:Name="NavTweaks" Style="{StaticResource NavButton}" Content="Tweaks"
+                                     Tag="&#xE9E9;" Checked="Nav_Checked"/>
+                        <RadioButton x:Name="NavMenu" Style="{StaticResource NavButton}" Content="Right-click Menu"
+                                     Tag="&#xE8A7;" Checked="Nav_Checked"/>
+                        <RadioButton x:Name="NavProcesses" Style="{StaticResource NavButton}" Content="Processes"
+                                     Tag="&#xE9D9;" Checked="Nav_Checked"/>
+
+                        <TextBlock Text="SYSTEM" Style="{StaticResource NavSection}"/>
+                        <RadioButton x:Name="NavHardware" Style="{StaticResource NavButton}" Content="Hardware"
+                                     Tag="&#xE950;" Checked="Nav_Checked"/>
+                        <RadioButton x:Name="NavNetwork" Style="{StaticResource NavButton}" Content="Network"
+                                     Tag="&#xE968;" Checked="Nav_Checked"/>
+                        <RadioButton x:Name="NavApps" Style="{StaticResource NavButton}" Content="Apps"
+                                     Tag="&#xE719;" Checked="Nav_Checked"/>
                         <RadioButton x:Name="NavTools" Style="{StaticResource NavButton}" Content="Tools"
                                      Tag="&#xE90F;" Checked="Nav_Checked"/>
                         <RadioButton x:Name="NavSettings" Style="{StaticResource NavButton}" Content="Settings"
@@ -125,6 +133,7 @@
             <views:CleanerView x:Name="CleanerPage" Visibility="Collapsed"/>
             <views:DiskView x:Name="DiskPage" Visibility="Collapsed"/>
             <views:NetworkView x:Name="NetworkPage" Visibility="Collapsed"/>
+            <views:ContextMenuView x:Name="MenuPage" Visibility="Collapsed"/>
             <views:HardwareView x:Name="HardwarePage" Visibility="Collapsed"/>
             <views:StartupView x:Name="StartupPage" Visibility="Collapsed"/>
             <views:ProcessesView x:Name="ProcessesPage" Visibility="Collapsed"/>

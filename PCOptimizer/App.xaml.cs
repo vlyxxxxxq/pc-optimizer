@@ -48,6 +48,14 @@ public partial class App : Application
         base.OnSessionEnding(e);
     }
 
+    /// <summary>Starts a fresh copy (same profile) and exits this one.</summary>
+    public static void Restart()
+    {
+        ReleaseInstanceLock();
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = true });
+        Current.Shutdown();
+    }
+
     /// <summary>Lets a relaunched (e.g. elevated) copy start before this one has fully exited.</summary>
     public static void ReleaseInstanceLock()
     {
