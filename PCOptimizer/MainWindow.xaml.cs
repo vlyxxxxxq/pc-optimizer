@@ -29,6 +29,7 @@ public partial class MainWindow : Window
             [NavStartup] = StartupPage, [NavProcesses] = ProcessesPage, [NavTweaks] = TweaksPage,
             [NavApps] = AppsPage, [NavUninstall] = UninstallPage, [NavTools] = ToolsPage, [NavSettings] = SettingsPage,
             [NavNetwork] = NetworkPage, [NavHardware] = HardwarePage, [NavMenu] = MenuPage, [NavSecurity] = SecurityPage,
+            [NavLibrary] = LibraryPage, [NavClips] = ClipsPage, [NavClipboard] = ClipboardPage, [NavScreenTime] = ScreenTimePage,
         };
 
         AdminStatus.Text = Elevation.IsElevated ? "● Administrator mode" : "● Standard mode · some features need admin";
@@ -57,6 +58,19 @@ public partial class MainWindow : Window
         GamePage.OverlaySettingsChanged += (_, _) => UpdateOverlay();
         _gameMode.StateChanged += (_, _) => UpdateOverlay();
         _autoCleaner.Start();
+
+        // Game library, clips, clipboard history and screen time.
+        LibraryPage.Attach(_settings, _gameMode);
+        ClipsPage.Attach(_settings);
+        ClipsPage.HotkeysChanged += (_, _) => RegisterCaptureHotkeys();
+        ClipsPage.ScreenshotRequested += (_, _) => TakeScreenshot();
+        _clipboard.Enabled = _settings.ClipboardHistoryEnabled;
+        ClipboardPage.Attach(_settings, _clipboard);
+        _screenTime = new ScreenTime(_settings, () => _gameMode.IsActive);
+        _screenTime.Notify += Notify;
+        ScreenTimePage.Attach(_settings, _screenTime);
+        _screenTime.Start();
+        SetUpHotkeys(); // own hidden window, so they work while the app sits in the tray
 
         // Updates: clean up after a previous update, then check shortly after start and once a day.
         Updater.CleanUpOld();
@@ -149,8 +163,59 @@ public partial class MainWindow : Window
     void UpdateOverlay()
     {
         bool show = _overlayPreview || (_settings.OverlayWithGameMode && _gameMode.IsActive);
-        if (show) (_overlay ??= new Views.Overlay()).ShowAt(_settings.OverlayCorner);
+        if (show) (_overlay ??= new Views.Overlay(() => _gameMode.Game?.Pid)).ShowAt(_settings.OverlayCorner);
         else _overlay?.HideOverlay();
+    }
+
+    readonly ClipboardHistory _clipboard = new();
+    readonly ScreenTime _screenTime;
+    HotkeyHost? _hotkeys, _captureKeys;
+    Views.ClipboardPopup? _clipboardPopup;
+
+    /// <summary>Global hotkeys: Ctrl+Alt+V for clipboard history (always), capture keys if switched on.</summary>
+    void SetUpHotkeys()
+    {
+        _hotkeys = new HotkeyHost();
+        _hotkeys.ClipboardChanged += (_, _) => _clipboard.OnClipboardChanged();
+        _hotkeys.Register(HotkeyHost.MOD_CONTROL | HotkeyHost.MOD_ALT, Key.V, () =>
+        {
+            if (_clipboard.Enabled) (_clipboardPopup ??= new Views.ClipboardPopup(_clipboard)).Open();
+        });
+        RegisterCaptureHotkeys();
+    }
+
+    void RegisterCaptureHotkeys()
+    {
+        _captureKeys?.Dispose();
+        _captureKeys = null;
+        bool clipOk = true, shotOk = true;
+        if (_settings.CaptureHotkeys)
+        {
+            _captureKeys = new HotkeyHost();
+            clipOk = _captureKeys.Register(HotkeyHost.MOD_CONTROL | HotkeyHost.MOD_SHIFT, Key.F9, SaveClip);
+            shotOk = _captureKeys.Register(HotkeyHost.MOD_CONTROL | HotkeyHost.MOD_SHIFT, Key.F10, TakeScreenshot);
+        }
+        ClipsPage.ShowHotkeyState(clipOk, shotOk);
+    }
+
+    void SaveClip()
+    {
+        if (!Captures.BackgroundRecording)
+        {
+            Notify("Clips need background recording", "Open Clips & Screenshots in PC Optimizer and turn on background recording.");
+            return;
+        }
+        Captures.SaveClip();
+        // Game Bar shows its own "Game clip recorded" toast; refresh the gallery once the file has been written.
+        Dispatcher.InvokeAsync(async () => { await Task.Delay(8000); if (ClipsPage.IsVisible) ClipsPage.Reload(); });
+    }
+
+    void TakeScreenshot()
+    {
+        var file = Captures.Screenshot(_gameMode.Game?.Name);
+        if (file is null) { Notify("Screenshot failed", "Windows didn't allow the screen to be captured."); return; }
+        Notify("Screenshot saved", Path.GetFileName(file));
+        if (ClipsPage.IsVisible) ClipsPage.Reload();
     }
 
     /// <summary>Dark caption bar that matches the sidebar (Windows 11; ignored on older builds).</summary>
@@ -211,6 +276,10 @@ public partial class MainWindow : Window
         _cleanedUp = true;
         _gameMode.Shutdown();
         _overlay?.Close();
+        _screenTime.Stop();
+        ClipboardPage.FlushNotes();
+        _hotkeys?.Dispose();
+        _captureKeys?.Dispose();
         _tray.Dispose();
     }
 
@@ -245,6 +314,9 @@ public partial class MainWindow : Window
         if (selected == NavHardware) HardwarePage.EnsureLoaded();
         if (selected == NavMenu) MenuPage.EnsureLoaded();
         if (selected == NavSecurity) SecurityPage.EnsureLoaded();
+        if (selected == NavLibrary) LibraryPage.EnsureLoaded();
+        if (selected == NavClips) ClipsPage.EnsureLoaded();
+        if (selected == NavScreenTime) ScreenTimePage.EnsureLoaded();
     }
 
     /// <summary>Quick fade + slide up when a page opens.</summary>

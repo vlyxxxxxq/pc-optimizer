@@ -89,6 +89,14 @@ public sealed class AppSettings
     public bool OverlayWithGameMode { get; set; }
     public int OverlayCorner { get; set; } // 0 top-left, 1 top-right, 2 bottom-left, 3 bottom-right
 
+    // Library, clips, clipboard, screen time
+    public bool LaunchWithGameMode { get; set; } = true;
+    public bool CaptureHotkeys { get; set; } = true;
+    public bool ClipboardHistoryEnabled { get; set; } = true;
+    public bool ScreenTimeEnabled { get; set; } = true;
+    public bool BreakReminders { get; set; }
+    public int BreakMinutes { get; set; } = 60;
+
     // Maintenance night
     public bool MaintenanceEnabled { get; set; }
     public DayOfWeek MaintenanceDay { get; set; } = DayOfWeek.Sunday;

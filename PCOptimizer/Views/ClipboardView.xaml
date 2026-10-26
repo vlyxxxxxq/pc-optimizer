@@ -1,0 +1,72 @@
+<UserControl x:Class="PCOptimizer.Views.ClipboardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Margin="32,28,32,24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition/>
+        </Grid.RowDefinitions>
+        <StackPanel>
+            <TextBlock Text="Clipboard &amp; Notes" Style="{StaticResource PageTitle}"/>
+            <TextBlock Style="{StaticResource PageSubtitle}"
+                       Text="Everything you copied, one shortcut away, plus a notepad that saves as you type."/>
+        </StackPanel>
+
+        <Grid Grid.Row="1" Margin="0,20,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="3*"/>
+                <ColumnDefinition Width="16"/>
+                <ColumnDefinition Width="2*"/>
+            </Grid.ColumnDefinitions>
+
+            <Border Style="{StaticResource Card}">
+                <DockPanel>
+                    <DockPanel DockPanel.Dock="Top">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
+                            <Button Content="Clear" Click="Clear_Click" Margin="0,0,12,0"/>
+                            <CheckBox x:Name="HistorySwitch" Style="{StaticResource Switch}" Click="HistorySwitch_Click" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="Clipboard history" FontSize="15" FontWeight="SemiBold"/>
+                                <Border Style="{StaticResource Badge}"><TextBlock Text="Ctrl + Alt + V" FontSize="11"/></Border>
+                            </StackPanel>
+                            <TextBlock x:Name="HistoryText" Style="{StaticResource Muted}" Margin="0,2,16,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <Grid DockPanel.Dock="Top" Margin="0,12,0,8">
+                        <TextBox x:Name="SearchBox" TextChanged="Search_Changed" VerticalContentAlignment="Center"/>
+                        <TextBlock x:Name="SearchHint" Text="Search what you copied" Style="{StaticResource Muted}" IsHitTestVisible="False"
+                                   VerticalAlignment="Center" Margin="10,0,0,0"/>
+                    </Grid>
+                    <ListBox x:Name="History" Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ItemContainerStyle="{StaticResource PlainListItem}" MouseDoubleClick="History_DoubleClick">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border Padding="10,8" Margin="0,0,0,4" CornerRadius="6" Background="{StaticResource InputBrush}">
+                                    <DockPanel>
+                                        <Button DockPanel.Dock="Right" Content="Copy" Click="Copy_Click" Padding="10,3" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                                        <TextBlock DockPanel.Dock="Right" Text="{Binding When}" Style="{StaticResource Muted}" FontSize="11" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding Preview}" TextTrimming="CharacterEllipsis" MaxHeight="38" TextWrapping="Wrap"/>
+                                    </DockPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+
+            <Border Grid.Column="2" Style="{StaticResource Card}">
+                <DockPanel>
+                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+                        <TextBlock x:Name="NotesSaved" DockPanel.Dock="Right" Style="{StaticResource Muted}" FontSize="11" VerticalAlignment="Bottom"/>
+                        <TextBlock Text="Quick notes" FontSize="15" FontWeight="SemiBold"/>
+                    </DockPanel>
+                    <TextBox x:Name="Notes" AcceptsReturn="True" AcceptsTab="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
+                             VerticalContentAlignment="Top" Padding="8" FontFamily="Cascadia Mono, Consolas" FontSize="13"
+                             TextChanged="Notes_Changed"/>
+                </DockPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

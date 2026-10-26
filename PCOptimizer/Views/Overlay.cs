@@ -16,13 +16,17 @@ public sealed class Overlay : Window
     readonly CpuSampler _cpu = new();
     readonly GpuLoad _gpu = new();
     readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(1) };
-    readonly TextBlock _cpuText = Value(), _gpuText = Value(), _ramText = Value(), _pingText = Value();
+    readonly TextBlock _fpsText = Value(), _cpuText = Value(), _gpuText = Value(), _ramText = Value(), _pingText = Value();
+    readonly FpsMonitor _fps = new();
+    readonly Func<int?> _gamePid;
     int _tick;
     bool _pinging;
     int _corner;
 
-    public Overlay()
+    /// <param name="gamePid">The game Game Mode is boosting, if any; otherwise the busiest DirectX app is shown.</param>
+    public Overlay(Func<int?> gamePid)
     {
+        _gamePid = gamePid;
         WindowStyle = WindowStyle.None;
         AllowsTransparency = true;
         Background = Brushes.Transparent;
@@ -42,7 +46,7 @@ public sealed class Overlay : Window
             Child = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
-                Children = { Item("CPU", _cpuText), Item("GPU", _gpuText), Item("RAM", _ramText), Item("PING", _pingText, last: true) },
+                Children = { Item("FPS", _fpsText), Item("CPU", _cpuText), Item("GPU", _gpuText), Item("RAM", _ramText), Item("PING", _pingText, last: true) },
             },
         };
         _timer.Tick += async (_, _) => await TickAsync();
@@ -74,13 +78,14 @@ public sealed class Overlay : Window
     public void ShowAt(int corner)
     {
         _corner = corner;
-        if (!IsVisible) { Show(); _cpu.Sample(); _gpu.Sample(); _timer.Start(); }
+        if (!IsVisible) { Show(); _cpu.Sample(); _gpu.Sample(); _fps.Start(); _timer.Start(); }
         Place();
     }
 
     public void HideOverlay()
     {
         _timer.Stop();
+        _fps.Stop();
         Hide();
     }
 
@@ -97,6 +102,9 @@ public sealed class Overlay : Window
     {
         double cpu = _cpu.Sample(), gpu = _gpu.Sample();
         var (total, available) = SystemInfo.Memory();
+        bool needsAdmin = _fps.Problem == "admin";
+        _fpsText.Text = needsAdmin ? "admin" : _fps.Read(_gamePid() ?? _fps.Busiest() ?? 0) is { } f ? $"{f.Fps:0} ({f.Low1:0} low)" : "–";
+        _fpsText.Foreground = needsAdmin ? Brushes.Gray : Brushes.White;
         _cpuText.Text = $"{cpu:0}%";
         _gpuText.Text = $"{gpu:0}%";
         _ramText.Text = total > 0 ? $"{100.0 * (total - available) / total:0}%" : "–";
@@ -120,6 +128,7 @@ public sealed class Overlay : Window
     protected override void OnClosed(EventArgs e)
     {
         _timer.Stop();
+        _fps.Dispose();
         _gpu.Dispose();
         base.OnClosed(e);
     }

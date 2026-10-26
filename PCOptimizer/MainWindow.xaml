@@ -80,8 +80,20 @@
                     <StackPanel Margin="0,0,0,8">
                         <RadioButton x:Name="NavDashboard" Style="{StaticResource NavButton}" Content="Dashboard"
                                      Tag="&#xE80F;" IsChecked="True" Checked="Nav_Checked"/>
+
+                        <TextBlock Text="PLAY" Style="{StaticResource NavSection}"/>
                         <RadioButton x:Name="NavGame" Style="{StaticResource NavButton}" Content="Game Mode"
                                      Tag="&#xE7FC;" Checked="Nav_Checked"/>
+                        <RadioButton x:Name="NavLibrary" Style="{StaticResource NavButton}" Content="Game Library"
+                                     Tag="&#xE8F1;" Checked="Nav_Checked"/>
+                        <RadioButton x:Name="NavClips" Style="{StaticResource NavButton}" Content="Clips &amp; Screenshots"
+                                     Tag="&#xE714;" Checked="Nav_Checked"/>
+
+                        <TextBlock Text="EVERYDAY" Style="{StaticResource NavSection}"/>
+                        <RadioButton x:Name="NavClipboard" Style="{StaticResource NavButton}" Content="Clipboard &amp; Notes"
+                                     Tag="&#xE77F;" Checked="Nav_Checked"/>
+                        <RadioButton x:Name="NavScreenTime" Style="{StaticResource NavButton}" Content="Screen Time"
+                                     Tag="&#xE916;" Checked="Nav_Checked"/>
 
                         <TextBlock Text="CLEAN UP" Style="{StaticResource NavSection}"/>
                         <RadioButton x:Name="NavCleaner" Style="{StaticResource NavButton}" Content="Junk Cleaner"
@@ -132,6 +144,10 @@
         <Grid Grid.Column="1" x:Name="Pages">
             <views:DashboardView x:Name="DashboardPage"/>
             <views:GameModeView x:Name="GamePage" Visibility="Collapsed"/>
+            <views:LibraryView x:Name="LibraryPage" Visibility="Collapsed"/>
+            <views:ClipsView x:Name="ClipsPage" Visibility="Collapsed"/>
+            <views:ClipboardView x:Name="ClipboardPage" Visibility="Collapsed"/>
+            <views:ScreenTimeView x:Name="ScreenTimePage" Visibility="Collapsed"/>
             <views:CleanerView x:Name="CleanerPage" Visibility="Collapsed"/>
             <views:DiskView x:Name="DiskPage" Visibility="Collapsed"/>
             <views:NetworkView x:Name="NetworkPage" Visibility="Collapsed"/>

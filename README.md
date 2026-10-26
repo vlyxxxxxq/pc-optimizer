@@ -48,6 +48,14 @@ The EXE isn't code-signed, so the first time you run it Windows SmartScreen may 
   - Per-game profiles: different boosts for different games.
   - Optional performance overlay: a click-through CPU / GPU / RAM / ping readout in a corner of the screen.
   - Windows notifications when Game Mode turns on or off.
+  - Optional FPS counter (with 1% lows) in the overlay for DirectX games, in administrator mode.
+- **Game Library** – every installed Steam, Epic and GOG game with cover art and playtime; click to play,
+  optionally with Game Mode switched on.
+- **Clips & Screenshots** – Ctrl+Shift+F9 saves the last 30 seconds (via Windows Game Bar's background
+  recording), Ctrl+Shift+F10 saves a screenshot named after the game; a gallery of everything captured.
+- **Clipboard & Notes** – Ctrl+Alt+V opens your last 50 copies anywhere (memory only; password-manager copies
+  are skipped), plus quick notes that save as you type.
+- **Screen Time** – time per app per day and a 7-day chart, counting only active use, with optional break reminders.
 - **Junk Cleaner** – temp files, browser caches, Recycle Bin, thumbnails, shader cache, crash dumps.
   Optional automatic cleaning (daily / weekly / monthly), skipped while you're gaming. Browser privacy:
   cookies and history per browser (never passwords, autofill or bookmarks).
