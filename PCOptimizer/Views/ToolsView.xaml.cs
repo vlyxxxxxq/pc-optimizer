@@ -24,7 +24,82 @@ public partial class ToolsView : UserControl
         _loaded = true;
         GpuList.ItemsSource = GpuInfo.Load();
         RenderPause();
+        RenderMaintenance();
         await LoadPlansAsync();
+    }
+
+    // ---------- Maintenance night ----------
+
+    AppSettings? _settings;
+
+    public void Attach(AppSettings settings)
+    {
+        _settings = settings;
+        DayOfWeek[] days = [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday,
+                            DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday];
+        foreach (var d in days)
+        {
+            var rb = new RadioButton { Content = d.ToString()[..3], GroupName = "MaintDay", Margin = new Thickness(0, 0, 6, 0),
+                                       IsChecked = settings.MaintenanceDay == d };
+            rb.Checked += async (_, _) => { settings.MaintenanceDay = d; await SaveMaintenanceAsync(); };
+            MaintDays.Items.Add(rb);
+        }
+        foreach (var h in new[] { 1, 2, 3, 4, 5 })
+        {
+            var rb = new RadioButton { Content = $"{h} AM", GroupName = "MaintHour", Margin = new Thickness(0, 0, 6, 0),
+                                       IsChecked = settings.MaintenanceHour == h };
+            rb.Checked += async (_, _) => { settings.MaintenanceHour = h; await SaveMaintenanceAsync(); };
+            MaintHours.Items.Add(rb);
+        }
+    }
+
+    void RenderMaintenance()
+    {
+        if (_settings is null) return;
+        MaintSwitch.IsChecked = _settings.MaintenanceEnabled;
+        MaintUpdates.IsChecked = _settings.MaintenanceInstallUpdates;
+        var when = $"every {_settings.MaintenanceDay} at {_settings.MaintenanceHour} AM";
+        MaintText.Text = (_settings.MaintenanceEnabled
+                             ? $"On: cleans junk and checks app updates {when}, even if this app isn't open. Runs later if your PC was off; skipped during games."
+                             : "Cleans junk and checks app updates once a week while you sleep, then leaves you a summary.") +
+                         (_settings.LastMaintenanceSummary is { } s && _settings.LastMaintenance is { } t ? $"\nLast run {t:g}: {s}" : "");
+    }
+
+    async Task SaveMaintenanceAsync()
+    {
+        if (_settings is null) return;
+        _settings.Save();
+        if (_settings.MaintenanceEnabled)
+        {
+            var (ok, output) = await Maintenance.ScheduleAsync(_settings);
+            if (!ok) ShowOutput($"Couldn't schedule maintenance: {output}");
+        }
+        RenderMaintenance();
+    }
+
+    async void Maint_Click(object sender, RoutedEventArgs e)
+    {
+        if (_settings is null) return;
+        _settings.MaintenanceEnabled = MaintSwitch.IsChecked == true;
+        if (!_settings.MaintenanceEnabled) { Maintenance.Unschedule(); _settings.Save(); RenderMaintenance(); return; }
+        await SaveMaintenanceAsync();
+    }
+
+    async void MaintUpdates_Click(object sender, RoutedEventArgs e)
+    {
+        if (_settings is null) return;
+        _settings.MaintenanceInstallUpdates = MaintUpdates.IsChecked == true;
+        await SaveMaintenanceAsync();
+    }
+
+    async void MaintRun_Click(object sender, RoutedEventArgs e)
+    {
+        if (_settings is null) return;
+        MaintRunButton.IsEnabled = false;
+        var summary = await Maintenance.RunAsync(_settings, new Progress<string>(s => MaintText.Text = s));
+        MaintRunButton.IsEnabled = true;
+        RenderMaintenance();
+        ShowOutput($"Maintenance done. {summary}");
     }
 
     void RenderPause()

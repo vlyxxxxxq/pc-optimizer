@@ -79,8 +79,23 @@ public sealed class AppSettings
                 return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(FilePath)) ?? new();
         }
         catch { /* corrupt file: fall back to defaults */ }
-        return new();
+        return new() { IsFirstRun = true };
     }
+
+    /// <summary>No settings file existed yet: show the welcome. Not saved.</summary>
+    [System.Text.Json.Serialization.JsonIgnore] public bool IsFirstRun { get; private set; }
+
+    // Gaming overlay
+    public bool OverlayWithGameMode { get; set; }
+    public int OverlayCorner { get; set; } // 0 top-left, 1 top-right, 2 bottom-left, 3 bottom-right
+
+    // Maintenance night
+    public bool MaintenanceEnabled { get; set; }
+    public DayOfWeek MaintenanceDay { get; set; } = DayOfWeek.Sunday;
+    public int MaintenanceHour { get; set; } = 3;
+    public bool MaintenanceInstallUpdates { get; set; }
+    public DateTime? LastMaintenance { get; set; }
+    public string? LastMaintenanceSummary { get; set; }
 
     public void Save()
     {
@@ -108,10 +123,10 @@ public static class AutoStart
         }
     }
 
-    public static void Set(bool enabled)
+    public static void Set(bool enabled, string? exe = null)
     {
         using var key = Registry.CurrentUser.CreateSubKey(RunKey);
-        if (enabled) key.SetValue(ValueName, $"\"{Environment.ProcessPath}\" --tray");
+        if (enabled) key.SetValue(ValueName, $"\"{exe ?? Environment.ProcessPath}\" --tray");
         else key.DeleteValue(ValueName, throwOnMissingValue: false);
     }
 }

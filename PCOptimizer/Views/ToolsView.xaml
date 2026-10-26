@@ -51,6 +51,41 @@
                 </StackPanel>
             </Border>
 
+            <!-- Maintenance night -->
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
+                    <DockPanel>
+                        <CheckBox x:Name="MaintSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" Click="Maint_Click"/>
+                        <Button x:Name="MaintRunButton" DockPanel.Dock="Right" Content="Run now" Click="MaintRun_Click" Margin="0,0,14,0" Padding="12,5"/>
+                        <StackPanel>
+                            <TextBlock Text="Maintenance night" FontSize="15" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="MaintText" Style="{StaticResource Muted}" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <WrapPanel Margin="0,12,0,0">
+                        <TextBlock Text="Every" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <ItemsControl x:Name="MaintDays">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                        <TextBlock Text="at" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="6,0,8,0"/>
+                        <ItemsControl x:Name="MaintHours">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                    </WrapPanel>
+                    <DockPanel Margin="0,12,0,0">
+                        <CheckBox x:Name="MaintUpdates" DockPanel.Dock="Right" Style="{StaticResource Switch}" Click="MaintUpdates_Click"/>
+                        <StackPanel>
+                            <TextBlock Text="Also install app updates" FontSize="14"/>
+                            <TextBlock Style="{StaticResource Muted}" Text="Off by default: some installers ask for administrator permission and would wait for you."/>
+                        </StackPanel>
+                    </DockPanel>
+                </StackPanel>
+            </Border>
+
             <!-- Pause Windows Update -->
             <Border Style="{StaticResource Card}" Margin="0,16,0,0">
                 <DockPanel>

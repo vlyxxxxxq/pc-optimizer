@@ -288,6 +288,22 @@
                                 <TextBlock Text="Reopen them when you're done" Style="{StaticResource RowTitle}"
                                            Foreground="{StaticResource MutedBrush}"/>
                             </DockPanel>
+                            <DockPanel Style="{StaticResource Row}">
+                                <CheckBox DockPanel.Dock="Right" Style="{StaticResource Switch}"
+                                          IsChecked="{Binding OverlayWithGameMode}" Click="Overlay_Click"/>
+                                <StackPanel>
+                                    <TextBlock Text="Performance overlay" Style="{StaticResource RowTitle}"/>
+                                    <TextBlock Style="{StaticResource Muted}"
+                                               Text="CPU, GPU, RAM and ping in a corner while you play. Click-through. Shows over borderless/windowed games."/>
+                                </StackPanel>
+                            </DockPanel>
+                            <WrapPanel Margin="0,8,0,0">
+                                <RadioButton Content="↖ Top left" GroupName="OverlayCorner" Tag="0" Click="Corner_Click" x:Name="Corner0" Margin="0,0,6,6"/>
+                                <RadioButton Content="↗ Top right" GroupName="OverlayCorner" Tag="1" Click="Corner_Click" x:Name="Corner1" Margin="0,0,6,6"/>
+                                <RadioButton Content="↙ Bottom left" GroupName="OverlayCorner" Tag="2" Click="Corner_Click" x:Name="Corner2" Margin="0,0,6,6"/>
+                                <RadioButton Content="↘ Bottom right" GroupName="OverlayCorner" Tag="3" Click="Corner_Click" x:Name="Corner3" Margin="0,0,12,6"/>
+                                <Button x:Name="PreviewOverlayButton" Content="Preview" Click="PreviewOverlay_Click" Padding="12,4" Margin="0,0,0,6"/>
+                            </WrapPanel>
 
                             <!-- Recommended apps found on this PC -->
                             <DockPanel Margin="0,18,0,0">

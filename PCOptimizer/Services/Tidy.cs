@@ -44,6 +44,7 @@ public static class Tidy
     /// <summary>Desktop and Start menu shortcuts whose target file or folder no longer exists.</summary>
     public static List<TidyItem> BrokenShortcuts()
     {
+        if (Environment.GetEnvironmentVariable("PCOPTIMIZER_TEST_NO_SHORTCUTS") == "1") return []; // tests use dummy folders only
         var places = new[]
         {
             Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),

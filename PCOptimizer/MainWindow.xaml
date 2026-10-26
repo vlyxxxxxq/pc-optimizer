@@ -106,6 +106,8 @@
                                      Tag="&#xE950;" Checked="Nav_Checked"/>
                         <RadioButton x:Name="NavNetwork" Style="{StaticResource NavButton}" Content="Network"
                                      Tag="&#xE968;" Checked="Nav_Checked"/>
+                        <RadioButton x:Name="NavSecurity" Style="{StaticResource NavButton}" Content="Security"
+                                     Tag="&#xEA18;" Checked="Nav_Checked"/>
                         <RadioButton x:Name="NavApps" Style="{StaticResource NavButton}" Content="Apps"
                                      Tag="&#xE719;" Checked="Nav_Checked"/>
                         <RadioButton x:Name="NavTools" Style="{StaticResource NavButton}" Content="Tools"
@@ -134,6 +136,7 @@
             <views:DiskView x:Name="DiskPage" Visibility="Collapsed"/>
             <views:NetworkView x:Name="NetworkPage" Visibility="Collapsed"/>
             <views:ContextMenuView x:Name="MenuPage" Visibility="Collapsed"/>
+            <views:SecurityView x:Name="SecurityPage" Visibility="Collapsed"/>
             <views:HardwareView x:Name="HardwarePage" Visibility="Collapsed"/>
             <views:StartupView x:Name="StartupPage" Visibility="Collapsed"/>
             <views:ProcessesView x:Name="ProcessesPage" Visibility="Collapsed"/>

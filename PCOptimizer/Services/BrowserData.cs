@@ -27,8 +27,10 @@ public sealed class BrowserItem : ObservableObject
 /// </summary>
 public static class BrowserData
 {
-    static readonly string Local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-    static readonly string Roaming = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+    // PCOPTIMIZER_TEST_BROWSER_ROOT points both at a folder of fake browser profiles, for testing deletes safely.
+    static readonly string? TestRoot = Environment.GetEnvironmentVariable("PCOPTIMIZER_TEST_BROWSER_ROOT") is { Length: > 0 } t ? t : null;
+    static readonly string Local = TestRoot ?? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+    static readonly string Roaming = TestRoot ?? Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
 
     public static List<BrowserItem> Find()
     {

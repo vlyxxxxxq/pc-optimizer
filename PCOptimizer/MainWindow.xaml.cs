@@ -28,7 +28,7 @@ public partial class MainWindow : Window
             [NavDashboard] = DashboardPage, [NavGame] = GamePage, [NavCleaner] = CleanerPage, [NavDisk] = DiskPage,
             [NavStartup] = StartupPage, [NavProcesses] = ProcessesPage, [NavTweaks] = TweaksPage,
             [NavApps] = AppsPage, [NavUninstall] = UninstallPage, [NavTools] = ToolsPage, [NavSettings] = SettingsPage,
-            [NavNetwork] = NetworkPage, [NavHardware] = HardwarePage, [NavMenu] = MenuPage,
+            [NavNetwork] = NetworkPage, [NavHardware] = HardwarePage, [NavMenu] = MenuPage, [NavSecurity] = SecurityPage,
         };
 
         AdminStatus.Text = Elevation.IsElevated ? "● Administrator mode" : "● Standard mode · some features need admin";
@@ -49,6 +49,13 @@ public partial class MainWindow : Window
         _autoCleaner = new AutoCleaner(_settings, () => _gameMode.IsActive);
         _autoCleaner.Notify += Notify;
         CleanerPage.Attach(_settings, _autoCleaner);
+        ToolsPage.Attach(_settings);
+        SecurityPage.Attach(() => _gameMode.Detector.Libraries);
+
+        // Performance overlay: shown with Game Mode (if enabled) or while previewing.
+        GamePage.OverlayPreview += on => { _overlayPreview = on; UpdateOverlay(); };
+        GamePage.OverlaySettingsChanged += (_, _) => UpdateOverlay();
+        _gameMode.StateChanged += (_, _) => UpdateOverlay();
         _autoCleaner.Start();
 
         // Updates: clean up after a previous update, then check shortly after start and once a day.
@@ -69,6 +76,11 @@ public partial class MainWindow : Window
             if (_settings.AutoCheckUpdates) await SettingsPage.CheckForUpdateAsync(quiet: true);
         };
         _updateTimer.Start();
+
+        // Test hook: PCOPTIMIZER_TEST_CRASH=1 throws once the window is up, to check the crash reporter.
+        if (Environment.GetEnvironmentVariable("PCOPTIMIZER_TEST_CRASH") == "1")
+            Loaded += (_, _) => Dispatcher.BeginInvoke(new Action(() =>
+                throw new InvalidOperationException("Test crash requested by PCOPTIMIZER_TEST_CRASH")));
 
         // Just imported a setup: open Apps with its programs ticked.
         if (_settings.PendingInstallIds.Count > 0)
@@ -131,6 +143,16 @@ public partial class MainWindow : Window
 
     void UpdateChip_Click(object sender, MouseButtonEventArgs e) => NavSettings.IsChecked = true;
 
+    Views.Overlay? _overlay;
+    bool _overlayPreview;
+
+    void UpdateOverlay()
+    {
+        bool show = _overlayPreview || (_settings.OverlayWithGameMode && _gameMode.IsActive);
+        if (show) (_overlay ??= new Views.Overlay()).ShowAt(_settings.OverlayCorner);
+        else _overlay?.HideOverlay();
+    }
+
     /// <summary>Dark caption bar that matches the sidebar (Windows 11; ignored on older builds).</summary>
     protected override void OnSourceInitialized(EventArgs e)
     {
@@ -188,6 +210,7 @@ public partial class MainWindow : Window
         if (_cleanedUp) return;
         _cleanedUp = true;
         _gameMode.Shutdown();
+        _overlay?.Close();
         _tray.Dispose();
     }
 
@@ -221,6 +244,7 @@ public partial class MainWindow : Window
         if (selected == NavNetwork) NetworkPage.EnsureLoaded();
         if (selected == NavHardware) HardwarePage.EnsureLoaded();
         if (selected == NavMenu) MenuPage.EnsureLoaded();
+        if (selected == NavSecurity) SecurityPage.EnsureLoaded();
     }
 
     /// <summary>Quick fade + slide up when a page opens.</summary>

@@ -10,6 +10,21 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        Services.CrashReporter.Install(this);
+
+        // Command-line modes that don't open the main window.
+        if (e.Args.Contains("--uninstall", StringComparer.OrdinalIgnoreCase))
+        {
+            Services.Installer.RunUninstall();
+            Shutdown();
+            return;
+        }
+        if (e.Args.Contains("--maintenance", StringComparer.OrdinalIgnoreCase))
+        {
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            _ = Services.Maintenance.RunHeadlessAsync().ContinueWith(_ => Dispatcher.Invoke(Shutdown));
+            return;
+        }
 
         // One copy per settings profile: a second launch just brings the running one to the front.
         // A separate profile (PCOPTIMIZER_SETTINGS) runs alongside, so testing never touches the real app.
@@ -26,9 +41,27 @@ public partial class App : Application
         }
 
         ShutdownMode = ShutdownMode.OnExplicitShutdown; // the tray keeps us alive when the window is closed
+        bool tray = e.Args.Contains("--tray", StringComparer.OrdinalIgnoreCase);
+        Services.Installer.RefreshRegistration();
+
+        // First run: welcome tour. Choosing "Install" relaunches from the installed copy.
+        var settings = Services.AppSettings.Load();
+        if (settings.IsFirstRun && !tray)
+        {
+            var welcome = new WelcomeWindow(settings);
+            welcome.ShowDialog();
+            if (welcome.Installed && !Services.Installer.IsRunningInstalled)
+            {
+                ReleaseInstanceLock();
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Services.Installer.InstalledExe) { UseShellExecute = true });
+                Shutdown();
+                return;
+            }
+        }
+
         var window = new MainWindow();
         MainWindow = window;
-        if (!e.Args.Contains("--tray", StringComparer.OrdinalIgnoreCase)) window.Show();
+        if (!tray) window.Show();
 
         new Thread(() =>
         {

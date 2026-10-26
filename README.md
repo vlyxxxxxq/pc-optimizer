@@ -17,11 +17,14 @@ like Razer Cortex and Process Lasso, and Windows' own maintenance tools.
 
 ## Download
 
-Grab an EXE from the [latest release](../../releases/latest). Both are single files with no installer,
-for 64-bit Windows 10 and 11:
+Grab an EXE from the [latest release](../../releases/latest), for 64-bit Windows 10 and 11:
 
 - **`PCOptimizer.exe`** (~72 MB): everything built in. Pick this if you're not sure.
 - **`PCOptimizer-lite.exe`** (under 1 MB): needs the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) installed.
+
+Run it and a short welcome sets things up and offers to install it (no admin needed: it goes in your user
+folder, with a Start menu shortcut and an entry in Windows' "Installed apps" to uninstall it). Or pick
+"Portable" and keep running the EXE from wherever it is.
 
 The app updates itself: when a new release is out, Settings → Updates (or the sidebar) offers a one-click update.
 
@@ -43,6 +46,7 @@ The EXE isn't code-signed, so the first time you run it Windows SmartScreen may 
   - Everything is undone when the game closes, including after a crash (the old power plan is restored on next launch).
   - Live CPU / GPU / game RAM while you play, and a play history: time per game plus average and peak load per session.
   - Per-game profiles: different boosts for different games.
+  - Optional performance overlay: a click-through CPU / GPU / RAM / ping readout in a corner of the screen.
   - Windows notifications when Game Mode turns on or off.
 - **Junk Cleaner** – temp files, browser caches, Recycle Bin, thumbnails, shader cache, crash dumps.
   Optional automatic cleaning (daily / weekly / monthly), skipped while you're gaming. Browser privacy:
@@ -68,7 +72,9 @@ The EXE isn't code-signed, so the first time you run it Windows SmartScreen may 
 - **Tools** – graphics driver check (version, age, one click to AMD / NVIDIA / Intel downloads),
   pause Windows Update for 1–5 weeks, power plans
   (+ add Ultimate Performance), flush DNS, restart Explorer, repair Windows (DISM/SFC, network reset,
-  Windows Update fix, chkdsk), shortcuts to Windows tools.
+  Windows Update fix, chkdsk), shortcuts to Windows tools. Maintenance night: a weekly scheduled clean
+  and app-update check that catches up if the PC was off, and skips itself while you're gaming.
+- **Security** – Windows Defender status, quick / full scans, definition updates, and game-folder exclusions (admin).
 - **Settings** – start with Windows (in the tray), close to tray, notifications, automatic updates, and
   backup & share: export your whole setup to one file and import it on another PC or a friend's.
 
@@ -92,6 +98,12 @@ dotnet publish -c Release -r win-x64 --self-contained false -p:PublishSingleFile
 
 Then rename `Release\lite\PCOptimizer.exe` to `PCOptimizer-lite.exe` when attaching it to a release.
 The updater matches on those two asset names.
+
+Releasing is automated: bump `<Version>` in `PCOptimizer.csproj`, optionally add `docs/release-notes/vX.Y.Z.md`,
+then push a `vX.Y.Z` tag. GitHub Actions builds both EXEs and publishes the release. Every push to `main`
+is also build-checked.
+
+If the app hits an error it shows a report you can copy; logs are in `%AppData%\PCOptimizer\logs`.
 
 Settings live in `%AppData%\PCOptimizer\settings.json`. Set `PCOPTIMIZER_SETTINGS` to another path to use a
 separate profile (useful for testing).

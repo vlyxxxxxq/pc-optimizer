@@ -50,6 +50,7 @@ public partial class GameModeView : UserControl
         RenderIgnored();
         RenderHistory();
         RenderProfiles();
+        RenderOverlay();
         Render();
     }
 
@@ -61,6 +62,41 @@ public partial class GameModeView : UserControl
         LiveCpu.Text = $"{s.LastCpu:0}%";
         LiveGpu.Text = $"{s.LastGpu:0}%";
         LiveRam.Text = s.LastGameRam > 0 ? Fmt.Bytes(s.LastGameRam) : "–";
+    }
+
+    // ---------- Overlay ----------
+
+    /// <summary>Raised to show (true) or hide (false) the overlay preview; the main window owns the overlay.</summary>
+    public event Action<bool>? OverlayPreview;
+    public event EventHandler? OverlaySettingsChanged;
+    bool _previewing;
+
+    void RenderOverlay()
+    {
+        if (_settings is null) return;
+        var corners = new[] { Corner0, Corner1, Corner2, Corner3 };
+        corners[Math.Clamp(_settings.OverlayCorner, 0, 3)].IsChecked = true;
+    }
+
+    void Overlay_Click(object sender, RoutedEventArgs e)
+    {
+        _settings?.Save();
+        OverlaySettingsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    void Corner_Click(object sender, RoutedEventArgs e)
+    {
+        if (_settings is null || ((FrameworkElement)sender).Tag is not string c) return;
+        _settings.OverlayCorner = int.Parse(c);
+        _settings.Save();
+        OverlaySettingsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    void PreviewOverlay_Click(object sender, RoutedEventArgs e)
+    {
+        _previewing = !_previewing;
+        PreviewOverlayButton.Content = _previewing ? "Hide preview" : "Preview";
+        OverlayPreview?.Invoke(_previewing);
     }
 
     void RenderProfiles()
