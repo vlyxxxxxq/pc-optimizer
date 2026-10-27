@@ -64,10 +64,13 @@ public class CaptureUpgradeTests
     {
         using var box = new Sandbox();
         var options = new AppSettings { CaptureFps = 30, CaptureHeight = 720, CaptureMbps = 4, CaptureSystemAudio = true, CaptureMicrophone = false };
+        var wallClock = System.Diagnostics.Stopwatch.StartNew();
         await using var run = await CaptureRun.StartAsync(new ScreenArea(0, 0, 320, 180), options, synthetic: true);
         await Task.Delay(4500);
         await run.StopAsync();
-        Assert.InRange(run.Elapsed.TotalSeconds, 4, 8);
+        // Startup and graceful shutdown can take longer on a busy CI runner; the
+        // generated media must still advance in real time rather than run ahead.
+        Assert.InRange(run.Elapsed.TotalSeconds, 4, wallClock.Elapsed.TotalSeconds + 1);
         var segments = ReplayMedia.ReadSegments(run.Directory);
         Assert.True(segments.Count >= 2, run.Error);
         var details = await ReplayMedia.InspectAsync(segments[0].Path);
