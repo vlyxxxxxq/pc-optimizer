@@ -97,8 +97,8 @@
             <Border Style="{StaticResource Card}" Margin="0,16,0,0">
                 <StackPanel>
                     <DockPanel>
-                        <Button x:Name="HotkeyButton" DockPanel.Dock="Right" Click="Hotkey_Click" PreviewKeyDown="Hotkey_PreviewKeyDown"
-                                LostKeyboardFocus="Hotkey_LostFocus" Padding="10,3" ToolTip="Click, then press the keys you want"/>
+                        <Button x:Name="HotkeyButton" DockPanel.Dock="Right"
+                                 Padding="10,3" ToolTip="Click, then press the keys you want"/>
                         <StackPanel>
                             <TextBlock Text="Toggle hotkey" FontSize="15" FontWeight="SemiBold"/>
                             <TextBlock x:Name="HotkeyText" Style="{StaticResource Muted}" Margin="0,2,16,0" TextWrapping="Wrap"

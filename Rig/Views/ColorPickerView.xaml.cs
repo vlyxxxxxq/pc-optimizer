@@ -35,13 +35,15 @@ public partial class ColorPickerView : UserControl
     /// <summary>A colour was picked from this page (the main window also picks from the hotkey).</summary>
     public event EventHandler? PickRequested;
     public event EventHandler? MeasureRequested;
+    public event EventHandler? HotkeysPaused, HotkeysChanged;
 
     public ColorPickerView() => InitializeComponent();
 
     public void Attach(AppSettings settings, string hotkey)
     {
         _settings = settings;
-        HotkeyText.Text = hotkey;
+        HotkeyButton.Content = hotkey;
+        _ = new ShortcutCapture(HotkeyButton, settings, nameof(AppSettings.ColorHotkey), () => HotkeysPaused?.Invoke(this, EventArgs.Empty), () => HotkeysChanged?.Invoke(this, EventArgs.Empty));
         Render();
     }
 

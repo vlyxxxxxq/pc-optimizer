@@ -132,7 +132,7 @@ public sealed class AppSettings
     public static string DataFile(string name) => Path.Combine(Path.GetDirectoryName(FilePath)!, name);
 
     /// <summary>Data files a full backup carries along with the settings.</summary>
-    public static readonly string[] DataFiles = ["sessions.json", "screentime.json", "inputstats.json", "notes.txt", "benchmarks.json", "layouts.json", "timers.json"];
+    public static readonly string[] DataFiles = ["sessions.json", "screentime.json", "inputstats.json", "notes.txt", "benchmarks.json", "layouts.json", "timers.json", "capture-library.json"];
 
     static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
 
@@ -170,7 +170,7 @@ public sealed class AppSettings
         catch { return null; }
     }
 
-    static readonly string[] Themes = ["Dark", "Light"];
+    static readonly string[] Themes = Services.Theme.Modes;
 
     /// <summary>
     /// Makes loaded or imported values safe: missing (null) lists and objects get their defaults, numbers are kept
@@ -199,13 +199,15 @@ public sealed class AppSettings
         AutoCleanDays = Math.Clamp(AutoCleanDays, 1, 90);
         BreakMinutes = Math.Clamp(BreakMinutes, 15, 240);
         OverlayCorner = Math.Clamp(OverlayCorner, 0, 3);
-        foreach (var (get, set, fallback) in new (Func<string>, Action<string>, string)[]
-                 {
-                     (() => ClipHotkey, v => ClipHotkey = v, defaults.ClipHotkey), (() => ScreenshotHotkey, v => ScreenshotHotkey = v, defaults.ScreenshotHotkey),
-                     (() => RecordHotkey, v => RecordHotkey = v, defaults.RecordHotkey), (() => CrosshairHotkey, v => CrosshairHotkey = v, defaults.CrosshairHotkey),
-                     (() => ColorHotkey, v => ColorHotkey = v, defaults.ColorHotkey),
-                 })
-            if (Hotkey.Parse(get()) is not { IsUsable: true }) set(fallback);
+        Shortcuts.Normalize(this);
+        ReplaySeconds = Math.Clamp(ReplaySeconds, 15, 120);
+        CaptureFps = CaptureFps == 30 ? 30 : 60;
+        CaptureHeight = new[] { 720, 1080, 1440, 2160 }.Contains(CaptureHeight) ? CaptureHeight : 1080;
+        CaptureMbps = Math.Clamp(CaptureMbps, 4, 80);
+        CaptureSystemVolume = double.IsFinite(CaptureSystemVolume) ? Math.Clamp(CaptureSystemVolume, 0, 1) : 1;
+        CaptureMicVolume = double.IsFinite(CaptureMicVolume) ? Math.Clamp(CaptureMicVolume, 0, 2) : 1;
+        if (!string.IsNullOrWhiteSpace(CaptureFolder) && !Path.IsPathFullyQualified(CaptureFolder)) CaptureFolder = null;
+        CaptureFolders = CaptureFolders.Where(p => !string.IsNullOrWhiteSpace(p) && Path.IsPathFullyQualified(p)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         DisabledModules = DisabledModules.Where(id => id is not null && Rig.Modules.All.Any(m => m.Id == id && !m.Core)).Distinct().ToList();
         HomeCards = HomeCards.Where(c => !string.IsNullOrWhiteSpace(c)).Distinct().ToList();
         foreach (var list in new[] { CustomGames, AppsToClose, IgnoredGames, PinnedPages, CollapsedCategories, ColorHistory, PendingInstallIds })
@@ -240,12 +242,30 @@ public sealed class AppSettings
     public string ClipHotkey { get; set; } = "Ctrl+Shift+F9";
     public string ScreenshotHotkey { get; set; } = "Ctrl+Shift+F10";
     public string RecordHotkey { get; set; } = "Ctrl+Shift+F11";
+    public string ReplayHotkey { get; set; } = "Ctrl+Shift+F12";
+    public string PaletteHotkey { get; set; } = "Ctrl+Alt+P";
+    public string ClipboardHotkey { get; set; } = "Ctrl+Alt+V";
     public bool RecordGif { get; set; }
     public bool RecordCursor { get; set; } = true;
+    public int ReplaySeconds { get; set; } = 30;
+    public int CaptureFps { get; set; } = 60;
+    public int CaptureHeight { get; set; } = 1080;
+    public int CaptureMbps { get; set; } = 16;
+    public bool CaptureSystemAudio { get; set; } = true;
+    public bool CaptureMicrophone { get; set; }
+    public double CaptureSystemVolume { get; set; } = 1;
+    public double CaptureMicVolume { get; set; } = 1;
+    public string? CaptureOutputDevice { get; set; }
+    public string? CaptureMicDevice { get; set; }
+    public string? CaptureFolder { get; set; }
+    public List<string> CaptureFolders { get; set; } = [];
+    public int CaptureMonitor { get; set; } = -1;
+    public bool ReplayWithGameMode { get; set; }
     public bool InputStatsEnabled { get; set; }
     public bool LayoutsLaunchApps { get; set; }
-    /// <summary>Offer pre-releases (betas) as updates.</summary>
-    public bool BetaUpdates { get; set; }
+    /// <summary>Appearance options applied immediately through shared theme resources.</summary>
+    public bool ThemeGlow { get; set; } = true;
+    public bool RoundCards { get; set; } = true;
     public string ColorHotkey { get; set; } = "Ctrl+Shift+F7";
     /// <summary>Picked colours as #RRGGBB, newest first.</summary>
     public List<string> ColorHistory { get; set; } = [];

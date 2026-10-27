@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+using System.Windows.Input;
 using Rig.Services;
 
 namespace Rig.Views;
@@ -43,6 +44,7 @@ public partial class DashboardView : UserControl
         new("pins", "Pinned tools", true), new("health", "Maintenance check", true),
         new("cpu", "CPU", false), new("memory", "Memory", false), new("system", "System", false),
         new("gamemode", "Game Mode", true), new("music", "Now playing", false),
+        new("clips", "Clips & Recording", true, "Clips"),
         new("recent", "Recent tools", true),
         new("screentime", "Screen time today", false, "ScreenTime"), new("input", "Input today", false, "Input"),
         new("timers", "Timers & reminders", false, "Timers"), new("power", "Power timer", false, "Tools"), new("freegames", "Free games", false, "Library"),
@@ -56,6 +58,9 @@ public partial class DashboardView : UserControl
     HealthReport? _health;
     bool _allFindings;
     GameModeState _gameState;
+    Point _dragOrigin;
+    string? _dragCard;
+    const string CardDragFormat = "Rig.HomeCard";
     public event EventHandler? SearchRequested;
     public event Action<string>? PinRequested;
 
@@ -228,12 +233,10 @@ public partial class DashboardView : UserControl
             card.Margin = new Thickness(0);
             // While customizing, a soft overlay covers the card with its name and the move / remove buttons.
             var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 10, 0, 0) };
-            buttons.Children.Add(EditButton("", "Move earlier", () => Move(id, -1)));
-            buttons.Children.Add(EditButton("", "Move later", () => Move(id, +1)));
             buttons.Children.Add(EditButton("", "Remove from Home", () => Remove(id)));
             var bar = new Border
             {
-                CornerRadius = new CornerRadius(12), Visibility = Visibility.Collapsed,
+                CornerRadius = new CornerRadius(12), Visibility = Visibility.Collapsed, Focusable = true,
                 BorderBrush = (Brush)FindResource("AccentBrush"), BorderThickness = new Thickness(1.5),
                 Child = new StackPanel
                 {
@@ -241,12 +244,57 @@ public partial class DashboardView : UserControl
                     Children =
                     {
                         new TextBlock { Text = Catalog.First(c => c.Id == id).Title, FontSize = 15, FontWeight = FontWeights.SemiBold, HorizontalAlignment = HorizontalAlignment.Center },
+                        new TextBlock { Text = "Drag to rearrange", FontSize = 12, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 6, 0, 0) },
                         buttons,
                     },
                 },
             };
             bar.SetResourceReference(Border.BackgroundProperty, "EditVeilBrush");
             var slot = new CardSlot { Margin = new Thickness(8), Tag = id, Children = { card, bar } };
+            slot.AllowDrop = true;
+            slot.PreviewMouseLeftButtonDown += (_, e) =>
+            {
+                if (!_editing || e.OriginalSource is DependencyObject target && Ancestor<Button>(target) is not null) return;
+                _dragOrigin = e.GetPosition(this); _dragCard = id;
+            };
+            slot.PreviewMouseMove += (_, e) =>
+            {
+                if (!_editing || _dragCard != id || e.LeftButton != MouseButtonState.Pressed) return;
+                var position = e.GetPosition(this);
+                if (Math.Abs(position.X - _dragOrigin.X) < SystemParameters.MinimumHorizontalDragDistance && Math.Abs(position.Y - _dragOrigin.Y) < SystemParameters.MinimumVerticalDragDistance) return;
+                try { slot.Opacity = .55; DragDrop.DoDragDrop(slot, new DataObject(CardDragFormat, id), DragDropEffects.Move); }
+                finally { slot.Opacity = 1; _dragCard = null; }
+            };
+            slot.DragOver += (_, e) =>
+            {
+                e.Effects = _editing && e.Data.GetDataPresent(CardDragFormat) ? DragDropEffects.Move : DragDropEffects.None;
+                if (Ancestor<ScrollViewer>(slot) is { } scroll)
+                {
+                    double y = e.GetPosition(scroll).Y;
+                    if (y < 48) scroll.ScrollToVerticalOffset(scroll.VerticalOffset - 18);
+                    else if (y > scroll.ActualHeight - 48) scroll.ScrollToVerticalOffset(scroll.VerticalOffset + 18);
+                }
+                bar.BorderThickness = new Thickness(3); e.Handled = true;
+            };
+            slot.DragLeave += (_, _) => bar.BorderThickness = new Thickness(1.5);
+            slot.Drop += (_, e) =>
+            {
+                bar.BorderThickness = new Thickness(1.5);
+                if (!_editing || _settings is null || e.Data.GetData(CardDragFormat) is not string source || source == id) return;
+                var point = e.GetPosition(slot);
+                bool after = point.Y > slot.ActualHeight / 2;
+                _settings.HomeCards = HomeLayout.Reorder(_settings.HomeCards, source, id, after);
+                _settings.Save(); RenderCards(); e.Handled = true;
+            };
+            // Keyboard access without visible arrow buttons.
+            var orderMenu = new ContextMenu();
+            foreach (var (caption, step) in new[] { ("Move earlier", -1), ("Move later", 1) })
+            {
+                var item = new MenuItem { Header = caption };
+                item.Click += (_, _) => Move(id, step); orderMenu.Items.Add(item);
+            }
+            bar.ContextMenu = orderMenu;
+            System.Windows.Automation.AutomationProperties.SetName(bar, Catalog.First(c => c.Id == id).Title + ". Drag to rearrange, or open the context menu to move with the keyboard.");
             System.Windows.Automation.AutomationProperties.SetAutomationId(slot, "HomeCard_" + id);
             System.Windows.Automation.AutomationProperties.SetName(slot, Catalog.First(c => c.Id == id).Title);
             _slots[id] = slot;
@@ -276,9 +324,19 @@ public partial class DashboardView : UserControl
         AddCardButton.IsEnabled = Catalog.Any(c => !_settings.HomeCards.Contains(c.Id) && Available(c.Id));
         CustomizeButton.Content = _editing ? "Done" : "Customize";
         CustomizeButton.Style = (Style)FindResource(_editing ? "PrimaryButton" : typeof(Button));
-        Subtitle.Text = _editing ? "Move cards with the arrows, remove what you don't need, or add another." : "A clear view. A few useful next steps.";
+        Subtitle.Text = _editing ? "Drag cards to rearrange them. Drop near the top or bottom of a card to place it before or after." : "A clear view. A few useful next steps.";
         SizeCards();
         CardsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    static T? Ancestor<T>(DependencyObject? element) where T : DependencyObject
+    {
+        while (element is not null)
+        {
+            if (element is T match) return match;
+            element = element is Visual or System.Windows.Media.Media3D.Visual3D ? VisualTreeHelper.GetParent(element) : LogicalTreeHelper.GetParent(element);
+        }
+        return null;
     }
 
     /// <summary>Three small cards per row (two on a narrow window); wide cards take the whole row.</summary>
@@ -420,6 +478,17 @@ public partial class DashboardView : UserControl
         SongText.Text = track?.Title ?? "Nothing playing";
         ArtistText.Text = track is null ? "Spotify, Apple Music, YouTube and more" : track.Artist is null ? track.App : $"{track.Artist} · {track.App}";
     }
+
+    public void SetCapture(CaptureStudio? studio)
+    {
+        CaptureTitle.Text = studio?.IsRecording == true ? $"Recording · {studio.Elapsed:mm\\:ss}" : studio?.ReplayEnabled == true ? $"Replay is on · {studio.BufferedSeconds:0}s buffered" : "Keep the moment.";
+        CaptureDetail.Text = studio?.LastError ?? "Save a replay clip, start a recording, or open your capture library.";
+        HomeReplayButton.Content = studio?.ReplayEnabled == true ? "Turn replay off" : "Enable replay";
+        HomeReplayButton.IsEnabled = HomeRecordButton.IsEnabled = studio?.Busy != true;
+        HomeRecordButton.Content = studio?.IsRecording == true ? "Stop & save" : "Record";
+        HomeSaveClipButton.IsEnabled = studio?.ReplayEnabled == true && studio.BufferedSeconds > .5 && !studio.Busy;
+    }
+    void CaptureAction_Click(object sender, RoutedEventArgs e) { if (((Button)sender).Tag is string action) ActionRequested?.Invoke(this, action); }
 
     public void SetScreenTime(TimeSpan total, string? topApp)
     {

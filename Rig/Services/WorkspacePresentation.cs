@@ -34,9 +34,19 @@ public sealed record MaintenanceOverview(string Title, string Detail, int Issues
 /// <summary>Only the old factory layout is upgraded; intentionally customized card orders are kept.</summary>
 public static class HomeLayout
 {
-    public static readonly string[] Default = ["gamemode", "cpu", "memory", "system", "pins", "health", "recent", "storage"];
+    public static readonly string[] Default = ["clips", "gamemode", "cpu", "memory", "system", "pins", "health", "recent", "storage"];
+    public static readonly string[] PreviousDefault = ["gamemode", "cpu", "memory", "system", "pins", "health", "recent", "storage"];
     public static readonly string[] LegacyDefault = ["pins", "health", "cpu", "memory", "system", "gamemode", "music", "screentime", "storage"];
-    public static List<string> Upgrade(IReadOnlyList<string> cards) => cards.SequenceEqual(LegacyDefault) ? [.. Default] : [.. cards];
+    public static List<string> Upgrade(IReadOnlyList<string> cards) => cards.SequenceEqual(LegacyDefault) || cards.SequenceEqual(PreviousDefault) ? [.. Default] : [.. cards];
+
+    public static List<string> Reorder(IReadOnlyList<string> cards, string source, string target, bool after)
+    {
+        var result = cards.ToList();
+        if (source == target || !result.Contains(source) || !result.Contains(target)) return result;
+        result.Remove(source);
+        result.Insert(result.IndexOf(target) + (after ? 1 : 0), source);
+        return result;
+    }
 
     public static string? ModuleForAction(string action) => action switch
     {

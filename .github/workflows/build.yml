@@ -14,6 +14,8 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+      - name: Prepare pinned capture engine
+        run: ./scripts/Prepare-CaptureEngine.ps1
       - run: dotnet build Rig -c Release -warnaserror
       # Domain tests run in temporary folders and an isolated profile. Desktop tests (screen capture,
       # Media Foundation) need an interactive session and are run by hand.

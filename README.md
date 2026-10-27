@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  A native Windows toolkit for your games, your files, and the things you do every day.
+  Capture your best moments. Keep your everyday PC tools close.
 </p>
 
 <p align="center">
@@ -19,9 +19,22 @@
 
 ---
 
+## Your moments, saved
+
+**New in 2.1:** Rig's own replay buffer, manual recording, game audio and optional microphone capture.
+Enable replay before you play, then keep the last 15–120 seconds with one shortcut.
+
+<p align="center"><img src="docs/screenshots/clips.png" alt="Rig capture studio with replay, recording, shortcuts, and a local clip library" width="100%"></p>
+
+Choose a quality preset, display, audio devices, and save folder. Find clips in the searchable library,
+mark favourites, preview videos, trim a new copy, or export a short GIF. Capture files stay on your PC.
+
+[Download Rig 2.1.0](https://github.com/vlyxxxxxq/rig/releases/download/v2.1.0/Rig.exe) ·
+[Keep using Rig 2.0.0](https://github.com/vlyxxxxxq/rig/releases/tag/v2.0.0)
+
 ## A home for your PC tools
 
-**New in 2.1:** a clearer Home, recent tools for this session, and a redesigned Game Mode with installed-game profiles.
+Drag cards into your preferred order, use capture controls from Home, and keep the tools you use within reach.
 
 Rig brings gaming controls, maintenance, and everyday utilities into one desktop app. Pin the tools you use,
 choose what appears on Home, and switch off the modules you don't need. Keep it in the notification area
@@ -54,7 +67,7 @@ for automatic Game Mode, reminders, and shortcuts.
     </td>
     <td valign="top">
       <h3>Your setup, your choices</h3>
-      <p>Dark and light themes, six accents, customizable Home cards, optional tracking, and modules you can turn off.
+      <p>Six theme modes, twelve accents and custom colours, draggable Home cards, optional tracking, and modules you can turn off.
       Your setup and history stay in local files.</p>
     </td>
   </tr>
@@ -76,7 +89,7 @@ Clipboard history and screen time start off, and a desktop shortcut is optional.
 
 ## Find it. Run it. Get back to what you were doing.
 
-Open the command palette with **Ctrl+Alt+P** to find a tool, jump to a setting, launch an app,
+Open the command palette with **Ctrl+Alt+P** (or your own shortcut) to find a tool, jump to a setting, launch an app,
 or set a timer. Try a few:
 
 | Type | What happens |
@@ -86,7 +99,7 @@ or set a timer. Try a few:
 | `5 ft in cm` | Convert a measurement |
 | `Window Layouts` | Jump to your saved arrangements |
 
-Shortcuts are listed in Settings, and capture shortcuts can be changed on their tool pages.
+Every global shortcut can be changed by clicking its key in Settings. Capture, clipboard, colour-picker, crosshair, and palette shortcuts also have editors where you use them.
 
 ## Built to show you what's happening
 
@@ -137,8 +150,8 @@ Review these choices in **Settings → Privacy & data**. A shareable setup does 
 <details>
 <summary><strong>Does screen recording include sound?</strong></summary>
 
-The built-in MP4 and GIF recorder captures video without audio. Saving a recent gameplay clip uses Windows Game Bar
-and depends on its recording settings.
+Rig records game/system audio and an optional microphone into a mixed video track. Choose devices and levels in
+Capture settings. GIF exports have no sound. Rig 2.1 replay clips use Rig's own buffer; Game Bar is not required.
 
 </details>
 
@@ -158,7 +171,8 @@ Rig 2.0.0 can update to 2.1.0 from **Settings → Check for updates**. You can a
 and replace its EXE with the new download. Your settings are stored separately.
 
 If you used an earlier experimental build already numbered 2.1.0, download this release manually once.
-Existing settings and custom Home layouts are retained. The old default layout receives the new Home arrangement.
+Existing settings and custom Home layouts are retained. Factory layouts receive the new capture card.
+Rig 2.0.0 remains available as the preserved previous release.
 
 </details>
 
@@ -169,4 +183,4 @@ Existing settings and custom Home layouts are retained. The old default layout r
 - [Rig 2.1.0 release notes](docs/release-notes/v2.1.0.md)
 - [Report a bug or request a feature](https://github.com/vlyxxxxxq/rig/issues/new/choose)
 
-Built with **C#**, **WPF**, and **.NET 10**. The application has no third-party runtime packages.
+Built with **C#**, **WPF**, and **.NET 10**. Recording uses NAudio and a pinned FFmpeg build; see [component notices](docs/THIRD-PARTY.md).

@@ -27,26 +27,52 @@ public partial class SettingsView : UserControl
     }
 
     /// <summary>Every global shortcut, with the key it's on now.</summary>
-    public void ShowShortcuts(IEnumerable<(string What, string Key)> keys)
+    public event EventHandler? ShortcutsPaused, ShortcutsChanged;
+    readonly List<ShortcutCapture> _shortcutEditors = [];
+    public void ShowShortcuts() { foreach (var editor in _shortcutEditors) editor.Render(); }
+    void Shortcut_Loaded(object sender, RoutedEventArgs e)
     {
-        var rows = keys.Select(k => new ShortcutRow(k.What, k.Key)).ToList();
-        // Only rebuild the list when a key changed, so screen readers keep their place on repeat visits.
-        if (ShortcutList.ItemsSource is List<ShortcutRow> shown && shown.SequenceEqual(rows)) return;
-        ShortcutList.ItemsSource = rows;
+        if (sender is not Button button || button.Tag is not string property || _settings is null || button.DataContext is null) return;
+        if (button.ReadLocalValue(FrameworkElement.ToolTipProperty) is string) return;
+        button.ToolTip = "Click to change. Right-click to reset or unbind.";
+        _shortcutEditors.Add(new ShortcutCapture(button, _settings, property,
+            () => ShortcutsPaused?.Invoke(this, EventArgs.Empty), () => ShortcutsChanged?.Invoke(this, EventArgs.Empty)));
     }
-
-    public sealed record ShortcutRow(string What, string Key);
     /// <summary>A module was switched on or off (its id).</summary>
     public event Action<string>? ModuleChanged;
 
-    void Theme_Checked(object sender, RoutedEventArgs e)
+    void ThemeMode_Changed(object sender, SelectionChangedEventArgs e)
     {
-        if (_settings is null || !IsLoaded) return;
-        var theme = ThemeLight.IsChecked == true ? "Light" : "Dark";
-        if (theme == _settings.Theme) return;
-        _settings.Theme = theme;
-        _settings.Save();
-        RestartRow.Visibility = Visibility.Visible;
+        if (_settings is null || ThemeMode.SelectedItem is not string mode) return;
+        _settings.Theme = mode; ApplyAppearance();
+    }
+    void ApplyAppearance()
+    {
+        if (_settings is null) return;
+        _settings.Save(); Theme.Apply(Application.Current.Resources, _settings);
+        AccentHex.Text = _settings.Accent ?? Theme.Accents[0].Hex;
+        AppearanceStatus.Text = "Applied. No restart needed.";
+        RenderAccents();
+    }
+    void Appearance_Click(object sender, RoutedEventArgs e) => ApplyAppearance();
+    void ApplyAccent_Click(object sender, RoutedEventArgs e)
+    {
+        if (_settings is null) return;
+        var hex = AccentHex.Text.Trim();
+        if (!System.Text.RegularExpressions.Regex.IsMatch(hex, "^#[0-9a-fA-F]{6}$")) { AppearanceStatus.Text = "Use a colour like #4F8CFF."; return; }
+        _settings.Accent = hex.ToUpperInvariant(); ApplyAppearance();
+    }
+    void PickAccent_Click(object sender, RoutedEventArgs e)
+    {
+        using var picker = new System.Windows.Forms.ColorDialog { FullOpen = true };
+        if (picker.ShowDialog() != System.Windows.Forms.DialogResult.OK || _settings is null) return;
+        _settings.Accent = $"#{picker.Color.R:X2}{picker.Color.G:X2}{picker.Color.B:X2}"; ApplyAppearance();
+    }
+    void ResetAppearance_Click(object sender, RoutedEventArgs e)
+    {
+        if (_settings is null) return;
+        _settings.Theme = "Dark"; _settings.Accent = null; _settings.ThemeGlow = true; _settings.RoundCards = true;
+        ThemeMode.SelectedItem = "Dark"; DataContext = null; DataContext = _settings; ApplyAppearance();
     }
 
     void RenderAccents()
@@ -69,7 +95,7 @@ public partial class SettingsView : UserControl
                 _settings.Accent = hex;
                 _settings.Save();
                 RenderAccents();
-                RestartRow.Visibility = Visibility.Visible;
+                ApplyAppearance();
             };
             AccentSwatches.Children.Add(swatch);
         }
@@ -88,7 +114,7 @@ public partial class SettingsView : UserControl
         return new ControlTemplate(typeof(Button)) { VisualTree = ring };
     }
 
-    void RestartTheme_Click(object sender, RoutedEventArgs e) => App.Restart();
+
 
     /// <summary>One switch per module that can be turned off, grouped by category.</summary>
     void RenderModules()
@@ -158,7 +184,7 @@ public partial class SettingsView : UserControl
         if (!quiet) UpdateText.Text = "Checking GitHub…";
         try
         {
-            _update = await Updater.CheckAsync(_settings?.BetaUpdates == true);
+            _update = await Updater.CheckAsync();
             if (_update is null)
             {
                 UpdateTitle.Text = "You're up to date";
@@ -206,11 +232,13 @@ public partial class SettingsView : UserControl
     {
         Loaded += (_, _) => RenderModules();
         DataFolderText.Text = "Data folder: " + Path.GetDirectoryName(AppSettings.DataFile("settings.json"));
-        ThemeLight.IsChecked = settings.Theme == "Light";
-        ThemeDark.IsChecked = settings.Theme != "Light";
-        RenderAccents();
+        ThemeMode.ItemsSource = Theme.Modes;
+        ThemeMode.SelectedItem = settings.Theme;
+        AccentHex.Text = settings.Accent ?? Theme.Accents[0].Hex;
         _settings = settings;
         DataContext = settings;
+        ShortcutList.ItemsSource = Shortcuts.All;
+        RenderAccents();
         AutoStartSwitch.IsChecked = AutoStart.IsEnabled;
         SettingsPath.Text = "Settings file: " + (Environment.GetEnvironmentVariable("RIG_SETTINGS") is { Length: > 0 } p
             ? p : @"%AppData%\Rig\settings.json");
@@ -279,4 +307,13 @@ public partial class SettingsView : UserControl
 
     void TestNotification_Click(object sender, RoutedEventArgs e) =>
         TestNotificationRequested?.Invoke(this, EventArgs.Empty);
+
+    void Notices_Click(object sender, RoutedEventArgs e)
+    {
+        using var stream = typeof(App).Assembly.GetManifestResourceStream("Rig.ThirdPartyNotices.txt")!;
+        using var reader = new StreamReader(stream);
+        new Window { Title = "Rig · Licences & credits", Owner = Window.GetWindow(this), Width = 820, Height = 650,
+            Content = new TextBox { Text = reader.ReadToEnd(), IsReadOnly = true, TextWrapping = TextWrapping.Wrap,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto, Padding = new Thickness(20) } }.Show();
+    }
 }

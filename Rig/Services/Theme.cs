@@ -1,19 +1,17 @@
 using System.Windows;
 using System.Windows.Media;
-
 namespace Rig.Services;
-
 /// <summary>
 /// Dark or light colours plus an accent, written into the app's resources before any window opens.
-/// Every page uses these named colours, so a change applies on the next start.
+/// Named resources update in place so existing pages follow changes immediately.
 /// </summary>
 public static class Theme
 {
     public static readonly (string Name, string Hex)[] Accents =
     [
         ("Blue", "#4F8CFF"), ("Purple", "#9B6BFF"), ("Teal", "#22B8C8"), ("Green", "#2FBF7A"), ("Orange", "#FF8A3D"), ("Pink", "#F2559A"),
+        ("Cyan", "#20C7E8"), ("Red", "#E95565"), ("Gold", "#E5B84A"), ("Mint", "#64D9AF"), ("Indigo", "#7785F5"), ("Slate", "#8799B8"),
     ];
-
     static readonly Dictionary<string, (string Dark, string Light)> Palette = new()
     {
         ["Bg"] = ("#0F1117", "#F3F4F7"),
@@ -46,20 +44,40 @@ public static class Theme
         ["DangerTint"] = ("#3A1E1E", "#FAE1E0"),
         ["InfoTint"] = ("#1B2433", "#E2EAF9"),
     };
-
+    public static event Action? Changed;
+    public static readonly string[] Modes = ["Dark", "Light", "System", "Midnight", "Graphite", "OLED"];
+    public static bool ResolveDark(string mode) => mode != "Light" && (mode != "System" || Microsoft.Win32.Registry.GetValue(@"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize", "AppsUseLightTheme", 0) is not 1);
+    public static void Apply(ResourceDictionary resources, AppSettings settings)
+    {
+        Apply(resources, ResolveDark(settings.Theme), settings.Accent);
+        if (!SystemParameters.HighContrast)
+        {
+            string? surface = settings.Theme switch { "Midnight" => "#101828", "Graphite" => "#202020", "OLED" => "#000000", _ => null };
+            if (surface is not null)
+            {
+                var basis = Parse(surface);
+                foreach (var (key, amount) in new[] { ("Bg", 0.0), ("Sidebar", .025), ("Card", .055), ("Input", .015), ("Control", .10), ("Subtle", .08), ("Deep", 0.0) })
+                    Set(resources, key, Mix(basis, Colors.White, amount));
+            }
+            if (!settings.ThemeGlow)
+                foreach (var name in new[] { "AccentGlowEffect", "NavGlowEffect" })
+                    if (resources[name] is System.Windows.Media.Effects.DropShadowEffect effect) effect.Opacity = 0;
+        }
+        resources["CardCornerRadius"] = new CornerRadius(settings.RoundCards ? 12 : 3);
+        Changed?.Invoke();
+    }
     public static bool IsDark { get; private set; } = true;
-
     public static void Apply(ResourceDictionary resources, bool dark, string? accentHex)
     {
         IsDark = dark;
         foreach (var (key, (d, l)) in Palette) Set(resources, key, Parse(dark ? d : l));
         if (SystemParameters.HighContrast) { ApplyHighContrast(resources); return; }
-
         var accent = Parse(accentHex ?? Accents[0].Hex);
         // On light backgrounds the accent is darkened a little so text and icons in it stay readable.
         var ink = dark ? accent : Mix(accent, Colors.Black, 0.15);
         Set(resources, "Accent", ink);
         Set(resources, "AccentLight", dark ? Mix(accent, Colors.White, 0.3) : Mix(accent, Colors.Black, 0.1));
+        Set(resources, "PrimaryText", (accent.R * .2126 + accent.G * .7152 + accent.B * .0722) > 155 ? Parse("#11141B") : Colors.White);
         Set(resources, "Selected", dark ? Mix(Parse("#1B1F2A"), accent, 0.22) : Mix(Colors.White, accent, 0.16));
         resources["AccentColor"] = accent;
         resources["PrimaryStartColor"] = Mix(accent, Colors.White, 0.18);
@@ -70,11 +88,9 @@ public static class Theme
         resources["TitleEndColor"] = dark ? Mix(accent, Colors.White, 0.45) : ink;
         resources["AccentGlowColor"] = Color.FromArgb(0x1A, accent.R, accent.G, accent.B);
         resources["AccentGlowClearColor"] = Color.FromArgb(0, accent.R, accent.G, accent.B);
-
         // Covers a Home card while customizing.
         var veilBase = Parse(dark ? "#0F1117" : "#F3F4F7");
         resources["EditVeilBrush"] = Frozen(new SolidColorBrush(Color.FromArgb(0xD9, veilBase.R, veilBase.G, veilBase.B)));
-
         // Gradients and glows used by the shared styles.
         resources["TitleBrush"] = Frozen(new LinearGradientBrush((Color)resources["TitleStartColor"], (Color)resources["TitleEndColor"], 0));
         resources["PrimaryBrush"] = Frozen(new LinearGradientBrush((Color)resources["PrimaryStartColor"], (Color)resources["PrimaryEndColor"], 45));
@@ -84,9 +100,7 @@ public static class Theme
         resources["AccentGlowEffect"] = Frozen(new System.Windows.Media.Effects.DropShadowEffect { Color = accent, BlurRadius = 18, ShadowDepth = 0, Opacity = dark ? 0.55 : 0.35 });
         resources["NavGlowEffect"] = Frozen(new System.Windows.Media.Effects.DropShadowEffect { Color = accent, BlurRadius = 10, ShadowDepth = 0, Opacity = dark ? 0.7 : 0.3 });
     }
-
-    static T Frozen<T>(T f) where T : Freezable { f.Freeze(); return f; }
-
+    static T Frozen<T>(T f) where T : Freezable => f;
     /// <summary>Windows' contrast theme: every surface, text and border uses the system's own colours, and no gradients or glows.</summary>
     static void ApplyHighContrast(ResourceDictionary r)
     {
@@ -98,6 +112,7 @@ public static class Theme
         foreach (var key in new[] { "Muted", "DisabledText", "GridLine" }) Set(r, key, gray);
         foreach (var key in new[] { "Control", "Subtle", "Track", "Thumb", "NavHover" }) Set(r, key, control);
         foreach (var key in new[] { "Accent", "AccentLight", "Selected", "Good", "Warn", "Danger" }) Set(r, key, hilite);
+        Set(r, "PrimaryText", hiliteText);
         r["AccentColor"] = hilite;
         r["TitleBrush"] = Frozen(new SolidColorBrush(text));
         r["PrimaryBrush"] = Frozen(new SolidColorBrush(hilite));
@@ -108,19 +123,14 @@ public static class Theme
         r["NavGlowEffect"] = Frozen(new System.Windows.Media.Effects.DropShadowEffect { Opacity = 0 });
         _ = hiliteText;
     }
-
     static void Set(ResourceDictionary resources, string key, Color c)
     {
-        var brush = new SolidColorBrush(c);
-        brush.Freeze();
-        resources[key + "Brush"] = brush;
+        if (resources[key + "Brush"] is SolidColorBrush old && !old.IsFrozen) old.Color = c;
+        else resources[key + "Brush"] = new SolidColorBrush(c);
     }
-
     public static Color Parse(string hex) => (Color)ColorConverter.ConvertFromString(hex);
-
     public static Color Mix(Color a, Color b, double t) => Color.FromRgb(
         (byte)(a.R + (b.R - a.R) * t), (byte)(a.G + (b.G - a.G) * t), (byte)(a.B + (b.B - a.B) * t));
-
     /// <summary>Caption bar colours for DWM (COLORREF is 0x00BBGGRR).</summary>
     public static (int Caption, int Border) WindowFrame =>
         IsDark ? (0x00211815, 0x00382B26) : (0x00EFEAE8, 0x00E8E1DD);

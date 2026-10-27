@@ -18,6 +18,7 @@ public static class Modules
         new(Home, "Home", "", "", "Your cards: pinned tools, PC health and more", Core: true),
 
         new("Game", "Game Mode", "", "Gaming", "Boosts your PC while you play", Core: true),
+        new("Clips", "Clips & Recording", "", "Gaming", "Replay clips, recording, audio and trimming"),
         new("Library", "Game Library", "", "Gaming", "Installed games, news and free games"),
         new("Crosshair", "Crosshair", "", "Gaming", "A custom crosshair over your games"),
         new("Controller", "Controller Tester", "", "Gaming", "Buttons, sticks, drift and rumble"),
@@ -25,7 +26,6 @@ public static class Modules
 
         new("Photos", "Similar Photos", "\uE91B", "Media", "Find and clear out near-duplicate photos"),
         new("ColorPicker", "Color Picker & Ruler", "\uE790", "Media", "Pick any colour on screen, measure in pixels"),
-        new("Clips", "Clips & Recording", "", "Media", "Clips, screenshots and screen recording"),
 
         new("Clipboard", "Clipboard & Notes", "", "Productivity", "Clipboard history and quick notes"),
         new("ScreenTime", "Screen Time", "", "Productivity", "Time per app and break reminders"),

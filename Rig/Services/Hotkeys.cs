@@ -63,7 +63,8 @@ public readonly record struct Hotkey(System.Windows.Input.ModifierKeys Modifiers
     public uint NativeModifiers =>
         (Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Alt) ? HotkeyHost.MOD_ALT : 0) |
         (Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Control) ? HotkeyHost.MOD_CONTROL : 0) |
-        (Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Shift) ? HotkeyHost.MOD_SHIFT : 0);
+        (Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Shift) ? HotkeyHost.MOD_SHIFT : 0) |
+        (Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Windows) ? 8u : 0);
 
     public override string ToString()
     {
@@ -71,6 +72,7 @@ public readonly record struct Hotkey(System.Windows.Input.ModifierKeys Modifiers
         if (Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Control)) parts.Add("Ctrl");
         if (Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Shift)) parts.Add("Shift");
         if (Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Alt)) parts.Add("Alt");
+        if (Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Windows)) parts.Add("Win");
         parts.Add(Key switch
         {
             >= System.Windows.Input.Key.D0 and <= System.Windows.Input.Key.D9 => ((int)Key - (int)System.Windows.Input.Key.D0).ToString(),
@@ -92,8 +94,10 @@ public readonly record struct Hotkey(System.Windows.Input.ModifierKeys Modifiers
                 case "ctrl": mods |= System.Windows.Input.ModifierKeys.Control; break;
                 case "shift": mods |= System.Windows.Input.ModifierKeys.Shift; break;
                 case "alt": mods |= System.Windows.Input.ModifierKeys.Alt; break;
-                case "printscreen": key = System.Windows.Input.Key.Snapshot; break;
+                case "win": case "windows": mods |= System.Windows.Input.ModifierKeys.Windows; break;
+                case "printscreen": if (key is not null) return null; key = System.Windows.Input.Key.Snapshot; break;
                 default:
+                    if (key is not null) return null;
                     if (part.Length == 1 && char.IsDigit(part[0])) key = System.Windows.Input.Key.D0 + (part[0] - '0');
                     else if (Enum.TryParse<System.Windows.Input.Key>(part, true, out var k)) key = k;
                     else return null;
@@ -103,10 +107,10 @@ public readonly record struct Hotkey(System.Windows.Input.ModifierKeys Modifiers
         return key is { } kk ? new Hotkey(mods, kk) : null;
     }
 
-    /// <summary>F-keys and Print Screen can stand alone; anything else needs Ctrl or Alt so typing isn't hijacked.</summary>
-    public bool IsUsable =>
-        Key is >= System.Windows.Input.Key.F1 and <= System.Windows.Input.Key.F24 or System.Windows.Input.Key.Snapshot ||
-        Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Control) || Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Alt);
+    /// <summary>Action keys can be reassigned freely; modifier-only values are not valid shortcuts.</summary>
+    public bool IsUsable => Enum.IsDefined(Key) && Key is not (System.Windows.Input.Key.None or System.Windows.Input.Key.System
+        or System.Windows.Input.Key.LeftCtrl or System.Windows.Input.Key.RightCtrl or System.Windows.Input.Key.LeftAlt or System.Windows.Input.Key.RightAlt
+        or System.Windows.Input.Key.LeftShift or System.Windows.Input.Key.RightShift or System.Windows.Input.Key.LWin or System.Windows.Input.Key.RWin);
 }
 
 /// <summary>Sends key presses to whatever window has focus.</summary>

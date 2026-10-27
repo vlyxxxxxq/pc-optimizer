@@ -21,6 +21,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        if (Environment.GetEnvironmentVariable("RIG_TEST_CAPTURE_SYNTHETIC") == "1") Title = "Rig · capture test";
 
         AdminStatus.Text = Elevation.IsElevated ? "● Administrator mode" : "● Standard mode · some features need admin";
         AdminStatus.Foreground = (Brush)FindResource(Elevation.IsElevated ? "GoodBrush" : "MutedBrush");
@@ -36,7 +37,12 @@ public partial class MainWindow : Window
         _screenTime.Notify += Notify;
         _power = new PowerTimer(() => _gameMode.Detector.Libraries.Where(l => l.Source == "Steam" && l.Name is null).Select(l => l.Root));
         _power.Due += action => new Views.PowerCountdown(action).Show();
-        _recorder.Finished += (file, error) => Dispatcher.BeginInvoke(() => RecordingFinished(file, error));
+        _studio = new CaptureStudio(_settings);
+        _studio.Saved += file => Dispatcher.BeginInvoke(() => { if (_cleanedUp) return; Notify("Capture saved", Path.GetFileName(file)); ReloadClips(); });
+        _studio.Changed += () => Dispatcher.BeginInvoke(() => { if (_cleanedUp) return; Created<Views.DashboardView>(Modules.Home)?.SetCapture(_studio); Created<Views.ClipsView>("Clips")?.ShowRecording(_studio.IsRecording); if (!_studio.IsRecording) { _recordingBar?.Close(); _recordingBar = null; } });
+        Theme.Changed += OnThemeChanged;
+        Microsoft.Win32.SystemEvents.UserPreferenceChanged += WindowsPreferenceChanged;
+        _gameMode.StateChanged += async (_, _) => await UpdateAutomaticReplayAsync();
         _timers.Fired += TimerFired;
         _timers.Enabled = IsOn("Timers");
         RegisterPages();
@@ -52,6 +58,7 @@ public partial class MainWindow : Window
         _musicTimer.Tick += async (_, _) => await UpdateMusicAsync();
         SetNowPlaying(_settings.ShowNowPlaying);
         SetUpHotkeys(); // own hidden window, so they work while the app sits in the tray
+        _ = new Views.ShortcutCapture(PaletteKeyText, _settings, nameof(AppSettings.PaletteHotkey), PauseAllHotkeys, RebindAllHotkeys);
 
         // Crosshair: follows the chosen games, the "Show now" switch and its hotkey.
         _crosshairTimer.Tick += (_, _) => UpdateCrosshair();
@@ -148,6 +155,7 @@ public partial class MainWindow : Window
 
     async Task RefreshHomeCoreAsync(Views.DashboardView home)
     {
+        if (home.Shows("clips")) home.SetCapture(_studio);
         if (home.Shows("gamemode"))
         {
             if (!_lastSessionLoaded)
@@ -250,6 +258,9 @@ public partial class MainWindow : Window
                 switch (action)
                 {
                     case "clean": Go("Cleaner"); break;
+                    case "replay-toggle": ToggleReplay(); break;
+                    case "clip-save": SaveClip(); break;
+                    case "record-toggle": ToggleRecording(); break;
                     case "game-toggle": await _gameMode.ToggleAsync(); await RefreshHomeAsync(); break;
                     case "startup": Go("Startup"); break;
                     case "disk": Go("Disk"); break;
@@ -285,18 +296,13 @@ public partial class MainWindow : Window
             p.Attach(_settings);
             p.TestNotificationRequested += (_, _) => _tray.Notify("Notifications work", "You'll see Game Mode alerts like this one.");
             p.NowPlayingChanged += SetNowPlaying;
+            p.ShortcutsPaused += (_, _) => PauseAllHotkeys();
+            p.ShortcutsChanged += (_, _) => RebindAllHotkeys();
             p.PrivacyChanged += (_, _) => { foreach (var id in new[] { "Clipboard", "ScreenTime", "Input" }) ApplyModule(id); };
             p.IsVisibleChanged += (_, _) =>
             {
                 if (!p.IsVisible) return;
-                p.ShowShortcuts(
-                [
-                    ("Command palette", PaletteKeyText.Text is { Length: > 0 } k ? k : "taken by another app"),
-                    ("Clipboard history", "Ctrl+Alt+V"),
-                    ("Save the last 30 seconds", _settings.ClipHotkey), ("Screenshot", _settings.ScreenshotHotkey),
-                    ("Record screen", _settings.RecordHotkey), ("Crosshair on/off", _settings.CrosshairHotkey),
-                    ("Pick a colour", _settings.ColorHotkey),
-                ]);
+                p.ShowShortcuts();
             };
             p.ModuleChanged += ApplyModule;
             p.UpdateFound += info =>
@@ -327,13 +333,16 @@ public partial class MainWindow : Window
         Register("Clips", () =>
         {
             var p = new Views.ClipsView();
-            p.Attach(_settings);
-            p.HotkeysChanged += (_, _) => RegisterCaptureHotkeys();
-            p.HotkeysPaused += (_, _) => { _captureKeys?.Dispose(); _captureKeys = null; };
+            p.Attach(_settings, _studio);
+            p.HotkeysChanged += (_, _) => RebindAllHotkeys();
+            p.HotkeysPaused += (_, _) => PauseAllHotkeys();
             p.ScreenshotRequested += (_, _) => TakeScreenshot();
             p.RecordRequested += (_, _) => ToggleRecording();
             p.ShowHotkeyState(_captureState.Clip, _captureState.Shot, _captureState.Record);
-            p.ShowRecording(_recorder.IsRecording);
+            p.ReplayRequested += (_, _) => ToggleReplay();
+            p.SaveClipRequested += (_, _) => SaveClip();
+            p.RegionRequested += (_, _) => RecordRegion();
+            p.ShowRecording(_studio.IsRecording);
             return p;
         }, p => p.EnsureLoaded());
         Register("Input", () => { var p = new Views.InputStatsView(); p.Attach(_settings, _inputStats); return p; }, p => p.EnsureLoaded());
@@ -343,13 +352,20 @@ public partial class MainWindow : Window
         {
             var p = new Views.ColorPickerView();
             p.Attach(_settings, _colorKeyOk ? _settings.ColorHotkey : $"{_settings.ColorHotkey} is taken");
+            p.HotkeysPaused += (_, _) => PauseAllHotkeys();
+            p.HotkeysChanged += (_, _) => RebindAllHotkeys();
             p.PickRequested += async (_, _) => await PickColorAsync();
             p.MeasureRequested += async (_, _) => await MeasureAsync();
             return p;
         });
         Register("Timers", () => { var p = new Views.TimersView(); p.Attach(_timers); return p; });
         Register("Layouts", () => { var p = new Views.LayoutsView(); p.Attach(_settings); return p; }, p => p.EnsureLoaded());
-        Register("Clipboard", () => { var p = new Views.ClipboardView(); p.Attach(_settings, _clipboard); return p; });
+        Register("Clipboard", () =>
+        {
+            var p = new Views.ClipboardView(); p.Attach(_settings, _clipboard);
+            p.HotkeysPaused += (_, _) => PauseAllHotkeys(); p.HotkeysChanged += (_, _) => RebindAllHotkeys();
+            return p;
+        });
         Register("ScreenTime", () => { var p = new Views.ScreenTimeView(); p.Attach(_settings, _screenTime); return p; }, p => p.EnsureLoaded());
         Register("Crosshair", () =>
         {
@@ -357,8 +373,8 @@ public partial class MainWindow : Window
             p.Attach(_settings);
             p.Changed += (_, _) => { SyncCrosshairTimer(); UpdateCrosshair(); };
             p.ShowRequested += on => { _crosshairManual = on; SyncCrosshairTimer(); UpdateCrosshair(); };
-            p.HotkeyPaused += (_, _) => { _crosshairKeys?.Dispose(); _crosshairKeys = null; };
-            p.HotkeyChanged += (_, _) => RegisterCrosshairHotkey();
+            p.HotkeyPaused += (_, _) => PauseAllHotkeys();
+            p.HotkeyChanged += (_, _) => RebindAllHotkeys();
             p.ShowHotkeyState(_crosshairKeyOk);
             p.SetShowing(_crosshairManual);
             return p;
@@ -528,7 +544,8 @@ public partial class MainWindow : Window
     void MusicPlay_Click(object sender, RoutedEventArgs e) => NowPlaying.PlayPause();
     async void MusicNext_Click(object sender, RoutedEventArgs e) { NowPlaying.Next(); await Task.Delay(1200); await UpdateMusicAsync(); }
     async void MusicPrev_Click(object sender, RoutedEventArgs e) { NowPlaying.Previous(); await Task.Delay(1200); await UpdateMusicAsync(); }
-    readonly ScreenRecorder _recorder = new();
+    readonly CaptureStudio _studio;
+    bool _automaticReplay;
     Views.RecordingBar? _recordingBar;
     bool _picking;
     Views.ClipboardPopup? _clipboardPopup;
@@ -536,16 +553,27 @@ public partial class MainWindow : Window
     /// <summary>Global hotkeys: Ctrl+Alt+V for clipboard history (always), capture keys if switched on.</summary>
     void SetUpHotkeys()
     {
+        _hotkeys?.Dispose();
         _hotkeys = new HotkeyHost();
         _hotkeys.ClipboardChanged += (_, _) => _clipboard.OnClipboardChanged();
-        _hotkeys.Register(HotkeyHost.MOD_CONTROL | HotkeyHost.MOD_ALT, Key.V, () =>
+        if (Hotkey.Parse(_settings.ClipboardHotkey) is { } clipboardKey) _hotkeys.Register(clipboardKey, () =>
         {
             if (_clipboard.Enabled) (_clipboardPopup ??= new Views.ClipboardPopup(_clipboard)).Open();
         });
-        // Ctrl+Alt+Space if free, otherwise Ctrl+Alt+P; the sidebar shows which one worked.
-        PaletteKeyText.Text = _hotkeys.Register(HotkeyHost.MOD_CONTROL | HotkeyHost.MOD_ALT, Key.Space, OpenPalette) ? "Ctrl+Alt+Space"
-            : _hotkeys.Register(HotkeyHost.MOD_CONTROL | HotkeyHost.MOD_ALT, Key.P, OpenPalette) ? "Ctrl+Alt+P" : "";
+        PaletteKeyText.Content = Hotkey.Parse(_settings.PaletteHotkey) is { } palette && _hotkeys.Register(palette, OpenPalette)
+            ? _settings.PaletteHotkey : "Shortcut unavailable";
         RegisterCaptureHotkeys();
+    }
+
+    void PauseAllHotkeys()
+    {
+        _hotkeys?.Dispose(); _hotkeys = null; _captureKeys?.Dispose(); _captureKeys = null; _crosshairKeys?.Dispose(); _crosshairKeys = null;
+    }
+    void RebindAllHotkeys()
+    {
+        PauseAllHotkeys(); SetUpHotkeys();
+        if (IsOn("Crosshair")) RegisterCrosshairHotkey();
+        Created<Views.SettingsView>(Modules.Settings)?.ShowShortcuts();
     }
 
     void PaletteHint_Click(object sender, MouseButtonEventArgs e) => OpenPalette();
@@ -561,6 +589,7 @@ public partial class MainWindow : Window
             clipOk = Hotkey.Parse(_settings.ClipHotkey) is { } clip && _captureKeys.Register(clip, SaveClip);
             shotOk = Hotkey.Parse(_settings.ScreenshotHotkey) is { } shot && _captureKeys.Register(shot, TakeScreenshot);
             recordOk = Hotkey.Parse(_settings.RecordHotkey) is { } rec && _captureKeys.Register(rec, ToggleRecording);
+            if (Hotkey.Parse(_settings.ReplayHotkey) is { } replay) _captureKeys.Register(replay, ToggleReplay);
         }
         if (IsOn("ColorPicker"))
         {
@@ -571,55 +600,70 @@ public partial class MainWindow : Window
         Created<Views.ClipsView>("Clips")?.ShowHotkeyState(clipOk, shotOk, recordOk);
     }
 
-    /// <summary>Starts a recording (after picking an area) or stops the one running.</summary>
+    ScreenArea CaptureArea()
+    {
+        var screens = System.Windows.Forms.Screen.AllScreens;
+        var selected = _settings.CaptureMonitor >= 0 && _settings.CaptureMonitor < screens.Length ? screens[_settings.CaptureMonitor] : System.Windows.Forms.Screen.PrimaryScreen!;
+        if (_settings.CaptureMonitor == -1 && _gameMode.Game is { } game)
+        {
+            try { using var process = System.Diagnostics.Process.GetProcessById(game.Pid); if (process.MainWindowHandle != IntPtr.Zero) selected = System.Windows.Forms.Screen.FromHandle(process.MainWindowHandle); } catch { }
+        }
+        var bounds = selected.Bounds;
+        return new ScreenArea(bounds.X, bounds.Y, bounds.Width, bounds.Height);
+    }
+    async void ToggleReplay()
+    {
+        if (!IsOn("Clips")) return;
+        await _studio.ToggleReplayAsync(CaptureArea(), _gameMode.Game?.Name ?? "Desktop");
+        if (_studio.LastError is { } error) Notify("Capture needs attention", error);
+    }
     async void ToggleRecording()
     {
-        if (_recorder.IsRecording) { _recorder.Stop(); return; }
-        if (_picking) return;
+        if (!IsOn("Clips")) return;
+        await StartOrStopRecordingAsync(CaptureArea());
+    }
+    async Task StartOrStopRecordingAsync(ScreenArea area)
+    {
+        await _studio.ToggleRecordingAsync(area, _gameMode.Game?.Name ?? "Desktop");
+        if (_studio.LastError is { } error) Notify("Capture needs attention", error);
+        if (_studio.IsRecording && _recordingBar is null)
+        {
+            _recordingBar = new Views.RecordingBar(area, () => _studio.Elapsed, _settings.RecordHotkey);
+            _recordingBar.StopRequested += (_, _) => ToggleRecording(); _recordingBar.Show();
+        }
+    }
+    async void RecordRegion()
+    {
+        if (_picking || _studio.Active) return;
         _picking = true;
-        ScreenArea? area;
-        try { area = await new Views.RegionPicker().PickAsync(); }
+        try { if (await new Views.RegionPicker().PickAsync() is { Width: >= 16, Height: >= 16 } area) await StartOrStopRecordingAsync(area); }
         finally { _picking = false; }
-        if (area is not { Width: >= 16, Height: >= 16 } a) return;
-        _recorder.Start(a, _settings.RecordGif, _settings.RecordCursor, _gameMode.Game?.Name ?? "Recording");
-        _recordingBar = new Views.RecordingBar(a, () => _recorder.Elapsed, _settings.RecordHotkey);
-        _recordingBar.StopRequested += (_, _) => _recorder.Stop();
-        _recordingBar.Show();
-        Created<Views.ClipsView>("Clips")?.ShowRecording(true);
     }
-
-    void RecordingFinished(string? file, string? error)
-    {
-        _recordingBar?.Close();
-        _recordingBar = null;
-        Created<Views.ClipsView>("Clips")?.ShowRecording(false);
-        if (file is null)
-        {
-            Notify("Recording failed", error ?? "Nothing was saved.");
-            if (!_settings.Notifications) MessageBox.Show($"The recording couldn't be saved.\n{error}", "Rig");
-            return;
-        }
-        Notify(file.EndsWith(".gif", StringComparison.OrdinalIgnoreCase) ? "GIF saved" : "Recording saved", Path.GetFileName(file));
-        ReloadClips();
-    }
-
     void ReloadClips() { if (Created<Views.ClipsView>("Clips") is { IsVisible: true } clips) clips.Reload(); }
-
-    void SaveClip()
+    async void SaveClip()
     {
-        if (!Captures.BackgroundRecording)
+        if (!IsOn("Clips")) return;
+        await _studio.SaveReplayAsync();
+        if (_studio.LastError is { } error) Notify("Clip wasn't saved", error);
+    }
+    async Task UpdateAutomaticReplayAsync()
+    {
+        if (!IsOn("Clips")) return;
+        if (_settings.ReplayWithGameMode && _gameMode.State == GameModeState.On && !_studio.ReplayEnabled)
         {
-            Notify("Clips need background recording", "Open Clips & Screenshots in Rig and turn on background recording.");
-            return;
+            await _studio.ToggleReplayAsync(CaptureArea(), _gameMode.Game?.Name ?? "Desktop");
+            _automaticReplay = _studio.ReplayEnabled;
         }
-        Captures.SaveClip();
-        // Game Bar shows its own "Game clip recorded" toast; refresh the gallery once the file has been written.
-        Dispatcher.InvokeAsync(async () => { await Task.Delay(8000); ReloadClips(); });
+        else if (_automaticReplay && _gameMode.State is GameModeState.Off or GameModeState.RecoveryNeeded)
+        {
+            _automaticReplay = false;
+            if (_studio.ReplayEnabled) await _studio.ToggleReplayAsync(CaptureArea(), "Desktop");
+        }
     }
 
     void TakeScreenshot()
     {
-        var file = Captures.Screenshot(_gameMode.Game?.Name);
+        var file = Captures.Screenshot(_gameMode.Game?.Name, Path.Combine(_studio.Folder, "Screenshots"));
         if (file is null) { Notify("Screenshot failed", "Windows didn't allow the screen to be captured."); return; }
         Notify("Screenshot saved", Path.GetFileName(file));
         ReloadClips();
@@ -635,6 +679,23 @@ public partial class MainWindow : Window
         Native.DwmSetWindowAttribute(hwnd, Native.DWMWA_USE_IMMERSIVE_DARK_MODE, ref dark, sizeof(int));
         Native.DwmSetWindowAttribute(hwnd, Native.DWMWA_CAPTION_COLOR, ref caption, sizeof(int));
         Native.DwmSetWindowAttribute(hwnd, Native.DWMWA_BORDER_COLOR, ref border, sizeof(int));
+    }
+
+    void WindowsPreferenceChanged(object sender, Microsoft.Win32.UserPreferenceChangedEventArgs e)
+    {
+        if (_settings.Theme == "System") Dispatcher.BeginInvoke(() => Theme.Apply(Application.Current.Resources, _settings));
+    }
+    void OnThemeChanged()
+    {
+        var hwnd = new WindowInteropHelper(this).Handle;
+        if (hwnd != IntPtr.Zero)
+        {
+            int dark = Theme.IsDark ? 1 : 0; var (caption, border) = Theme.WindowFrame;
+            Native.DwmSetWindowAttribute(hwnd, Native.DWMWA_USE_IMMERSIVE_DARK_MODE, ref dark, sizeof(int));
+            Native.DwmSetWindowAttribute(hwnd, Native.DWMWA_CAPTION_COLOR, ref caption, sizeof(int));
+            Native.DwmSetWindowAttribute(hwnd, Native.DWMWA_BORDER_COLOR, ref border, sizeof(int));
+        }
+        BuildNav(); RenderPins();
     }
 
     public void ShowFromTray()
@@ -688,8 +749,9 @@ public partial class MainWindow : Window
         _crosshairKeys?.Dispose();
         _screenTime.Stop();
         // Finish a recording in progress so the file is complete (playable) before the app goes away.
-        if (_recorder.IsRecording && !_recorder.StopAndWait(TimeSpan.FromSeconds(30)))
-            try { File.AppendAllText(AppSettings.DataFile(Path.Combine("logs", "recordings.log")), $"{DateTime.Now:s} recording didn't finish before exit{Environment.NewLine}"); } catch { }
+        try { if (!_studio.StopAndWait(TimeSpan.FromSeconds(30))) File.AppendAllText(AppSettings.DataFile(Path.Combine("logs", "recordings.log")), $"{DateTime.Now:s} recording finalization is pending; replay recovery segments were retained{Environment.NewLine}"); } catch { }
+        Theme.Changed -= OnThemeChanged;
+        Microsoft.Win32.SystemEvents.UserPreferenceChanged -= WindowsPreferenceChanged;
         _inputStats.Stop();
         Created<Views.ClipboardView>("Clipboard")?.FlushNotes();
         _hotkeys?.Dispose();

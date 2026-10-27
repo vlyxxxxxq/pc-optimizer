@@ -3,7 +3,7 @@
 [Download Rig 2.1.0](https://github.com/vlyxxxxxq/rig/releases/download/v2.1.0/Rig.exe) Â· [Back to the overview](../README.md)
 
 Rig groups its tools into Gaming, Media, Productivity, Files, and System. Turn off unused modules in Settings.
-Pin tools to Home, arrange the cards, or choose a compact preset.
+Pin tools to Home, drag the cards, or choose a compact preset.
 
 ## Home and search
 
@@ -37,8 +37,7 @@ Power-plan and priority changes are preferences to evaluate on your PC, not guar
 - **Similar Photos:** separate byte-for-byte duplicates from visual look-alikes. See the match reason and choose a keeper.
   Only exact copies are preselected; look-alikes require your review. Selected photos go to the Recycle Bin.
 - **Color Picker & Ruler:** freeze the screen, magnify a pixel, copy its color, or drag to measure a region.
-- **Clips & Recording:** screenshots, recent clips through Game Bar, and region recording to MP4 or GIF.
-  The built-in recorder captures video without audio.
+- **Clips & Recording:** Rig replay clips (15–120 seconds), manual display/area recording, game/system audio, optional microphone, quality presets and custom capture settings. Search and favourite captures, preview video, trim a copy, and export GIFs. Audio is mixed; GIFs are silent. Interrupted recordings have a recovery action.
 
 ## Productivity
 

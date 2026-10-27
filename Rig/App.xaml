@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:views="clr-namespace:Rig.Views">
     <Application.Resources>
+        <CornerRadius x:Key="CardCornerRadius">12</CornerRadius>
         <!-- Palette: dark defaults; Services/Theme.cs replaces these (and adds the other named colours) at start -->
         <SolidColorBrush x:Key="BgBrush" Color="#0F1117"/>
         <SolidColorBrush x:Key="SidebarBrush" Color="#151821"/>
@@ -39,7 +40,6 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <views:InverseBoolToVisibility x:Key="InverseBoolToVis"/>
         <views:NotConverter x:Key="Not"/>
-
         <!-- Typography -->
         <Style x:Key="PageTitle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="28"/>
@@ -67,13 +67,12 @@
             <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
-
         <!-- Card -->
         <Style x:Key="Card" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="CornerRadius" Value="{DynamicResource CardCornerRadius}"/>
             <Setter Property="Padding" Value="18"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
@@ -81,7 +80,6 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
-
         <!-- Buttons -->
         <Style TargetType="Button">
             <Setter Property="Background" Value="{DynamicResource ControlBrush}"/>
@@ -117,7 +115,7 @@
             </Setter>
         </Style>
         <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Background" Value="{DynamicResource PrimaryBrush}"/>
             <Style.Triggers>
@@ -155,7 +153,6 @@
                 </MultiTrigger>
             </Style.Triggers>
         </Style>
-
         <!-- Default radio buttons: dark pills (e.g. Daily / Weekly / Monthly) -->
         <Style TargetType="RadioButton">
             <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
@@ -181,7 +178,6 @@
                 </Setter.Value>
             </Setter>
         </Style>
-
         <!-- Sidebar navigation -->
         <Style x:Key="NavSection" TargetType="TextBlock">
             <Setter Property="FontSize" Value="10.5"/>
@@ -227,7 +223,6 @@
                 </Setter.Value>
             </Setter>
         </Style>
-
         <!-- Progress bar -->
         <Style TargetType="ProgressBar">
             <Setter Property="Height" Value="8"/>
@@ -268,7 +263,6 @@
                 </Setter.Value>
             </Setter>
         </Style>
-
         <!-- Checkbox -->
         <Style TargetType="CheckBox">
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
@@ -299,7 +293,6 @@
                 </Setter.Value>
             </Setter>
         </Style>
-
         <!-- Toggle switch (a CheckBox underneath) -->
         <Style x:Key="Switch" TargetType="CheckBox">
             <Setter Property="Cursor" Value="Hand"/>
@@ -338,7 +331,6 @@
                 </Setter.Value>
             </Setter>
         </Style>
-
         <!-- Small rounded label -->
         <!-- Small icon button for the sidebar music controls -->
         <Style x:Key="MediaButton" TargetType="Button">
@@ -368,7 +360,6 @@
             <Setter Property="Background" Value="{DynamicResource ControlBrush}"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
-
         <!-- Text input -->
         <!-- Drop-down lists, in the theme's colours -->
         <Style TargetType="ComboBox">
@@ -453,7 +444,6 @@
                 </Setter.Value>
             </Setter>
         </Style>
-
         <Style TargetType="TextBox">
             <Setter Property="Background" Value="{DynamicResource InputBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
@@ -461,7 +451,6 @@
             <Setter Property="CaretBrush" Value="{DynamicResource TextBrush}"/>
             <Setter Property="Padding" Value="8,6"/>
         </Style>
-
         <!-- Scrollbars: slim, dark, rounded -->
         <Style x:Key="ScrollThumb" TargetType="Thumb">
             <Setter Property="Template">
@@ -537,7 +526,6 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
-
         <!-- Plain list rows (no blue system highlight) -->
         <Style x:Key="PlainListItem" TargetType="ListBoxItem">
             <Setter Property="Cursor" Value="Hand"/>
@@ -560,7 +548,6 @@
                 </Setter.Value>
             </Setter>
         </Style>
-
         <!-- Data grid -->
         <Style TargetType="DataGrid">
             <Setter Property="Background" Value="Transparent"/>

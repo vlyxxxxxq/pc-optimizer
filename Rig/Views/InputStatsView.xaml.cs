@@ -13,6 +13,7 @@ public partial class InputStatsView : UserControl
     InputStats? _stats;
     AppSettings? _settings;
     InputStatsData? _data;
+    readonly System.Windows.Threading.DispatcherTimer _refresh = new() { Interval = TimeSpan.FromSeconds(1) };
 
     // A 75% (TKL-style) layout: label, virtual-key code, width in key units. A 0 code is a gap.
     static readonly (string Label, int Vk, double W)[][] Layout =
@@ -43,7 +44,13 @@ public partial class InputStatsView : UserControl
             var l => l,
         });
 
-    public InputStatsView() => InitializeComponent();
+    public InputStatsView()
+    {
+        InitializeComponent();
+        _refresh.Tick += (_, _) => Render();
+        IsVisibleChanged += (_, _) => { if (IsVisible) { Render(); _refresh.Start(); } else _refresh.Stop(); };
+        Unloaded += (_, _) => _refresh.Stop();
+    }
 
     public void Attach(AppSettings settings, InputStats stats)
     {
@@ -84,7 +91,8 @@ public partial class InputStatsView : UserControl
 
         var games = _data.Games.OrderByDescending(g => g.Value.Seconds).ToList();
         var selected = GamePicker.SelectedItem as string;
-        GamePicker.ItemsSource = games.Select(g => g.Key).ToList();
+        var names = games.Select(g => g.Key).ToList();
+        if (GamePicker.ItemsSource is not List<string> oldNames || !oldNames.SequenceEqual(names)) GamePicker.ItemsSource = names;
         GamePicker.SelectedItem = selected is not null && _data.Games.ContainsKey(selected) ? selected : games.FirstOrDefault().Key;
         GameList.ItemsSource = games.Select(g => new GameInputRow(g.Key, ScreenTimeView.Short(TimeSpan.FromSeconds(g.Value.Seconds)),
             Count(g.Value.Keys), Count(g.Value.Clicks), g.Value.Apm > 0 ? $"{g.Value.Apm:0}" : "–",
@@ -165,21 +173,23 @@ public partial class InputStatsView : UserControl
         if (_data is null) return;
         var cells = HeatClick.IsChecked == true ? _data.ClickHeat : _data.MoveHeat;
         int w = InputStatsData.HeatW, h = InputStatsData.HeatH;
-        double max = Math.Max(1, cells.DefaultIfEmpty(0).Max());
+        var density = Heatmaps.Smooth(cells, w, h);
+        double max = Math.Max(0.000001, density.DefaultIfEmpty(0).Max());
         var accent = ((SolidColorBrush)FindResource("AccentBrush")).Color;
         var pixels = new byte[w * h * 4];
         for (int i = 0; i < cells.Length; i++)
         {
             // Log scale: the area around the taskbar would otherwise drown out everything else.
-            double t = cells[i] == 0 ? 0 : Math.Log(1 + cells[i]) / Math.Log(1 + max);
+            double t = density[i] == 0 ? 0 : Math.Log(1 + density[i]) / Math.Log(1 + max);
             var c = Heat(t, accent);
             pixels[i * 4] = c.B; pixels[i * 4 + 1] = c.G; pixels[i * 4 + 2] = c.R; pixels[i * 4 + 3] = 255;
         }
         HeatImage.Source = BitmapSource.Create(w, h, 96, 96, PixelFormats.Bgra32, null, pixels, w * 4);
         // Same shape as the screens; fit to the card's width.
-        double vw = SystemParameters.VirtualScreenWidth, vh = SystemParameters.VirtualScreenHeight;
-        HeatFrame.Width = 440;
-        HeatFrame.Height = 440 * vh / Math.Max(1, vw);
+        double vw = _data.ScreenWidth, vh = _data.ScreenHeight;
+        double width = Math.Max(160, Math.Min(800, ActualWidth > 100 ? (ActualWidth - 112) / 2 : 440));
+        HeatFrame.Width = width;
+        HeatFrame.Height = Math.Clamp(width * vh / Math.Max(1, vw), 100, 450);
     }
 
     void RenderWeek()

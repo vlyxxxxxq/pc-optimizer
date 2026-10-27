@@ -33,12 +33,16 @@ internal static class PreviewExport
                 home.PinnedPanel.Children.Add(Views.DashboardView.ToolButton(module, () => { }));
             }
             home.SetRecentTools(new[] { Modules.Get("Library"), Modules.Get("Disk"), Modules.Get("Timers") });
-            Save(home, directory, light ? "home-light.png" : "home.png", 1040, 1000);
+            Save(home, directory, light ? "home-light.png" : "home.png", 1040, 1220);
             if (light) continue;
             var game = new Views.GameModeView();
             settings.GameProfiles.Add(new GameProfile { Game = "Example game", MatchPath = @"C:\Games\Example", PowerPlan = true, Priority = true, KeepAwake = true });
             game.Attach(new GameModeService(settings), settings, preview: true);
             Save(game, directory, "game-mode.png", 1040, 950);
+            var clips = new Views.ClipsView();
+            clips.Attach(new AppSettings(), preview: true);
+            if (((System.Windows.FrameworkElement)clips.FindName("CaptureSettings")).Parent is Expander captureOptions) captureOptions.IsExpanded = true;
+            Save(clips, directory, "clips.png", 1040, 1180);
             var welcome = new WelcomeWindow(new AppSettings(), preview: true);
             // Keep the actual window's resource scope while rendering its content without desktop chrome or a pointer.
             welcome.Measure(new Size(920, 650));

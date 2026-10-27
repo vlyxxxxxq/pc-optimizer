@@ -77,6 +77,7 @@ public partial class GameModeView : UserControl
     internal sealed record ProfileGame(string Name, string Store, string? Folder)
     {
         public string Label => $"{Name} · {Store}";
+        public override string ToString() => Label;
     }
 
     void RenderOverlay()

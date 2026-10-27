@@ -13,6 +13,7 @@ public partial class ClipboardView : UserControl
     AppSettings? _settings;
     readonly DispatcherTimer _saveNotes = new() { Interval = TimeSpan.FromSeconds(1) };
     bool _loadingNotes;
+    public event EventHandler? HotkeysPaused, HotkeysChanged;
 
     public ClipboardView()
     {
@@ -31,6 +32,7 @@ public partial class ClipboardView : UserControl
     public void Attach(AppSettings settings, ClipboardHistory history)
     {
         _settings = settings;
+        _ = new ShortcutCapture(ClipboardKeyButton, settings, nameof(AppSettings.ClipboardHotkey), () => HotkeysPaused?.Invoke(this, EventArgs.Empty), () => HotkeysChanged?.Invoke(this, EventArgs.Empty));
         _history = history;
         HistorySwitch.IsChecked = settings.ClipboardHistoryEnabled;
         var view = CollectionViewSource.GetDefaultView(history.Items);

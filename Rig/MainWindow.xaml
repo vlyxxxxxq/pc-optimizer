@@ -96,7 +96,7 @@
                         Background="{DynamicResource CardBrush}" BorderThickness="1" BorderBrush="{DynamicResource CardBorderBrush}"
                         MouseLeftButtonUp="PaletteHint_Click" ToolTip="Search pages, actions, games and apps">
                     <DockPanel>
-                        <TextBlock x:Name="PaletteKeyText" DockPanel.Dock="Right" Text="Ctrl+Alt+Space" FontSize="10" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"/>
+                        <Button x:Name="PaletteKeyText" DockPanel.Dock="Right" Content="Ctrl+Alt+P" FontSize="10" Padding="3,0" Background="Transparent" VerticalAlignment="Center" ToolTip="Click to change the command palette shortcut"/>
                         <TextBlock Text="&#xE721;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="12"
                                    Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <TextBlock x:Name="PaletteText" Text="Search or run…" Foreground="{DynamicResource MutedBrush}" FontSize="12" VerticalAlignment="Center"/>

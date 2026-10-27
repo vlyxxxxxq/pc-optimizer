@@ -28,6 +28,7 @@ dotnet run --project Rig -c Release -- --setup-preview --light
 ## Build and test
 
 ```powershell
+./scripts/Prepare-CaptureEngine.ps1
 dotnet build Rig -c Release -warnaserror
 dotnet test Rig.Tests -c Release --filter "Category!=Desktop"
 ```
@@ -83,3 +84,18 @@ dotnet run --project Rig -c Release -- --export-previews App/previews
 This exits after writing Home (dark and light), Game Mode, and setup PNGs. Metrics and findings are sample data;
 no app services start, personal settings are not loaded, and setup choices are not saved. Label public previews as
 sample data. This renderer complements hands-on checks; it doesn't prove that live Windows changes work.
+
+## Capture studio
+
+Prepare the pinned native engine before building or testing. The release workflow does this automatically.
+See [recording components](THIRD-PARTY.md). Audio uses NAudio 2.2.1; FFmpeg runs as a child process tied to Rig's lifetime.
+Replay uses two-second video segments in the local capture cache. Export reads completed segments and writes a new
+MP4 before announcing success. A manual recording's marker stays until a verified final file exists.
+
+`RIG_TEST_CAPTURE_SYNTHETIC=1` replaces display/audio capture with generated video and a test tone. Pair it with
+`RIG_SETTINGS` and `RIG_TEST_INSTALL_ROOT` for UI checks without recording personal activity.
+`RIG_TEST_INPUT_SYNTHETIC=1` produces test input counts when Input Stats is enabled in an isolated profile.
+Neither mode is enabled by a normal release launch.
+
+FFmpeg display capture currently uses GDI; hardware encoding availability varies by GPU and driver. Test real games,
+long recordings, audio sync, mixed-DPI displays, device changes and exclusive fullscreen before claiming broad coverage.

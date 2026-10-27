@@ -29,7 +29,9 @@ public sealed class GameInput
 
 public sealed class InputStatsData
 {
-    public const int HeatW = 64, HeatH = 36;
+    public const int HeatW = 320, HeatH = 180;
+    public int ScreenWidth { get; set; } = 1920;
+    public int ScreenHeight { get; set; } = 1080;
     /// <summary>"yyyy-MM-dd" -> totals for that day.</summary>
     public Dictionary<string, InputDay> Days { get; set; } = [];
     /// <summary>All-time presses per virtual-key code.</summary>
@@ -81,9 +83,10 @@ public sealed class InputStats
     int _lastX = int.MinValue, _lastY;
     int _vx, _vy, _vw = 1, _vh = 1;
     int _ticks;
+    bool _synthetic;
 
     public InputStatsData Data { get; }
-    public bool Running => _thread is not null;
+    public bool Running => _thread is not null || _synthetic;
     /// <summary>The game being played right now (set by Game Mode), so input can be counted per game.</summary>
     public volatile string? Game;
 
@@ -97,6 +100,7 @@ public sealed class InputStats
 
     public void Start()
     {
+        if (Environment.GetEnvironmentVariable("RIG_TEST_INPUT_SYNTHETIC") == "1") { _synthetic = true; _timer.Start(); return; }
         if (_thread is not null) return;
         RefreshScreen();
         var ready = new ManualResetEventSlim();
@@ -118,6 +122,7 @@ public sealed class InputStats
 
     public void Stop()
     {
+        _synthetic = false;
         _timer.Stop();
         if (_thread is not null)
         {
@@ -132,6 +137,7 @@ public sealed class InputStats
     {
         _vx = GetSystemMetrics(76); _vy = GetSystemMetrics(77);
         _vw = Math.Max(1, GetSystemMetrics(78)); _vh = Math.Max(1, GetSystemMetrics(79));
+        lock (_lock) { Data.ScreenWidth = _vw; Data.ScreenHeight = _vh; }
         var dc = GetDC(IntPtr.Zero);
         int mm = GetDeviceCaps(dc, 4), px = GetDeviceCaps(dc, 8); // HORZSIZE, HORZRES
         ReleaseDC(IntPtr.Zero, dc);
@@ -197,7 +203,7 @@ public sealed class InputStats
                             if (d < 1500) Today().Distance += d; // bigger jumps are games re-centring the cursor
                         }
                         _lastX = m->x; _lastY = m->y;
-                        Data.MoveHeat[cell]++;
+                        if (Data.MoveHeat[cell] < int.MaxValue) Data.MoveHeat[cell]++;
                         break;
                     case 0x201: Today().LeftClicks++; Click(cell); break;   // WM_LBUTTONDOWN
                     case 0x204: Today().RightClicks++; Click(cell); break;  // WM_RBUTTONDOWN
@@ -214,12 +220,23 @@ public sealed class InputStats
 
     void Click(int cell)
     {
-        Data.ClickHeat[cell]++;
+        if (Data.ClickHeat[cell] < int.MaxValue) Data.ClickHeat[cell]++;
         if (GameEntry() is { } g) g.Clicks++;
     }
 
     void Tick()
     {
+        if (_synthetic)
+        {
+            lock (_lock)
+            {
+                Today().Keys += 3; Today().LeftClicks++;
+                Data.KeyCounts[0x41] = Data.KeyCounts.GetValueOrDefault(0x41) + 3;
+                int cell = (InputStatsData.HeatH / 2) * InputStatsData.HeatW + InputStatsData.HeatW / 2;
+                Data.MoveHeat[cell]++; Data.ClickHeat[cell]++;
+            }
+            return;
+        }
         var info = new LASTINPUTINFO { cbSize = (uint)Marshal.SizeOf<LASTINPUTINFO>() };
         bool active = GetLastInputInfo(ref info) && unchecked((uint)Environment.TickCount - info.dwTime) < 60_000;
         if (active && Game is not null) lock (_lock) GameEntry()!.Seconds++;
@@ -240,7 +257,15 @@ public sealed class InputStats
     /// <summary>A copy that's safe to read while the hooks keep counting.</summary>
     public InputStatsData Snapshot()
     {
-        lock (_lock) return JsonSerializer.Deserialize<InputStatsData>(JsonSerializer.Serialize(Data))!;
+        lock (_lock) return new InputStatsData
+        {
+            Since = Data.Since, MmPerPixel = Data.MmPerPixel, ScreenWidth = Data.ScreenWidth, ScreenHeight = Data.ScreenHeight,
+            MoveHeat = (int[])Data.MoveHeat.Clone(), ClickHeat = (int[])Data.ClickHeat.Clone(), KeyCounts = new(Data.KeyCounts),
+            Days = Data.Days.ToDictionary(p => p.Key, p => new InputDay { Keys = p.Value.Keys, LeftClicks = p.Value.LeftClicks,
+                RightClicks = p.Value.RightClicks, MiddleClicks = p.Value.MiddleClicks, SideClicks = p.Value.SideClicks, Scrolls = p.Value.Scrolls, Distance = p.Value.Distance }),
+            Games = Data.Games.ToDictionary(p => p.Key, p => new GameInput { Keys = p.Value.Keys, Clicks = p.Value.Clicks,
+                Seconds = p.Value.Seconds, KeyCounts = new(p.Value.KeyCounts) }),
+        };
     }
 
     static InputStatsData Load()
@@ -248,8 +273,8 @@ public sealed class InputStats
         try
         {
             var data = File.Exists(FilePath) ? JsonSerializer.Deserialize<InputStatsData>(File.ReadAllText(FilePath)) ?? new() : new();
-            if (data.MoveHeat.Length != InputStatsData.HeatW * InputStatsData.HeatH) data.MoveHeat = new int[InputStatsData.HeatW * InputStatsData.HeatH];
-            if (data.ClickHeat.Length != InputStatsData.HeatW * InputStatsData.HeatH) data.ClickHeat = new int[InputStatsData.HeatW * InputStatsData.HeatH];
+            data.MoveHeat = Heatmaps.Upgrade(data.MoveHeat, InputStatsData.HeatW, InputStatsData.HeatH);
+            data.ClickHeat = Heatmaps.Upgrade(data.ClickHeat, InputStatsData.HeatW, InputStatsData.HeatH);
             return data;
         }
         catch { return new(); }

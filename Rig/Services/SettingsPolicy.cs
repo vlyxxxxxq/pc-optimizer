@@ -1,9 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-
 namespace Rig.Services;
-
 /// <summary>How a setting travels in a backup or a shared setup.</summary>
 public enum Transfer
 {
@@ -17,10 +15,8 @@ public enum Transfer
     /// <summary>About this PC or this install (recovery state, schedules, what's been seen): never imported.</summary>
     Local,
 }
-
 /// <summary>What the person importing chose in the preview.</summary>
 public sealed record ImportChoices(bool Preferences = true, bool AllowTrackingOn = false, bool PersonalData = false, bool Tweaks = true, bool Apps = true);
-
 /// <summary>
 /// The contract for every setting: whether it transfers and how. Every property of AppSettings must be listed here
 /// (a test fails otherwise), so a new setting can't silently be shared, or silently left out.
@@ -41,7 +37,8 @@ public static class SettingsPolicy
         [nameof(AppSettings.HomeCards)] = Transfer.Share,
         [nameof(AppSettings.PinnedPages)] = Transfer.Share,
         [nameof(AppSettings.AutoCheckUpdates)] = Transfer.Share,
-        [nameof(AppSettings.BetaUpdates)] = Transfer.Share,
+        [nameof(AppSettings.ThemeGlow)] = Transfer.Share,
+        [nameof(AppSettings.RoundCards)] = Transfer.Share,
         // Game Mode
         [nameof(AppSettings.AutoGameMode)] = Transfer.Share,
         [nameof(AppSettings.DetectFullscreen)] = Transfer.Share,
@@ -84,8 +81,25 @@ public static class SettingsPolicy
         [nameof(AppSettings.ClipHotkey)] = Transfer.Share,
         [nameof(AppSettings.ScreenshotHotkey)] = Transfer.Share,
         [nameof(AppSettings.RecordHotkey)] = Transfer.Share,
+        [nameof(AppSettings.ReplayHotkey)] = Transfer.Share,
+        [nameof(AppSettings.PaletteHotkey)] = Transfer.Share,
+        [nameof(AppSettings.ClipboardHotkey)] = Transfer.Share,
         [nameof(AppSettings.RecordGif)] = Transfer.Share,
         [nameof(AppSettings.RecordCursor)] = Transfer.Share,
+        [nameof(AppSettings.ReplaySeconds)] = Transfer.Share,
+        [nameof(AppSettings.CaptureFps)] = Transfer.Share,
+        [nameof(AppSettings.CaptureHeight)] = Transfer.Share,
+        [nameof(AppSettings.CaptureMbps)] = Transfer.Share,
+        [nameof(AppSettings.CaptureSystemAudio)] = Transfer.Share,
+        [nameof(AppSettings.CaptureMicrophone)] = Transfer.Privacy,
+        [nameof(AppSettings.CaptureSystemVolume)] = Transfer.Share,
+        [nameof(AppSettings.CaptureMicVolume)] = Transfer.Share,
+        [nameof(AppSettings.CaptureOutputDevice)] = Transfer.Local,
+        [nameof(AppSettings.CaptureMicDevice)] = Transfer.Local,
+        [nameof(AppSettings.CaptureFolder)] = Transfer.Local,
+        [nameof(AppSettings.CaptureFolders)] = Transfer.Local,
+        [nameof(AppSettings.CaptureMonitor)] = Transfer.Local,
+        [nameof(AppSettings.ReplayWithGameMode)] = Transfer.Privacy,
         [nameof(AppSettings.ColorHotkey)] = Transfer.Share,
         [nameof(AppSettings.ColorHistory)] = Transfer.Personal,
         [nameof(AppSettings.LayoutsLaunchApps)] = Transfer.Share,
@@ -99,12 +113,10 @@ public static class SettingsPolicy
         // The format version itself
         [nameof(AppSettings.SchemaVersion)] = Transfer.Local,
     };
-
     /// <summary>Persisted settings properties (everything serialized).</summary>
     public static IEnumerable<PropertyInfo> Properties() =>
         typeof(AppSettings).GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .Where(p => p.CanRead && p.CanWrite && p.GetCustomAttribute<System.Text.Json.Serialization.JsonIgnoreAttribute>() is null);
-
     /// <summary>Applies an incoming setup to these settings, field by field, as the policy and the choices allow.</summary>
     public static List<string> Apply(AppSettings incoming, AppSettings target, ImportChoices choices)
     {
@@ -131,7 +143,6 @@ public static class SettingsPolicy
         target.Normalize();
         return notes;
     }
-
     public static string Describe(string field) => field switch
     {
         nameof(AppSettings.ClipboardHistoryEnabled) => "Clipboard history",
@@ -140,12 +151,10 @@ public static class SettingsPolicy
         nameof(AppSettings.ShowNowPlaying) => "Now playing",
         _ => Regex.Replace(field, "(?<=[a-z])(?=[A-Z])", " "),
     };
-
     /// <summary>Tracking switches the incoming setup has on and these settings have off.</summary>
     public static List<string> TrackingItWouldTurnOn(AppSettings incoming, AppSettings target) =>
         Properties().Where(p => Fields.GetValueOrDefault(p.Name) == Transfer.Privacy && (bool)p.GetValue(incoming)! && !(bool)p.GetValue(target)!)
             .Select(p => Describe(p.Name)).ToList();
-
     static object? Clone(object? value, Type type) =>
         value is null || type.IsValueType || type == typeof(string) ? value : JsonSerializer.Deserialize(JsonSerializer.Serialize(value, type), type);
 }

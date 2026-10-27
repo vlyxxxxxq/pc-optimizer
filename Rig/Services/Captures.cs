@@ -15,12 +15,16 @@ public sealed class CaptureItem : ObservableObject
     public bool IsVideo => System.IO.Path.GetExtension(Path).ToLowerInvariant() is ".mp4" or ".mkv" or ".mov" or ".webm";
     public string Name => System.IO.Path.GetFileNameWithoutExtension(Path);
     public bool IsGif => System.IO.Path.GetExtension(Path).Equals(".gif", StringComparison.OrdinalIgnoreCase);
-    public bool IsRecording => IsVideo && System.IO.Path.GetDirectoryName(Path)!.Equals(ScreenRecorder.Folder, StringComparison.OrdinalIgnoreCase);
+    public bool IsRecording => IsVideo && (System.IO.Path.GetDirectoryName(Path)!.Equals(ScreenRecorder.Folder, StringComparison.OrdinalIgnoreCase)
+        || System.IO.Path.GetFileName(System.IO.Path.GetDirectoryName(Path)!).Equals("Recordings", StringComparison.OrdinalIgnoreCase));
     public string Kind => IsGif ? "GIF" : IsRecording ? "Recording" : IsVideo ? "Clip" : "Screenshot";
     public bool HasBadge => IsVideo || IsGif;
     public string Detail => $"{Kind} · {Taken:g} · {Fmt.Bytes(Size)}";
     ImageSource? _thumb;
     public ImageSource? Thumb { get => _thumb; set => Set(ref _thumb, value); }
+    bool _favourite;
+    public bool Favourite { get => _favourite; set { if (Set(ref _favourite, value)) OnPropertyChanged(nameof(FavouriteGlyph)); } }
+    public string FavouriteGlyph => Favourite ? "★" : "☆";
 }
 
 /// <summary>
@@ -68,7 +72,8 @@ public static class Captures
     public static void SaveClip() => KeySender.Chord(Key.LWin, Key.LeftAlt, Key.G);
 
     /// <summary>Saves the monitor the focused window is on as a PNG. Returns the file, or null.</summary>
-    public static string? Screenshot(string? game)
+    public static string? Screenshot(string? game) => Screenshot(game, ScreenshotFolder);
+    public static string? Screenshot(string? game, string folder)
     {
         try
         {
@@ -79,9 +84,9 @@ public static class Captures
             using var bmp = new System.Drawing.Bitmap(r.Right - r.Left, r.Bottom - r.Top);
             using (var g = System.Drawing.Graphics.FromImage(bmp))
                 g.CopyFromScreen(r.Left, r.Top, 0, 0, bmp.Size);
-            Directory.CreateDirectory(ScreenshotFolder);
+            Directory.CreateDirectory(folder);
             var label = string.Concat((game ?? "Screenshot").Split(Path.GetInvalidFileNameChars()));
-            var file = Path.Combine(ScreenshotFolder, $"{label} {DateTime.Now:yyyy-MM-dd HH-mm-ss}.png");
+            var file = Path.Combine(folder, $"{label} {DateTime.Now:yyyy-MM-dd HH-mm-ss}.png");
             bmp.Save(file, System.Drawing.Imaging.ImageFormat.Png);
             return file;
         }
@@ -89,6 +94,9 @@ public static class Captures
     }
 
     public static List<CaptureItem> List()
+        => List(null);
+
+    public static List<CaptureItem> List(string? customRoot, IEnumerable<string>? previousRoots = null)
     {
         var items = new List<CaptureItem>();
         foreach (var (folder, pattern) in new[] { (ClipFolder, "*.mp4"), (ClipFolder, "*.png"), (ScreenshotFolder, "*.png"), (ScreenRecorder.Folder, "*.mp4"), (ScreenRecorder.Folder, "*.gif") })
@@ -101,7 +109,20 @@ public static class Captures
             }
             catch { }
         }
-        return items.DistinctBy(i => i.Path.ToLowerInvariant()).OrderByDescending(i => i.Taken).Take(300).ToList();
+        string root = string.IsNullOrWhiteSpace(customRoot) ? ScreenRecorder.Folder : customRoot;
+        var roots = (previousRoots ?? []).Append(root).Distinct(StringComparer.OrdinalIgnoreCase);
+        foreach (var folder in roots.SelectMany(r => new[] { r, Path.Combine(r, "Clips"), Path.Combine(r, "Recordings"), Path.Combine(r, "Exports"), Path.Combine(r, "Screenshots") }).Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            try
+            {
+                if (!Directory.Exists(folder)) continue;
+                foreach (var file in new DirectoryInfo(folder).EnumerateFiles().Where(f => !f.Name.StartsWith('.') && new[] { ".mp4", ".gif", ".png", ".mkv", ".mov", ".webm" }.Contains(f.Extension.ToLowerInvariant())))
+                    items.Add(new CaptureItem { Path = file.FullName, Taken = file.LastWriteTime, Size = file.Length });
+            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
+        return items.DistinctBy(i => i.Path.ToLowerInvariant()).OrderByDescending(i => i.Taken).ToList();
     }
 }
 

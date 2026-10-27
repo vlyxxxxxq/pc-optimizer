@@ -102,15 +102,13 @@
                 <StackPanel>
                     <TextBlock Text="KEYBOARD SHORTCUTS" Style="{StaticResource CardLabel}"/>
                     <TextBlock Style="{StaticResource Muted}" Margin="0,4,0,0" TextWrapping="Wrap"
-                               Text="These work anywhere, even in games. Change a capture or crosshair key on its page."/>
+                               Text="Click any shortcut, then press your new keys. Right-click to reset or unbind. Keys are global while the action is enabled."/>
                     <ItemsControl x:Name="ShortcutList" Margin="0,8,0,0">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <DockPanel Margin="0,6,0,0">
-                                    <Border DockPanel.Dock="Right" Style="{StaticResource Badge}">
-                                        <TextBlock Text="{Binding Key}" FontSize="12"/>
-                                    </Border>
-                                    <TextBlock Text="{Binding What}" VerticalAlignment="Center"/>
+                                    <Button DockPanel.Dock="Right" Tag="{Binding Property}" Loaded="Shortcut_Loaded" Padding="12,6" MinWidth="170"/>
+                                    <TextBlock Text="{Binding Title}" VerticalAlignment="Center"/>
                                 </DockPanel>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
@@ -122,21 +120,17 @@
             <Border Style="{StaticResource Card}" Margin="0,16,0,0">
                 <StackPanel>
                     <TextBlock Text="APPEARANCE" Style="{StaticResource CardLabel}"/>
-                    <DockPanel Margin="0,14,0,0">
-                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                            <RadioButton x:Name="ThemeDark" Content="Dark" GroupName="Theme" Margin="0,0,6,0" Checked="Theme_Checked"/>
-                            <RadioButton x:Name="ThemeLight" Content="Light" GroupName="Theme" Checked="Theme_Checked"/>
-                        </StackPanel>
-                        <TextBlock Text="Theme" FontSize="14" VerticalAlignment="Center"/>
-                    </DockPanel>
-                    <DockPanel Margin="0,14,0,0">
-                        <StackPanel x:Name="AccentSwatches" DockPanel.Dock="Right" Orientation="Horizontal"/>
-                        <TextBlock Text="Accent colour" FontSize="14" VerticalAlignment="Center"/>
-                    </DockPanel>
-                    <DockPanel x:Name="RestartRow" Margin="0,14,0,0" Visibility="Collapsed">
-                        <Button DockPanel.Dock="Right" Content="Restart now" Style="{StaticResource PrimaryButton}" Click="RestartTheme_Click"/>
-                        <TextBlock Text="Restart to see the new look everywhere." Style="{StaticResource Muted}" VerticalAlignment="Center"/>
-                    </DockPanel>
+                    <TextBlock Text="Make Rig yours. Changes apply immediately." Style="{StaticResource Muted}" Margin="0,8,0,12"/>
+                    <TextBlock Text="Theme" FontSize="14" Margin="0,0,0,6"/>
+                    <ComboBox x:Name="ThemeMode" SelectionChanged="ThemeMode_Changed" MinWidth="200" MaxWidth="260" HorizontalAlignment="Left" AutomationProperties.Name="Theme"/>
+                    <TextBlock Text="Accent colour" FontSize="14" Margin="0,16,0,8"/>
+                    <WrapPanel x:Name="AccentSwatches"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0"><TextBox x:Name="AccentHex" Width="130" MaxLength="7" AutomationProperties.Name="Custom accent hexadecimal colour"/>
+                        <Button Content="Apply colour" Click="ApplyAccent_Click" Margin="8,0,0,0"/><Button Content="Choose colour…" Click="PickAccent_Click" Margin="8,0,0,0"/></StackPanel>
+                    <TextBlock x:Name="AppearanceStatus" Style="{StaticResource Muted}" Margin="0,8,0,0" AutomationProperties.LiveSetting="Polite"/>
+                    <CheckBox Content="Accent glows" IsChecked="{Binding ThemeGlow}" Click="Appearance_Click" Margin="0,12,0,0"/>
+                    <CheckBox Content="Rounded cards" IsChecked="{Binding RoundCards}" Click="Appearance_Click" Margin="0,12,0,0"/>
+                    <Button Content="Reset appearance" Click="ResetAppearance_Click" HorizontalAlignment="Left" Margin="0,14,0,0"/>
                 </StackPanel>
             </Border>
 
@@ -170,13 +164,7 @@
                         <CheckBox DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding AutoCheckUpdates}" Click="Save_Click"/>
                         <TextBlock Text="Check for updates automatically (once a day)" FontSize="14" VerticalAlignment="Center"/>
                     </DockPanel>
-                    <DockPanel Margin="0,14,0,0">
-                        <CheckBox x:Name="BetaSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding BetaUpdates}" Click="Save_Click"/>
-                        <StackPanel>
-                            <TextBlock Text="Beta updates" FontSize="14"/>
-                            <TextBlock Style="{StaticResource Muted}" Text="Get new versions early, before everyone else. They may have rough edges."/>
-                        </StackPanel>
-                    </DockPanel>
+
                 </StackPanel>
             </Border>
 
@@ -185,7 +173,8 @@
                     <TextBlock Text="ABOUT" Style="{StaticResource CardLabel}"/>
                     <TextBlock x:Name="VersionText" Margin="0,10,0,0" FontSize="14"/>
                     <TextBlock Style="{StaticResource Muted}" Margin="0,4,0,0"
-                               Text="Everything runs locally. The only network calls are update checks to GitHub and app installs through winget."/>
+                               Text="Captures and saved media stay on this PC. Online tools use their respective services for updates, games, apps, and other live information."/>
+                    <Button Content="Licences &amp; credits" Click="Notices_Click" HorizontalAlignment="Left" Margin="0,12,0,0"/>
                     <TextBlock x:Name="SettingsPath" Style="{StaticResource Muted}" Margin="0,4,0,0"/>
                 </StackPanel>
             </Border>

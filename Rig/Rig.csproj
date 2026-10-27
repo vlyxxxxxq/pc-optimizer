@@ -24,9 +24,15 @@
 
   <ItemGroup>
     <Resource Include="Assets\app.ico" />
+    <EmbeddedResource Include="Assets\capture-engine.zip" LogicalName="Rig.CaptureEngine.zip" Condition="Exists('Assets\capture-engine.zip')" />
+    <EmbeddedResource Include="Assets\THIRD-PARTY-NOTICES.txt" LogicalName="Rig.ThirdPartyNotices.txt" />
     <!-- WinForms is referenced only for the tray icon; keep its namespaces out of WPF code. -->
     <Using Remove="System.Windows.Forms" />
     <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NAudio" Version="2.2.1" />
   </ItemGroup>
 
 </Project>

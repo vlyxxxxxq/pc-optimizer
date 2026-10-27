@@ -7,7 +7,7 @@
             <RowDefinition/>
         </Grid.RowDefinitions>
         <StackPanel>
-            <TextBlock Text="Clipboard &amp; Notes" Style="{StaticResource PageTitle}"/>
+            <DockPanel><Button x:Name="ClipboardKeyButton" DockPanel.Dock="Right" Padding="12,5" VerticalAlignment="Center"/><TextBlock Text="Clipboard &amp; Notes" Style="{StaticResource PageTitle}"/></DockPanel>
             <TextBlock Style="{StaticResource PageSubtitle}"
                        Text="Everything you copied, one shortcut away, plus a notepad that saves as you type."/>
         </StackPanel>

@@ -203,11 +203,7 @@ public partial class MainWindow
             case "Input": if (on && _settings.InputStatsEnabled) _inputStats.Start(); else _inputStats.Stop(); break;
             case "Clips" or "ColorPicker":
                 // A recording in progress is finished and saved first, never cut off.
-                if (id == "Clips" && !on && _recorder.IsRecording)
-                {
-                    _recorder.StopAndWait(TimeSpan.FromSeconds(30));
-                    Notify("Recording saved", "Clips & Recording was switched off, so the recording in progress was finished and saved.");
-                }
+                if (id == "Clips" && !on) _ = _studio.SuspendAsync();
                 RegisterCaptureHotkeys();
                 break;
             case "Timers":

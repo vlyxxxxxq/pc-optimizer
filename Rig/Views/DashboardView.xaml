@@ -38,6 +38,15 @@
                 <Button x:Name="AddCardButton" Content="+ Add a card" Margin="0,0,0,6" Click="AddCard_Click"/>
             </WrapPanel>
             <WrapPanel x:Name="CardHost" Margin="-8,14,-8,0">
+                <Border Tag="clips" Style="{StaticResource Card}" Margin="8" Padding="20,16">
+                    <StackPanel><DockPanel><Button DockPanel.Dock="Right" Content="Open capture studio" Tag="Clips" Click="Open_Click" Padding="10,5"/><TextBlock Text="CLIPS &amp; RECORDING" Style="{StaticResource CardLabel}" VerticalAlignment="Center"/></DockPanel>
+                        <TextBlock x:Name="CaptureTitle" Text="Keep the moment." FontSize="24" FontWeight="SemiBold" Margin="0,9,0,4"/>
+                        <TextBlock x:Name="CaptureDetail" Text="Save a replay clip, start a recording, or open your capture library." Style="{StaticResource Muted}" TextWrapping="Wrap"/>
+                        <WrapPanel Margin="0,12,0,0"><Button x:Name="HomeReplayButton" Content="Enable replay" Tag="replay-toggle" Click="CaptureAction_Click" Style="{StaticResource PrimaryButton}" Margin="0,0,8,0"/>
+                            <Button x:Name="HomeSaveClipButton" Content="Save clip" Tag="clip-save" Click="CaptureAction_Click" IsEnabled="False" Margin="0,0,8,0"/>
+                            <Button x:Name="HomeRecordButton" Content="Record" Tag="record-toggle" Click="CaptureAction_Click"/></WrapPanel>
+                    </StackPanel>
+                </Border>
                 <Border x:Name="GameCard" Tag="gamemode" Style="{StaticResource Card}" Margin="8" Padding="20,16">
                     <StackPanel>
                         <DockPanel Margin="0,0,0,10">

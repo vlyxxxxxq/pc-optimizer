@@ -10,7 +10,7 @@ public partial class CrosshairView : UserControl
 {
     AppSettings? _settings;
     bool _loading = true, _gamesLoaded;
-    bool _capturing;
+
 
     static readonly string[] Colors = ["#00FF66", "#00E5FF", "#FFFF00", "#FF3B3B", "#FF00FF", "#FFFFFF", "#FF9F1A"];
 
@@ -24,6 +24,7 @@ public partial class CrosshairView : UserControl
     public void Attach(AppSettings settings)
     {
         _settings = settings;
+        _ = new ShortcutCapture(HotkeyButton, settings, nameof(AppSettings.CrosshairHotkey), () => HotkeyPaused?.Invoke(this, EventArgs.Empty), () => HotkeyChanged?.Invoke(this, EventArgs.Empty));
         var s = settings.Crosshair;
         foreach (var rb in new[] { ShapeCrossDot, ShapeCross, ShapeDot, ShapeCircle, ShapeT })
             rb.IsChecked = (string)rb.Tag == s.Shape.ToString();
@@ -140,41 +141,9 @@ public partial class CrosshairView : UserControl
         CrosshairOverlay.Draw(Preview, _settings.Crosshair, 150, 150);
     }
 
-    // --- Hotkey capture (same as on Clips & Screenshots) ---
-    void Hotkey_Click(object sender, RoutedEventArgs e)
-    {
-        if (_capturing) return;
-        _capturing = true;
-        HotkeyButton.Content = "Press keys…  (Esc cancels)";
-        HotkeyButton.Focus();
-        HotkeyPaused?.Invoke(this, EventArgs.Empty);
-    }
-
-    void Hotkey_PreviewKeyDown(object sender, KeyEventArgs e)
-    {
-        if (!_capturing || _settings is null) return;
-        e.Handled = true;
-        var key = e.Key == Key.System ? e.SystemKey : e.Key;
-        if (key is Key.LeftCtrl or Key.RightCtrl or Key.LeftShift or Key.RightShift or Key.LeftAlt or Key.RightAlt or Key.LWin or Key.RWin) return;
-        if (key == Key.Escape) { EndCapture(); return; }
-        var hotkey = new Hotkey(Keyboard.Modifiers & ~ModifierKeys.Windows, key);
-        if (!hotkey.IsUsable) { HotkeyButton.Content = "Add Ctrl or Alt (or use an F-key)"; return; }
-        _settings.CrosshairHotkey = hotkey.ToString();
-        _settings.Save();
-        EndCapture();
-    }
-
-    void Hotkey_LostFocus(object sender, KeyboardFocusChangedEventArgs e) { if (_capturing) EndCapture(); }
-
-    void EndCapture()
-    {
-        _capturing = false;
-        if (_settings is not null) HotkeyButton.Content = _settings.CrosshairHotkey.Replace("+", " + ");
-        HotkeyChanged?.Invoke(this, EventArgs.Empty);
-    }
-
     public void ShowHotkeyState(bool ok)
     {
+        HotkeyButton.Content = _settings?.CrosshairHotkey.Replace("+", " + ");
         HotkeyText.Text = ok ? "Show or hide the crosshair from inside any game." : $"Another app is already using {_settings?.CrosshairHotkey}. Click it to pick a different key.";
         HotkeyText.Foreground = (Brush)FindResource(ok ? "MutedBrush" : "WarnBrush");
     }
