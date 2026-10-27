@@ -6,6 +6,40 @@ namespace Rig.Tests;
 
 public class UpdaterTests
 {
+    static JsonDocument Releases(params (string Name, string Digest)[] assets) => JsonDocument.Parse(JsonSerializer.Serialize(new[]
+    {
+        new { draft = false, prerelease = false, tag_name = "v2.0.0", body = "Rig release", html_url = "https://github.com/vlyxxxxxq/rig/releases/tag/v2.0.0",
+            assets = assets.Select(a => new { name = a.Name, digest = a.Digest, size = 123L, browser_download_url = "https://example.test/" + a.Name }).ToArray() },
+    }));
+
+    [Fact]
+    public void Updates_select_the_standalone_Rig_download_and_its_verification_data()
+    {
+        using var releases = Releases(("Rig-lite.exe", "sha256:lite"), ("PCOptimizer.exe", "sha256:old"),
+            ("Rig.exe", "sha256:standalone"), ("Rig.exe.sig", ""));
+        var update = Updater.SelectUpdate(releases.RootElement, AppVersion.Parse("1.9.0")!);
+        Assert.NotNull(update);
+        Assert.Equal("https://example.test/Rig.exe", update.DownloadUrl);
+        Assert.Equal("standalone", update.Sha256);
+        Assert.Equal("https://example.test/Rig.exe.sig", update.SignatureUrl);
+    }
+
+    [Fact]
+    public void A_release_without_Rig_exe_is_not_offered_as_an_update()
+    {
+        using var releases = Releases(("Rig-lite.exe", ""), ("PCOptimizer.exe", ""));
+        Assert.Null(Updater.SelectUpdate(releases.RootElement, AppVersion.Parse("1.9.0")!));
+    }
+
+    [Theory]
+    [InlineData("2.0.0")]
+    [InlineData("2.1.0")]
+    public void The_version_reset_does_not_offer_an_automatic_downgrade(string installed)
+    {
+        using var releases = Releases(("Rig.exe", "sha256:standalone"));
+        Assert.Null(Updater.SelectUpdate(releases.RootElement, AppVersion.Parse(installed)!));
+    }
+
     [Fact]
     public void Signatures_verify_and_tampering_is_caught()
     {

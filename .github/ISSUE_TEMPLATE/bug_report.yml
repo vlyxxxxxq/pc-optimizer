@@ -1,0 +1,31 @@
+name: Report a bug
+description: Help us reproduce something that isn't working in Rig.
+title: "[Bug] "
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Rig version
+      description: Find this in Settings. Include whether you installed Rig or run it portable.
+      placeholder: 2.0.0, installed
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      placeholder: Windows 11, 64-bit
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: What happened?
+      description: Include the steps that reproduce the problem and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Screenshots or error details
+      description: Optional. Remove personal paths, clipboard content, and other private information before sharing.

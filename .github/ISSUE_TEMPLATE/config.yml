@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Download Rig
+    url: https://github.com/vlyxxxxxq/rig/releases/tag/v2.0.0
+    about: The current standalone Windows download and release notes.

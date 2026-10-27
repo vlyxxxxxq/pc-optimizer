@@ -23,14 +23,105 @@ public static class Installer
     public static bool IsRunningInstalled =>
         string.Equals(Environment.ProcessPath, InstalledExe, StringComparison.OrdinalIgnoreCase);
 
-    public static void Install(bool desktopShortcut)
+    public static async Task InstallAsync(bool desktopShortcut, IProgress<SetupProgress>? progress = null)
     {
         Directory.CreateDirectory(InstallDir);
-        if (!IsRunningInstalled) File.Copy(Environment.ProcessPath!, InstalledExe, overwrite: true);
+        if (!IsRunningInstalled) await CopyPayloadAsync(Environment.ProcessPath!, InstalledExe, progress);
 
+        progress?.Report(new("Creating your shortcuts…", 0.75));
         CreateShortcuts(desktopShortcut);
+        progress?.Report(new("Adding Rig to Installed apps…", 0.82));
         Register();
-        if (AutoStart.IsEnabled) AutoStart.Set(true, InstalledExe); // point "start with Windows" at the installed copy
+    }
+
+    /// <summary>
+    /// Stage the whole payload before replacing anything. Published single-file builds only need the EXE;
+    /// development builds also need their assembly and runtime metadata. Failed copies leave the old app intact.
+    /// </summary>
+    internal static async Task CopyPayloadAsync(string sourceExe, string targetExe,
+        IProgress<SetupProgress>? progress = null, CancellationToken cancel = default)
+    {
+        sourceExe = Path.GetFullPath(sourceExe);
+        targetExe = Path.GetFullPath(targetExe);
+        if (string.Equals(sourceExe, targetExe, StringComparison.OrdinalIgnoreCase)) return;
+
+        var sources = new List<string>();
+        if (File.Exists(Path.ChangeExtension(sourceExe, ".dll")))
+        {
+            foreach (var suffix in new[] { ".dll", ".deps.json", ".runtimeconfig.json" })
+            {
+                var file = Path.ChangeExtension(sourceExe, suffix);
+                if (!File.Exists(file)) throw new FileNotFoundException("The development build is incomplete. Build Rig again before installing it.", file);
+                sources.Add(file);
+            }
+        }
+        sources.Add(sourceExe); // replace the launcher last
+        long total = sources.Sum(f => new FileInfo(f).Length), copied = 0;
+        var folder = Path.GetDirectoryName(targetExe)!;
+        Directory.CreateDirectory(folder);
+        var batch = sources.Select(from =>
+        {
+            string to = from == sourceExe ? targetExe : Path.ChangeExtension(targetExe, from[Path.ChangeExtension(sourceExe, null).Length..]);
+            return new StagedFile(from, to, to + $".setup-{Guid.NewGuid():N}");
+        }).ToList();
+        try
+        {
+            var buffer = new byte[64 * 1024];
+            foreach (var file in batch)
+            {
+                cancel.ThrowIfCancellationRequested();
+                await using var input = new FileStream(file.Source, FileMode.Open, FileAccess.Read, FileShare.Read,
+                    buffer.Length, FileOptions.Asynchronous | FileOptions.SequentialScan);
+                await using var output = new FileStream(file.Staged, FileMode.CreateNew, FileAccess.Write, FileShare.None,
+                    buffer.Length, FileOptions.Asynchronous);
+                int read;
+                while ((read = await input.ReadAsync(buffer, cancel).ConfigureAwait(false)) > 0)
+                {
+                    await output.WriteAsync(buffer.AsMemory(0, read), cancel).ConfigureAwait(false);
+                    copied += read;
+                    progress?.Report(new("Copying Rig to your account…", 0.1 + 0.6 * copied / Math.Max(1, total)));
+                }
+                await output.FlushAsync(cancel).ConfigureAwait(false);
+                output.Flush(flushToDisk: true);
+            }
+            cancel.ThrowIfCancellationRequested();
+            foreach (var file in batch)
+            {
+                if (File.Exists(file.Target)) File.Replace(file.Staged, file.Target, file.Backup);
+                else File.Move(file.Staged, file.Target);
+                file.Committed = true;
+            }
+        }
+        catch (Exception original)
+        {
+            var recovery = new List<string>();
+            foreach (var file in batch.Where(f => f.Committed).Reverse())
+            {
+                try
+                {
+                    if (File.Exists(file.Backup)) File.Move(file.Backup, file.Target, overwrite: true);
+                    else File.Delete(file.Target);
+                }
+                catch { recovery.Add(file.Backup); }
+            }
+            if (recovery.Count > 0)
+                throw new IOException("Installation stopped. Previous files were kept for recovery: " + string.Join(", ", recovery), original);
+            throw;
+        }
+        finally
+        {
+            foreach (var file in batch) try { File.Delete(file.Staged); } catch { }
+        }
+        foreach (var file in batch) try { File.Delete(file.Backup); } catch { }
+    }
+
+    sealed class StagedFile(string source, string target, string staged)
+    {
+        public string Source { get; } = source;
+        public string Target { get; } = target;
+        public string Staged { get; } = staged;
+        public string Backup => Staged + ".bak";
+        public bool Committed { get; set; }
     }
 
     public static void CreateShortcuts(bool desktop)
@@ -65,7 +156,7 @@ public static class Installer
     static void CreateShortcut(string path, string target)
     {
         var type = Type.GetTypeFromProgID("WScript.Shell");
-        if (type is null) return;
+        if (type is null) throw new InvalidOperationException("Windows shortcut support is unavailable. Try running Rig in portable mode.");
         dynamic shell = Activator.CreateInstance(type)!;
         dynamic link = shell.CreateShortcut(path);
         link.TargetPath = target;

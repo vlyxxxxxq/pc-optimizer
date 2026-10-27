@@ -26,6 +26,18 @@ public partial class App : Application
         base.OnStartup(e);
         Services.CrashReporter.Install(this);
 
+        // A design preview never loads a personal profile, changes startup, or starts background services.
+        if (e.Args.Contains("--setup-preview", StringComparer.OrdinalIgnoreCase))
+        {
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            var sample = new Services.AppSettings();
+            bool light = e.Args.Contains("--light", StringComparer.OrdinalIgnoreCase);
+            Services.Theme.Apply(Resources, !light, null);
+            new WelcomeWindow(sample, preview: true).ShowDialog();
+            Shutdown();
+            return;
+        }
+
         // Command-line modes that don't open the main window.
         if (e.Args.Contains("--uninstall", StringComparer.OrdinalIgnoreCase))
         {
@@ -73,7 +85,7 @@ public partial class App : Application
         if (settings.IsFirstRun && !tray)
         {
             var welcome = new WelcomeWindow(settings);
-            welcome.ShowDialog();
+            if (welcome.ShowDialog() != true) { Shutdown(); return; }
             if (welcome.Installed && !Services.Installer.IsRunningInstalled)
             {
                 ReleaseInstanceLock();

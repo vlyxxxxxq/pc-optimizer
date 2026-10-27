@@ -1,13 +1,16 @@
 name: Release
 
-# Push a tag like v2.0.0 (matching <Version> in Rig.csproj) to build and publish both EXEs.
-# A tag with a suffix (v2.0.0-beta.1) is published as a pre-release, which only beta-channel users are offered.
+# Each release has one standalone Windows x64 download: Rig.exe.
 on:
   push:
     tags: ['v*']
 
 permissions:
   contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   release:
@@ -21,53 +24,61 @@ jobs:
 
       - name: Check the tag matches the app version
         shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
         run: |
           $version = ([xml](Get-Content Rig/Rig.csproj)).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
-          if ("v$version" -ne "${{ github.ref_name }}") { throw "Rig.csproj says $version but the tag is ${{ github.ref_name }}" }
+          if ("v$version" -ne $env:RELEASE_TAG) { throw "Rig.csproj says $version but the tag is $env:RELEASE_TAG" }
 
-      - name: Build full (self-contained) EXE
-        run: dotnet publish Rig -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -o out/full
+      - name: Build and test
+        run: |
+          dotnet build Rig -c Release -warnaserror
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet test Rig.Tests -c Release --filter "Category!=Desktop"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Build lite EXE
-        run: dotnet publish Rig -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:DebugType=none -o out/lite
+      - name: Publish standalone Rig
+        run: dotnet publish Rig -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -o out/rig
 
-      - name: Name the assets (the in-app updater looks for these names)
+      - name: Prepare the download
         shell: pwsh
         run: |
           New-Item -ItemType Directory dist | Out-Null
-          Copy-Item out/full/Rig.exe dist/Rig.exe
-          Copy-Item out/lite/Rig.exe dist/Rig-lite.exe
-          # PC Optimizer 1.x looks for these names, so it can update itself into Rig.
-          Copy-Item out/full/Rig.exe dist/PCOptimizer.exe
-          Copy-Item out/lite/Rig.exe dist/PCOptimizer-lite.exe
-          Get-ChildItem dist | ForEach-Object { "{0} {1:N1} MB" -f $_.Name, ($_.Length / 1MB) }
+          Copy-Item out/rig/Rig.exe dist/Rig.exe
+          $version = (Get-Item dist/Rig.exe).VersionInfo.ProductVersion.Split('+')[0]
+          $expected = ([xml](Get-Content Rig/Rig.csproj)).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
+          if ($version -ne $expected) { throw "Built EXE version $version does not match $expected" }
+          Get-FileHash dist/Rig.exe -Algorithm SHA256
 
-      # Detached signatures for the updater (docs/SIGNING.md). Skipped until the RIG_SIGNING_KEY secret exists;
-      # Rig only requires them once its embedded public key (Updater.SigningKey) is set.
-      - name: Sign the assets
+      # An optional detached signature is verification data, not a second app edition.
+      - name: Sign Rig when a release key is configured
         shell: pwsh
         env:
           RIG_SIGNING_KEY: ${{ secrets.RIG_SIGNING_KEY }}
         run: |
-          if (-not $env:RIG_SIGNING_KEY) { "No signing key configured; releases are unsigned."; exit 0 }
+          if (-not $env:RIG_SIGNING_KEY) { "No signing key configured; Rig.exe is unsigned."; exit 0 }
           $key = [System.Security.Cryptography.ECDsa]::Create()
-          $key.ImportFromPem($env:RIG_SIGNING_KEY)
-          foreach ($f in Get-ChildItem dist -Filter *.exe) {
-            $stream = [IO.File]::OpenRead($f.FullName)
+          try {
+            $key.ImportFromPem($env:RIG_SIGNING_KEY)
+            $stream = [IO.File]::OpenRead((Resolve-Path dist/Rig.exe))
             try { $sig = $key.SignData($stream, [System.Security.Cryptography.HashAlgorithmName]::SHA256, [System.Security.Cryptography.DSASignatureFormat]::IeeeP1363FixedFieldConcatenation) }
             finally { $stream.Dispose() }
-            [IO.File]::WriteAllText("$($f.FullName).sig", [Convert]::ToBase64String($sig))
-            "Signed $($f.Name)"
-          }
+            [IO.File]::WriteAllText((Join-Path (Resolve-Path dist) 'Rig.exe.sig'), [Convert]::ToBase64String($sig))
+          } finally { $key.Dispose() }
 
-      - name: Publish the GitHub release
+      - name: Publish Rig
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          $tag = "${{ github.ref_name }}"
+          $tag = $env:RELEASE_TAG
           $notes = "docs/release-notes/$tag.md"
-          $ghArgs = @('release', 'create', $tag) + (Get-ChildItem dist | ForEach-Object { $_.FullName }) + @('--title', "Rig $tag")
-          $ghArgs += $(if ($tag.Contains('-')) { '--prerelease' } else { '--latest' })
-          if (Test-Path $notes) { $ghArgs += @('--notes-file', $notes) } else { $ghArgs += '--generate-notes' }
-          gh @ghArgs
+          if (-not (Test-Path -LiteralPath $notes)) { throw "Write release notes at $notes before publishing." }
+          $releaseArgs = @('release', 'create', $tag, '--verify-tag', '--draft', '--title', "Rig $($tag.TrimStart('v'))", '--notes-file', $notes)
+          $releaseArgs += Get-ChildItem dist -File | ForEach-Object { $_.FullName }
+          gh @releaseArgs
+          if ($LASTEXITCODE -ne 0) { throw 'Could not create the draft release.' }
+          if ($tag.Contains('-')) { gh release edit $tag --draft=false --prerelease }
+          else { gh release edit $tag --draft=false --latest }
+          if ($LASTEXITCODE -ne 0) { throw 'Could not publish the release.' }

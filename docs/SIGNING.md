@@ -6,8 +6,8 @@ its digest too. Signed releases close that gap. **This is not set up yet**: unti
 
 How it works once set up:
 
-- The release workflow signs each EXE with a private key kept as the `RIG_SIGNING_KEY` repository secret, and uploads
-  `Rig.exe.sig` (and the same for the other EXEs) next to it. The signature is ECDSA P-256 over SHA-256 of the file,
+- The release workflow signs `Rig.exe` with a private key kept as the `RIG_SIGNING_KEY` repository secret, and uploads
+  `Rig.exe.sig` next to it. The signature is ECDSA P-256 over SHA-256 of the file,
   base64-encoded.
 - Rig carries the matching public key in `Updater.SigningKey`. When that constant isn't empty, the updater refuses
   any update without a valid `.sig`.

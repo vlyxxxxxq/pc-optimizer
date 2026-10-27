@@ -1,153 +1,199 @@
 <Window x:Class="Rig.WelcomeWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Welcome to Rig" Width="640" SizeToContent="Height" ResizeMode="NoResize"
-        WindowStartupLocation="CenterScreen" Icon="Assets/app.ico"
+        Title="Set up Rig" Width="920" Height="680" MinWidth="760" MinHeight="500"
+        WindowStartupLocation="CenterScreen" ResizeMode="CanResizeWithGrip" Icon="Assets/app.ico"
         Background="{DynamicResource BgBrush}" Foreground="{DynamicResource TextBrush}"
-        FontFamily="Segoe UI Variable Text, Segoe UI" FontSize="13">
+        FontFamily="Segoe UI Variable Text, Segoe UI" FontSize="14" UseLayoutRounding="True">
     <Window.Resources>
-        <!-- Big selectable option card -->
+        <Style x:Key="SetupHeading" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="30"/><Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+        <Style x:Key="SetupBody" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/><Setter Property="LineHeight" Value="21"/>
+        </Style>
         <Style x:Key="Choice" TargetType="RadioButton">
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Margin" Value="0,10,0,0"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="Cursor" Value="Hand"/><Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="RadioButton">
-                        <Border x:Name="bd" CornerRadius="10" Padding="16,12" Background="{DynamicResource CardBrush}"
-                                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1.5">
-                            <ContentPresenter/>
+                        <Border x:Name="bd" CornerRadius="12" Padding="20,16" Background="{DynamicResource CardBrush}"
+                                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="2">
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="28"/></Grid.ColumnDefinitions>
+                                <ContentPresenter HorizontalAlignment="Stretch"/>
+                                <Border Grid.Column="1" x:Name="ring" Width="19" Height="19" CornerRadius="10"
+                                        BorderBrush="{DynamicResource StrongBorderBrush}" BorderThickness="1.5"
+                                        VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,3,0,0">
+                                    <Ellipse x:Name="dot" Fill="{DynamicResource AccentBrush}" Margin="4" Visibility="Collapsed"/>
+                                </Border>
+                            </Grid>
                         </Border>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource StrongBorderBrush}"/>
-                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource StrongBorderBrush}"/></Trigger>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                                 <Setter TargetName="bd" Property="Background" Value="{DynamicResource InfoTintBrush}"/>
+                                <Setter TargetName="ring" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                <Setter TargetName="dot" Property="Visibility" Value="Visible"/>
                             </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource TextBrush}"/></Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
     </Window.Resources>
-
-    <StackPanel Margin="32,28,32,24">
-        <!-- Step 1: hello -->
-        <StackPanel x:Name="Step1">
-            <Border Width="64" Height="64" CornerRadius="16" HorizontalAlignment="Left">
-                <Border.Background>
-                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                        <GradientStop Color="#6CA0FF" Offset="0"/>
-                        <GradientStop Color="#3A6BE8" Offset="1"/>
-                    </LinearGradientBrush>
-                </Border.Background>
-                <Viewbox Width="64" Height="64">
-                    <Canvas Width="36" Height="36">
-                        <Path Data="M10.65,26.75 A10.4,10.4 0 1 1 25.35,26.75" Stroke="White" StrokeThickness="3" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
-                        <Line X1="18" Y1="19.4" X2="24.2" Y2="14.2" Stroke="White" StrokeThickness="3" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
-                        <Ellipse Canvas.Left="15.3" Canvas.Top="16.7" Width="5.4" Height="5.4" Fill="White"/>
-                    </Canvas>
-                </Viewbox>
-            </Border>
-            <TextBlock Text="Welcome to Rig" Style="{StaticResource PageTitle}" Margin="0,18,0,0"/>
-            <TextBlock Style="{StaticResource PageSubtitle}" FontSize="14"
-                       Text="Everything to keep a gaming PC fast and tidy, in one place. Nothing changes until you choose to."/>
-            <ItemsControl x:Name="Highlights" Margin="0,16,0,0">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <DockPanel Margin="0,8,0,0">
-                            <Border DockPanel.Dock="Left" Width="34" Height="34" CornerRadius="9" Background="{DynamicResource InfoTintBrush}" Margin="0,0,14,0">
-                                <TextBlock Text="{Binding Glyph}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="16"
-                                           Foreground="{DynamicResource AccentLightBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                            </Border>
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="14"/>
-                                <TextBlock Text="{Binding Text}" Style="{StaticResource Muted}"/>
-                            </StackPanel>
-                        </DockPanel>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </StackPanel>
-
-        <!-- Step 2: preferences -->
-        <StackPanel x:Name="Step2" Visibility="Collapsed">
-            <TextBlock Text="Set it up your way" Style="{StaticResource PageTitle}"/>
-            <TextBlock Style="{StaticResource PageSubtitle}" FontSize="14" Text="You can change all of these later in Settings and Game Mode."/>
-            <Border Style="{StaticResource Card}" Margin="0,18,0,0">
-                <StackPanel>
-                    <DockPanel>
-                        <CheckBox x:Name="AutoGame" DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="True"/>
-                        <StackPanel>
-                            <TextBlock Text="Turn Game Mode on automatically" FontSize="14"/>
-                            <TextBlock Style="{StaticResource Muted}" TextWrapping="Wrap" Text="When a game from Steam, Epic, Xbox and others is in focus, Rig switches to a high-performance power plan and raises the game's priority (you choose which in Game Mode). It's put back when you quit."/>
-                        </StackPanel>
-                    </DockPanel>
-                    <DockPanel Margin="0,16,0,0">
-                        <CheckBox x:Name="StartWithWindows" DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="True"/>
-                        <StackPanel>
-                            <TextBlock Text="Start with Windows (quietly, in the tray)" FontSize="14"/>
-                            <TextBlock Style="{StaticResource Muted}" TextWrapping="Wrap" Text="Adds Rig to Windows' startup list so it starts in the notification area when you sign in. Needed for automatic Game Mode, hotkeys, reminders and update checks. Closing the window keeps it running there; exit from the tray icon."/>
-                        </StackPanel>
-                    </DockPanel>
-                    <DockPanel Margin="0,16,0,0">
-                        <CheckBox x:Name="ClipboardChoice" DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="False" AutomationProperties.Name="Clipboard history"/>
-                        <StackPanel>
-                            <TextBlock Text="Clipboard history" FontSize="14"/>
-                            <TextBlock Style="{StaticResource Muted}" TextWrapping="Wrap" Text="Keeps your last 50 copies in memory only (never saved to disk), so Ctrl+Alt+V can paste older ones. Copies from password managers are skipped."/>
-                        </StackPanel>
-                    </DockPanel>
-                    <DockPanel Margin="0,16,0,0">
-                        <CheckBox x:Name="ScreenTimeChoice" DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="False" AutomationProperties.Name="Screen time"/>
-                        <StackPanel>
-                            <TextBlock Text="Screen time" FontSize="14"/>
-                            <TextBlock Style="{StaticResource Muted}" TextWrapping="Wrap" Text="Records which app is in front, every few seconds, to show time per app. Stays on this PC (in %AppData%\Rig)."/>
-                        </StackPanel>
-                    </DockPanel>
-                    <DockPanel Margin="0,16,0,0">
-                        <CheckBox x:Name="Notify" DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="True"/>
-                        <StackPanel>
-                            <TextBlock Text="Notifications" FontSize="14"/>
-                            <TextBlock Style="{StaticResource Muted}" Text="Game Mode on/off, updates and cleanup results."/>
-                        </StackPanel>
-                    </DockPanel>
-                </StackPanel>
-            </Border>
-        </StackPanel>
-
-        <!-- Step 3: install or run -->
-        <StackPanel x:Name="Step3" Visibility="Collapsed">
-            <TextBlock Text="Install it, or just run it?" Style="{StaticResource PageTitle}"/>
-            <TextBlock Style="{StaticResource PageSubtitle}" FontSize="14" Text="No administrator rights needed either way."/>
-            <RadioButton x:Name="InstallChoice" Style="{StaticResource Choice}" GroupName="Mode" IsChecked="True" Margin="0,16,0,0">
+    <Grid>
+        <Grid.ColumnDefinitions><ColumnDefinition x:Name="RailColumn" Width="224"/><ColumnDefinition/></Grid.ColumnDefinitions>
+        <Border Background="{DynamicResource SidebarBrush}" BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,0,1,0">
+            <Grid Margin="26,30,22,28">
+                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                 <StackPanel>
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="Install for me" FontSize="15" FontWeight="SemiBold"/>
-                        <Border Style="{StaticResource Badge}" Background="{DynamicResource GoodTintBrush}">
-                            <TextBlock Text="Recommended" FontSize="11" Foreground="{DynamicResource GoodBrush}"/>
+                        <Border Width="40" Height="40" CornerRadius="11" Background="{DynamicResource PrimaryBrush}">
+                            <Viewbox Margin="5"><Canvas Width="36" Height="36">
+                                <Path Data="M10.65,26.75 A10.4,10.4 0 1 1 25.35,26.75" Stroke="White" StrokeThickness="3" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                                <Line X1="18" Y1="19.4" X2="24.2" Y2="14.2" Stroke="White" StrokeThickness="3" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                                <Ellipse Canvas.Left="15.3" Canvas.Top="16.7" Width="5.4" Height="5.4" Fill="White"/>
+                            </Canvas></Viewbox>
+                        </Border>
+                        <TextBlock Text="Rig" FontSize="25" FontWeight="SemiBold" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                    </StackPanel>
+                    <TextBlock Text="Your PC toolkit." Style="{StaticResource SetupBody}" Margin="0,18,0,0"/>
+                </StackPanel>
+                <StackPanel x:Name="StepRail" Grid.Row="1" Margin="0,54,0,16">
+                    <Grid Margin="0,0,0,25">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                        <Border x:Name="StepDot1" CornerRadius="15" Width="28" Height="28" VerticalAlignment="Top"><TextBlock x:Name="StepNumber1" Text="1" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"/></Border>
+                        <StackPanel Grid.Column="1" Margin="8,2,0,0"><TextBlock x:Name="StepLabel1" Text="Make it yours" FontWeight="SemiBold"/><TextBlock x:Name="StepDetail1" Text="Install or run portable" Style="{StaticResource Muted}" Margin="0,4,0,0"/></StackPanel>
+                    </Grid>
+                    <Grid Margin="0,0,0,25">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                        <Border x:Name="StepDot2" CornerRadius="15" Width="28" Height="28" VerticalAlignment="Top"><TextBlock x:Name="StepNumber2" Text="2" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"/></Border>
+                        <StackPanel Grid.Column="1" Margin="8,2,0,0"><TextBlock x:Name="StepLabel2" Text="The essentials" FontWeight="SemiBold"/><TextBlock x:Name="StepDetail2" Text="Gaming and startup" Style="{StaticResource Muted}" Margin="0,4,0,0"/></StackPanel>
+                    </Grid>
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                        <Border x:Name="StepDot3" CornerRadius="15" Width="28" Height="28" VerticalAlignment="Top"><TextBlock x:Name="StepNumber3" Text="3" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold"/></Border>
+                        <StackPanel Grid.Column="1" Margin="8,2,0,0"><TextBlock x:Name="StepLabel3" Text="Your choices" FontWeight="SemiBold"/><TextBlock x:Name="StepDetail3" Text="Tools and privacy" Style="{StaticResource Muted}" Margin="0,4,0,0"/></StackPanel>
+                    </Grid>
+                </StackPanel>
+                <StackPanel Grid.Row="2">
+                    <StackPanel x:Name="RailHelp"><TextBlock Text="Made for your Windows account." Style="{StaticResource Muted}"/>
+                    <TextBlock Text="No administrator access needed for setup." Style="{StaticResource Muted}" Margin="0,5,0,0"/></StackPanel>
+                    <TextBlock x:Name="VersionText" Style="{StaticResource Muted}" Margin="0,20,0,0"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+            <DockPanel Margin="34,28,34,18">
+                <TextBlock x:Name="StepCounter" Text="SETUP · 1 OF 3" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource AccentLightBrush}" AutomationProperties.LiveSetting="Polite"/>
+                <TextBlock x:Name="PreviewBadge" Text="PREVIEW · no changes are saved" Visibility="Collapsed" FontSize="11" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Right"/>
+            </DockPanel>
+            <ScrollViewer Grid.Row="1" x:Name="StepScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="34,0,34,24">
+                <StackPanel>
+                    <StackPanel x:Name="Step1">
+                        <TextBlock Text="Welcome to Rig." Style="{StaticResource SetupHeading}"/>
+                        <TextBlock Text="Gaming, everyday tools, and a tidier PC. Let's give your toolkit a home." Style="{StaticResource SetupBody}" Margin="0,8,0,24"/>
+                        <StackPanel x:Name="InstallOptions">
+                            <RadioButton x:Name="InstallChoice" GroupName="Mode" Style="{StaticResource Choice}" IsChecked="True" AutomationProperties.Name="Install Rig for my Windows account" AutomationProperties.AutomationId="SetupInstall">
+                                <StackPanel Margin="0,0,12,0">
+                                    <WrapPanel><TextBlock Text="Install Rig" FontSize="17" FontWeight="SemiBold"/><Border CornerRadius="5" Background="{DynamicResource GoodTintBrush}" Padding="7,3" Margin="10,0,0,0"><TextBlock Text="Recommended" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource GoodBrush}"/></Border></WrapPanel>
+                                    <TextBlock Text="A place in your Start menu, easy updates, and a normal Windows uninstall." Style="{StaticResource SetupBody}" Margin="0,7,0,0" FontSize="13"/>
+                                </StackPanel>
+                            </RadioButton>
+                            <RadioButton x:Name="PortableChoice" GroupName="Mode" Style="{StaticResource Choice}" AutomationProperties.Name="Run Rig from its current location" AutomationProperties.AutomationId="SetupPortable">
+                                <StackPanel Margin="0,0,12,0">
+                                    <TextBlock Text="Run portable" FontSize="17" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Keep the app right here. No Start menu shortcut or Installed apps entry." Style="{StaticResource SetupBody}" Margin="0,7,0,0" FontSize="13"/>
+                                </StackPanel>
+                            </RadioButton>
+                            <CheckBox x:Name="DesktopShortcut" Content="Add a desktop shortcut" IsChecked="False" Margin="2,2,0,16"/>
+                        </StackPanel>
+                        <Border x:Name="InstalledNotice" Style="{StaticResource Card}" Visibility="Collapsed" Margin="0,0,0,16">
+                            <StackPanel><TextBlock Text="Rig is already installed" FontWeight="SemiBold" FontSize="16"/><TextBlock Text="Just a few preferences, then you're ready to go." Style="{StaticResource SetupBody}" Margin="0,6,0,0"/></StackPanel>
+                        </Border>
+                        <Border Background="{DynamicResource SubtleBrush}" CornerRadius="9" Padding="16,13">
+                            <StackPanel><TextBlock x:Name="LocationLabel" Text="APP LOCATION" Style="{StaticResource CardLabel}" FontSize="10"/>
+                                <TextBlock x:Name="LocationText" TextWrapping="Wrap" FontSize="12" Margin="0,6,0,0"/>
+                                <TextBlock x:Name="LocationHint" Style="{StaticResource Muted}" Margin="0,7,0,0"/></StackPanel>
                         </Border>
                     </StackPanel>
-                    <TextBlock Style="{StaticResource Muted}" Margin="0,3,0,0"
-                               Text="Adds it to the Start menu and Settings → Apps (so you can uninstall it normally), and keeps it updating smoothly."/>
-                    <CheckBox x:Name="DesktopShortcut" Content="Also put a shortcut on my desktop" IsChecked="True" Margin="0,10,0,0"/>
+                    <StackPanel x:Name="Step2" Visibility="Collapsed">
+                        <TextBlock Text="Ready when you are." Style="{StaticResource SetupHeading}"/>
+                        <TextBlock Text="Choose how Rig fits into your day. You can change these anytime in Settings." Style="{StaticResource SetupBody}" Margin="0,8,0,22"/>
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,12"><Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,20,0"><TextBlock Text="Automatic Game Mode" FontSize="15" FontWeight="SemiBold"/>
+                                <TextBlock Text="When a supported game starts, apply your power-plan and priority choices. Restore the previous settings afterward." Style="{StaticResource SetupBody}" FontSize="13" Margin="0,6,0,0"/></StackPanel>
+                            <CheckBox x:Name="AutoGame" Grid.Column="1" Style="{StaticResource Switch}" IsChecked="True" VerticalAlignment="Top" Margin="0,3,0,0" AutomationProperties.Name="Automatic Game Mode"/>
+                        </Grid></Border>
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,12"><Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,20,0"><TextBlock Text="Start with Windows" FontSize="15" FontWeight="SemiBold"/>
+                                <TextBlock Text="Start quietly in the notification area when you sign in, so Game Mode and shortcuts are ready." Style="{StaticResource SetupBody}" FontSize="13" Margin="0,6,0,0"/></StackPanel>
+                            <CheckBox x:Name="StartWithWindows" Grid.Column="1" Style="{StaticResource Switch}" IsChecked="True" VerticalAlignment="Top" Margin="0,3,0,0" AutomationProperties.Name="Start with Windows"/>
+                        </Grid></Border>
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,16"><Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,20,0"><TextBlock Text="Helpful notifications" FontSize="15" FontWeight="SemiBold"/>
+                                <TextBlock Text="Game Mode changes, available updates, and cleanup results." Style="{StaticResource SetupBody}" FontSize="13" Margin="0,6,0,0"/></StackPanel>
+                            <CheckBox x:Name="Notify" Grid.Column="1" Style="{StaticResource Switch}" IsChecked="True" VerticalAlignment="Top" Margin="0,3,0,0" AutomationProperties.Name="Helpful notifications"/>
+                        </Grid></Border>
+                        <Border Background="{DynamicResource InfoTintBrush}" CornerRadius="9" Padding="16,13"><TextBlock Text="Closing Rig's window keeps your enabled tools running in the tray. To quit completely, right-click the Rig tray icon and choose Exit." Style="{StaticResource SetupBody}" FontSize="13"/></Border>
+                    </StackPanel>
+                    <StackPanel x:Name="Step3" Visibility="Collapsed">
+                        <TextBlock Text="Useful tools. Your choice." Style="{StaticResource SetupHeading}"/>
+                        <TextBlock Text="These features start off. Turn on the ones you'd like to use." Style="{StaticResource SetupBody}" Margin="0,8,0,22"/>
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,12"><Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,20,0"><TextBlock Text="Clipboard history" FontSize="15" FontWeight="SemiBold"/>
+                                <TextBlock Text="Keep up to 50 text copies in memory and bring them back with Ctrl+Alt+V. History clears when Rig exits. Apps that mark copies as private are excluded." Style="{StaticResource SetupBody}" FontSize="13" Margin="0,6,0,0"/></StackPanel>
+                            <CheckBox x:Name="ClipboardChoice" Grid.Column="1" Style="{StaticResource Switch}" IsChecked="False" VerticalAlignment="Top" Margin="0,3,0,0" AutomationProperties.Name="Clipboard history"/>
+                        </Grid></Border>
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,18"><Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,20,0"><TextBlock Text="Screen time" FontSize="15" FontWeight="SemiBold"/>
+                                <TextBlock Text="See time spent in each app. Rig records app names and time while it's running, and saves them on this PC." Style="{StaticResource SetupBody}" FontSize="13" Margin="0,6,0,0"/></StackPanel>
+                            <CheckBox x:Name="ScreenTimeChoice" Grid.Column="1" Style="{StaticResource Switch}" IsChecked="False" VerticalAlignment="Top" Margin="0,3,0,0" AutomationProperties.Name="Screen time"/>
+                        </Grid></Border>
+                        <TextBlock Text="YOUR SETUP" Style="{StaticResource CardLabel}" FontSize="10"/>
+                        <TextBlock x:Name="SummaryText" Style="{StaticResource SetupBody}" FontSize="13" Margin="0,8,0,0"/>
+                        <TextBlock x:Name="DataLocationText" Style="{StaticResource Muted}" Margin="0,12,0,0"/>
+                    </StackPanel>
+                    <StackPanel x:Name="WorkingStep" Visibility="Collapsed" Margin="0,28,0,0">
+                        <TextBlock Text="Setting things up…" Style="{StaticResource SetupHeading}"/>
+                        <TextBlock Text="Getting your toolkit ready with the choices you made." Style="{StaticResource SetupBody}" Margin="0,10,0,32"/>
+                        <ProgressBar x:Name="SetupBar" Minimum="0" Maximum="1" Height="6" Foreground="{DynamicResource AccentBrush}"/>
+                        <TextBlock x:Name="ProgressText" Style="{StaticResource SetupBody}" Margin="0,16,0,0" AutomationProperties.LiveSetting="Polite"/>
+                    </StackPanel>
+                    <StackPanel x:Name="CompleteStep" Visibility="Collapsed" Margin="0,12,0,0">
+                        <Border Width="58" Height="58" HorizontalAlignment="Left" CornerRadius="29" Background="{DynamicResource GoodTintBrush}" Margin="0,0,0,22"><TextBlock Text="&#xE73E;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="25" Foreground="{DynamicResource GoodBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+                        <TextBlock Text="You're all set." Style="{StaticResource SetupHeading}"/>
+                        <TextBlock x:Name="CompleteText" Style="{StaticResource SetupBody}" Margin="0,10,0,24"/>
+                        <Border Style="{StaticResource Card}"><StackPanel><TextBlock Text="A good place to start" FontSize="15" FontWeight="SemiBold"/>
+                            <TextBlock Text="Home puts your pinned tools and maintenance checks in one place. Open Game Mode to fine-tune what happens when you play." Style="{StaticResource SetupBody}" FontSize="13" Margin="0,8,0,0"/></StackPanel></Border>
+                        <TextBlock Text="Find a tool quickly with the search box in the sidebar." Style="{StaticResource Muted}" Margin="0,18,0,0"/>
+                    </StackPanel>
+                    <Border x:Name="ErrorPanel" Visibility="Collapsed" Background="{DynamicResource WarnTintBrush}" BorderBrush="{DynamicResource WarnBrush}" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,18,0,0">
+                        <StackPanel><TextBlock Text="Setup needs your attention" FontWeight="SemiBold"/><TextBlock x:Name="ErrorText" TextWrapping="Wrap" Margin="0,7,0,0" FontSize="13" AutomationProperties.LiveSetting="Assertive"/>
+                            <Button x:Name="PortableRetryButton" Content="Choose portable mode instead" Click="PortableRetry_Click" HorizontalAlignment="Left" Margin="0,12,0,0"/></StackPanel>
+                    </Border>
                 </StackPanel>
-            </RadioButton>
-            <RadioButton x:Name="PortableChoice" Style="{StaticResource Choice}" GroupName="Mode">
-                <StackPanel>
-                    <TextBlock Text="Just run it from here" FontSize="15" FontWeight="SemiBold"/>
-                    <TextBlock Style="{StaticResource Muted}" Margin="0,3,0,0" TextWrapping="Wrap" Text="Portable: no Start menu shortcut or Installed apps entry, and the EXE stays where it is. Settings and data are still saved in %AppData%\Rig, and Start with Windows (if on) adds a startup entry."/>
-                </StackPanel>
-            </RadioButton>
-        </StackPanel>
-
-        <!-- Footer -->
-        <DockPanel Margin="0,26,0,0">
-            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                <Button x:Name="BackButton" Content="Back" Click="Back_Click" Margin="0,0,8,0" Visibility="Hidden"/>
-                <Button x:Name="NextButton" Content="Next" Style="{StaticResource PrimaryButton}" Click="Next_Click" MinWidth="110"/>
-            </StackPanel>
-            <StackPanel x:Name="Dots" Orientation="Horizontal" VerticalAlignment="Center"/>
-        </DockPanel>
-    </StackPanel>
+            </ScrollViewer>
+            <Border Grid.Row="2" BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="0,1,0,0" Padding="34,18">
+                <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <Button x:Name="CancelButton" Content="Cancel" Click="Cancel_Click" HorizontalAlignment="Left" Background="Transparent" Padding="0,8,12,8"/>
+                    <Button x:Name="BackButton" Grid.Column="1" Content="Back" Click="Back_Click" Margin="0,0,10,0" Visibility="Collapsed"/>
+                    <Button x:Name="NextButton" Grid.Column="2" Content="Continue" Style="{StaticResource PrimaryButton}" Click="Next_Click" MinWidth="126" IsDefault="True" AutomationProperties.AutomationId="SetupNext"/>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
 </Window>

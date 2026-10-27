@@ -71,12 +71,13 @@ public static class Updater
         AppVersion.Parse(Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion)
         ?? new AppVersion(new Version(0, 0, 0), null);
 
-    /// <summary>The lite build uses the installed .NET runtime; the full build carries its own.</summary>
-    public static bool IsLite =>
+    /// <summary>Local development builds use the installed runtime; the released EXE carries its own.</summary>
+    public static bool IsDevelopmentBuild =>
         System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory()
             .Contains(@"\shared\Microsoft.NETCore.App", StringComparison.OrdinalIgnoreCase);
 
-    public static string AssetName => IsLite ? "Rig-lite.exe" : "Rig.exe";
+    public static string BuildLabel => IsDevelopmentBuild ? "development build" : "standalone build";
+    public const string AssetName = "Rig.exe";
 
     /// <summary>
     /// The newest release that's newer than this build, otherwise null. Pre-releases count only with the beta channel on
@@ -84,17 +85,23 @@ public static class Updater
     /// </summary>
     public static async Task<UpdateInfo?> CheckAsync(bool beta = false)
     {
-        beta |= CurrentVersion.IsPreRelease;
         using var response = await Http.GetAsync($"https://api.github.com/repos/{Repo}/releases?per_page=20");
         response.EnsureSuccessStatusCode();
         using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        return SelectUpdate(doc.RootElement, CurrentVersion, beta);
+    }
+
+    /// <summary>Selects the one public app download, regardless of which runtime is running this copy.</summary>
+    internal static UpdateInfo? SelectUpdate(JsonElement releases, AppVersion current, bool beta = false)
+    {
+        beta |= current.IsPreRelease;
         UpdateInfo? best = null;
-        foreach (var release in doc.RootElement.EnumerateArray())
+        foreach (var release in releases.EnumerateArray())
         {
             if (release.GetProperty("draft").GetBoolean()) continue;
             if (release.GetProperty("prerelease").GetBoolean() && !beta) continue;
             var tag = release.GetProperty("tag_name").GetString() ?? "";
-            if (AppVersion.Parse(tag) is not { } version || !(version > CurrentVersion) || (best is not null && !(version > best.Version))) continue;
+            if (AppVersion.Parse(tag) is not { } version || !(version > current) || (best is not null && !(version > best.Version))) continue;
             var assets = release.GetProperty("assets").EnumerateArray().ToList();
             string? sigUrl = assets.FirstOrDefault(a => string.Equals(a.GetProperty("name").GetString(), AssetName + ".sig", StringComparison.OrdinalIgnoreCase)) is { ValueKind: JsonValueKind.Object } sig
                 ? sig.GetProperty("browser_download_url").GetString() : null;

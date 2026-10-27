@@ -1,133 +1,167 @@
-# Rig
+<p align="center">
+  <img src="docs/assets/rig-banner.svg" alt="Rig — Your PC, at your fingertips." width="100%">
+</p>
 
-Your PC toolkit: a native Windows desktop app (C# / WPF, .NET 10, no third-party packages) that boosts games,
-keeps Windows tidy, and handles the everyday stuff, from clipboard history and timers to screen recording,
-batch renaming and a colour picker. Formerly **PC Optimizer**. It lives in the notification area, so Game Mode
-and your hotkeys are always ready.
+<p align="center">
+  A native Windows toolkit for your games, your files, and the things you do every day.
+</p>
 
-![Home](docs/screenshots/home.png)
+<p align="center">
+  <a href="https://github.com/vlyxxxxxq/rig/releases/download/v2.0.0/Rig.exe"><img src="docs/assets/download-rig.svg" alt="Download Rig 2.0.0" width="236" height="54"></a>
+</p>
 
-| | |
+<p align="center">
+  Windows 10 &amp; 11 · 64-bit · Standalone EXE · Install or run portable<br>
+  <a href="https://github.com/vlyxxxxxq/rig/releases/tag/v2.0.0">Release notes</a> &nbsp;·&nbsp;
+  <a href="docs/FEATURES.md">Explore the tools</a> &nbsp;·&nbsp;
+  <a href="https://github.com/vlyxxxxxq/rig/issues">Report a problem</a>
+</p>
+
+---
+
+## A home for your PC tools
+
+Rig brings gaming controls, maintenance, and everyday utilities into one desktop app. Pin the tools you use,
+choose what appears on Home, and switch off the modules you don't need. Keep it in the notification area
+for automatic Game Mode, reminders, and shortcuts.
+
+<p align="center">
+  <img src="docs/screenshots/home.png" alt="Rig Home with pinned tools, a maintenance checklist, and live system information" width="100%">
+</p>
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>Ready when you play</h3>
+      <p>Detect supported games, apply per-game preferences, and track the changes that need to be restored afterward.
+      Keep your library, crosshair, controller tester, and session recap close by.</p>
+    </td>
+    <td width="50%" valign="top">
+      <h3>A little less clutter</h3>
+      <p>See where disk space goes, review temporary files, organize Downloads, and rename files in batches.
+      Undo and file recovery help you deal with interrupted moves and naming conflicts.</p>
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h3>The everyday stuff, covered</h3>
+      <p>Timers, reminders, quick notes, optional clipboard history, window layouts, a color picker, screenshots,
+      and screen recording—without opening a different app for each small task.</p>
+    </td>
+    <td valign="top">
+      <h3>Your setup, your choices</h3>
+      <p>Dark and light themes, six accents, customizable Home cards, optional tracking, and modules you can turn off.
+      Your setup and history stay in local files.</p>
+    </td>
+  </tr>
+</table>
+
+## Start in a minute
+
+1. **Download [Rig.exe](https://github.com/vlyxxxxxq/rig/releases/download/v2.0.0/Rig.exe).** One download includes the runtime; no separate .NET installation is needed.
+2. **Choose a home.** Install for your Windows account, or keep the EXE where it is and run portable.
+3. **Make your choices.** Review Game Mode, sign-in startup, notifications, and the optional clipboard and screen-time tools.
+4. **Open Rig.** Pin a few favorites and make Home yours.
+
+Setup doesn't need administrator access. Some system tools ask for it when required.
+Clipboard history and screen time start off, and a desktop shortcut is optional.
+
+<p align="center">
+  <img src="docs/screenshots/setup.png" alt="Rig setup showing installation and portable choices before any preferences are applied" width="85%">
+</p>
+
+## Find it. Run it. Get back to what you were doing.
+
+Open the command palette with **Ctrl+Alt+P** to find a tool, jump to a setting, launch an app,
+or set a timer. Try a few:
+
+| Type | What happens |
 |---|---|
-| ![Light theme with a purple accent](docs/screenshots/home-light.png) | ![Game Mode](docs/screenshots/game-mode.png) |
-| **Home**: your cards, in dark or light with your accent colour | **Game Mode**: boosts your PC while you play, then undoes everything |
-| ![Timers](docs/screenshots/timers.png) | ![Settings](docs/screenshots/settings.png) |
-| **Timers & Reminders**, also from the command palette | **Settings**: theme, accent and switching modules on or off |
+| `timer 25m focus` | Start a named countdown |
+| `remind me in 20 min to stretch` | Set a reminder |
+| `5 ft in cm` | Convert a measurement |
+| `Window Layouts` | Jump to your saved arrangements |
 
-## Download
+Shortcuts are listed in Settings, and capture shortcuts can be changed on their tool pages.
 
-Grab an EXE from the [releases](../../releases), for 64-bit Windows 10 and 11:
+## Built to show you what's happening
 
-- **`Rig.exe`** (~75 MB): everything built in. Pick this if you're not sure.
-- **`Rig-lite.exe`** (about 1 MB): needs the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) installed.
+- **Game Mode keeps a restoration record.** Applied changes are tracked, failed restores stay pending, and you can retry them.
+- **File changes keep a recovery trail.** Renames and Downloads moves are checked against their previews, with conflicts listed for review.
+- **Photo suggestions stay suggestions.** Exact duplicates and visual look-alikes are separate. Look-alikes aren't preselected for removal.
+- **Maintenance shows its basis.** Storage, startup apps, and current load are checks you can inspect—not a promise of higher FPS.
+- **Recording finishes before exit.** Rig waits for the recording file to be finalized when closing or restarting.
 
-Run it and a short welcome sets things up and offers to install it (no admin needed: it goes in your user
-folder, with a Start menu shortcut and an entry in Windows' "Installed apps" to uninstall it). Or pick
-"Portable" and keep running the EXE from wherever it is.
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/game-mode.png" alt="Game Mode settings and restoration controls"></td>
+    <td width="50%"><img src="docs/screenshots/home-light.png" alt="Rig Home in the light theme"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Game Mode, on your terms.</sub></td>
+    <td align="center"><sub>A familiar workspace in either theme.</sub></td>
+  </tr>
+</table>
 
-The app updates itself: when a new release is out, Settings → Updates (or the sidebar) offers a one-click update.
-Switch on **Beta updates** to get new versions early.
+## Good to know
 
-**Coming from PC Optimizer?** It updates itself into Rig. The first start after the update moves the program to
-its new folder and renames the shortcuts, the "Installed apps" entry, start with Windows and the maintenance task;
-your settings, games, play history and everything else come along.
+<details>
+<summary><strong>Install or portable: where does everything go?</strong></summary>
 
-The EXE isn't code-signed, so the first time you run it Windows SmartScreen may say
-"Windows protected your PC". Click **More info → Run anyway**.
+Installed Rig lives in `%LocalAppData%\Programs\Rig`, with a Start menu shortcut and an Installed apps entry.
+Portable keeps the EXE in its current folder and defaults to manual startup.
 
-## What's inside
+Both modes save settings and enabled history in `%AppData%\Rig`. Portable does not mean that settings
+are stored next to the EXE. Closing the main window normally keeps enabled tools in the tray; choose
+**Exit** from the tray menu to quit completely.
 
-Tools are grouped into five categories. Any tool you don't use can be switched off in Settings → Modules: it
-leaves the sidebar and stops its background work. Pages only load the first time you open them.
+</details>
 
-**Home** – a grid of cards you choose and arrange (Customize, or a compact preset): pinned tools (right-click any
-sidebar page to pin it), a maintenance check with one-click fixes (junk, startup apps, free space, memory right now,
-driver age; a checklist, not a speed test), live CPU and memory, system info, Game Mode, now playing, today's screen time
-and input, timers, the power timer, free games and storage.
+<details>
+<summary><strong>What do the optional tracking tools collect?</strong></summary>
 
-**Command palette** – Ctrl+Alt+P (or Ctrl+Alt+Space when free) from anywhere: jump to any page or setting, run
-actions, launch games and apps, end stuck windows, restore window layouts, control music, and quick answers:
-maths, units (`5 ft in cm`), currency (`100 usd to eur`), emoji (`:fire`), time zones (`time in tokyo`) and
-reminders (`remind me in 20 min to stretch`, `timer 25m focus`).
+Clipboard history keeps up to 50 text copies in memory and clears when Rig exits. Copies marked private
+by their source app are excluded. Screen time records app names and time spent, locally on this PC.
+Input Stats counts keys and clicks rather than storing what you type.
 
-### Gaming
-- **Game Mode** – turns on when a game from your libraries (Steam, Epic, GOG, Ubisoft, EA, Riot, Xbox, your own
-  list) is the window you're using. Optional boosts: top power plan, high CPU priority, no sleep, closing background
-  apps (asked to close; force-closing is a separate option); per-game profiles, including their own resolution and
-  refresh rate. Each change is recorded before it's made and put back to your original value when the game closes;
-  anything that couldn't be restored (even after a crash) is retried on the next start, with a "Try restoring again"
-  button. Performance overlay with FPS (admin) and a recap card after each session.
-- **Game Library** – every installed Steam, Epic and GOG game with covers and playtime, patch notes, and
-  free-to-keep games with optional alerts.
-- **Crosshair** – a click-through custom crosshair that turns on in the games you pick (Ctrl+Shift+F8).
-- **Controller Tester** – buttons, sticks, triggers, drift check and rumble for XInput controllers.
-- **Input Stats** – optional key, click, scroll and cursor-travel counts with keyboard and mouse heatmaps and
-  per-game APM. Counts only, never what you type.
+Review these choices in **Settings → Privacy & data**. A shareable setup does not turn tracking on without consent.
 
-### Media
-- **Similar Photos** – finds exact copies (ticked for the Recycle Bin, keeping one) and look-alikes such as resized or
-  re-saved copies (suggestions only, nothing ticked), with the reason for each match and a keeper you choose.
-- **Color Picker & Ruler** – Ctrl+Shift+F7 freezes the screen with a magnifier; click a pixel and its HEX is
-  copied (RGB and HSL too). Drag to measure anything in pixels.
-- **Clips & Recording** – save the last 30 seconds (Windows Game Bar), screenshots named after the game, and screen
-  recording of any area to MP4 or GIF (Ctrl+Shift+F9 / F10 / F11, all changeable).
+</details>
 
-### Productivity
-- **Clipboard & Notes** – Ctrl+Alt+V opens your last 50 copies anywhere; quick notes that save as you type.
-- **Screen Time** – time per app per day with optional break reminders.
-- **Window Layouts** – save where your windows are and put them back in one click.
-- **Timers & Reminders** – countdowns, reminders at a time or after a while (kept across restarts) and a stopwatch.
-- **Now playing** – a sidebar mini player for Spotify, Apple Music, YouTube and more.
+<details>
+<summary><strong>Does screen recording include sound?</strong></summary>
 
-### Files
-- **Downloads** – sorts loose downloads into folders (with undo and optional auto-sorting) and finds old installers.
-- **Disk Space** – WizTree-style folder tree and treemap, largest files, duplicates and a tidy-up tab.
-- **Junk Cleaner** – temp files, caches, Recycle Bin, shader cache, crash dumps; optional automatic cleaning.
-- **Batch Rename** – find and replace, numbering, prefixes, case, with a live preview and undo. Renames and Downloads
-  sorts keep a recovery record, never overwrite a file, and anything an undo can't put back is listed in File recovery.
-- **Uninstaller** – remove several programs in one go, plus removable Windows extras.
+The built-in MP4 and GIF recorder captures video without audio. Saving a recent gameplay clip uses Windows Game Bar
+and depends on its recording settings.
 
-### System
-- **Startup Apps**, **Processes**, **Tweaks** (reversible), **Right-click Menu**, **Apps** (winget installs and
-  updates), **Hardware** (specs, drive health, benchmarks), **Network** (ping, DNS switcher, speed test),
-  **Security** (Defender) and **Tools** (driver check, Windows Update pause, repairs, power timer, maintenance night).
+</details>
 
-### Settings
-Start with Windows, close to tray, notifications, now playing, **privacy & data** (clipboard history, screen time,
-input counting, where data lives), **keyboard shortcuts**, **dark or light theme with six accent colours** (Windows'
-contrast themes are followed), **modules**, updates (with a beta channel), and backup & share: one file with your
-setup, optionally with your personal data. Importing shows a preview where you choose each part, saves your current
-setup first, and never switches tracking on without asking.
+<details>
+<summary><strong>Why might Windows show a publisher warning?</strong></summary>
 
-Deliberately left out: "RAM cleaners" (trimming other apps' memory just makes them page back in from disk)
-and registry cleaners (no measurable benefit, real risk).
+Rig 2.0.0 is not Authenticode-signed, so Windows may show an unknown-publisher or SmartScreen warning.
+Download it from this repository's release page and decide whether you trust it before running it.
+Release-signing details are documented in [SIGNING.md](docs/SIGNING.md).
 
-## Build and run
+</details>
 
-Needs the [.NET 10 SDK](https://dotnet.microsoft.com/download). From the `Rig` folder:
+<details>
+<summary><strong>Moving from an earlier build?</strong></summary>
 
-```
-dotnet run -c Release
-```
+This release starts a single-download Rig lineup at **2.0.0**. Quit your running copy from the tray first,
+then replace its EXE with the new download. For an installed copy, the default location is
+`%LocalAppData%\Programs\Rig\Rig.exe`. Your settings are stored separately.
 
-Build both release EXEs into `Release\`:
+A previous 2.0.0 or 2.1.0 build will not automatically offer this reset as a newer update.
+Download it once manually. Migration support for older settings is retained.
 
-```
-dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -o ..\Release\full
-dotnet publish -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:DebugType=none -o ..\Release\lite
-```
+</details>
 
-Releasing is automated: bump `<Version>` in `Rig/Rig.csproj`, optionally add `docs/release-notes/vX.Y.Z.md`,
-then push a `vX.Y.Z` tag. GitHub Actions builds both EXEs (also published as `PCOptimizer.exe` and
-`PCOptimizer-lite.exe`, the names PC Optimizer 1.x updates from) and publishes the release. A tag with a suffix,
-like `v2.0.0-beta.1`, becomes a pre-release that only beta-channel users are offered. Every push is build-checked.
+## Explore or contribute
 
-Tests: `dotnet test Rig.Tests --filter "Category!=Desktop"` runs the domain tests (temporary folders and an isolated
-profile only); the `Desktop` category records a few seconds of a screen corner and needs an interactive session.
-Performance baseline and thresholds: `docs/PERFORMANCE.md`. Release signing: `docs/SIGNING.md`.
+- [All tools and features](docs/FEATURES.md)
+- [Build, test, and preview setup](docs/DEVELOPMENT.md)
+- [Rig 2.0.0 release notes](docs/release-notes/v2.0.0.md)
+- [Report a bug or request a feature](https://github.com/vlyxxxxxq/rig/issues/new/choose)
 
-If the app hits an error it shows a report you can copy; logs are in `%AppData%\Rig\logs`.
-
-Settings live in `%AppData%\Rig\settings.json`. Set `RIG_SETTINGS` to another path to use a separate profile
-(useful for testing), and `RIG_TEST_INSTALL_ROOT` to try installing, migrating and uninstalling in a sandbox
-folder (registry under `HKCU\Software\RigTest`) without touching the real system.
+Built with **C#**, **WPF**, and **.NET 10**. The application has no third-party runtime packages.

@@ -137,7 +137,7 @@ public partial class SettingsView : UserControl
     public SettingsView()
     {
         InitializeComponent();
-        VersionText.Text = $"Rig {Updater.CurrentVersion.ToString()} · {(Updater.IsLite ? "lite build (uses installed .NET)" : "standalone build")}";
+        VersionText.Text = $"Rig {Updater.CurrentVersion.ToString()} · {Updater.BuildLabel}";
         UpdateText.Text = $"Version {Updater.CurrentVersion.ToString()}.";
     }
 

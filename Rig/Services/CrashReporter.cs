@@ -42,7 +42,7 @@ public static class CrashReporter
 
     /// <summary>Builds the report text: version, Windows build, and the full exception.</summary>
     public static string Details(Exception ex) => new StringBuilder()
-        .AppendLine($"Rig {Updater.CurrentVersion.ToString()} ({(Updater.IsLite ? "lite" : "full")})")
+        .AppendLine($"Rig {Updater.CurrentVersion.ToString()} ({Updater.BuildLabel})")
         .AppendLine($"Windows {Environment.OSVersion.Version} · {(Environment.Is64BitProcess ? "64-bit" : "32-bit")} · {(Elevation.IsElevated ? "admin" : "standard")}")
         .AppendLine($"Time {DateTime.Now:yyyy-MM-dd HH:mm:ss}")
         .AppendLine()
