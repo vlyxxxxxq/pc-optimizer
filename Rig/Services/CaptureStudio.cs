@@ -62,7 +62,7 @@ public sealed class CaptureStudio
         bool fresh = _run is null;
         await EnsureRunAsync(area, label);
         _manualStart = fresh ? 0 : _run!.Elapsed.TotalSeconds;
-        System.IO.File.WriteAllText(Path.Combine(_run!.Directory, "recording.json"), JsonSerializer.Serialize(new RecoveryRecording(_manualStart.Value, _label)));
+        WriteMarker(_run!.Directory, new RecoveryRecording(_manualStart.Value, _label));
         Status = "Recording. Game audio and microphone follow your selected settings.";
     });
 
@@ -140,21 +140,45 @@ public sealed class CaptureStudio
             double duration = Math.Min(end, selected[^1].End) - Math.Max(start, selected[0].Start);
             if (duration <= 0) throw new IOException("The requested recording interval was empty.");
             var engine = await CaptureEngine.EnsureAsync();
-            var args = new List<string> { "-hide_banner", "-loglevel", "error", "-nostdin", "-f", "concat", "-safe", "0", "-i", list,
-                "-ss", ReplayMedia.Number(offset), "-t", ReplayMedia.Number(duration) };
-            if (category == "Recordings" && offset < .05 && run.HasExited) args.AddRange(["-c", "copy"]);
-            else args.AddRange(["-c:v", run.Encoder, "-b:v", $"{run.Options.CaptureMbps}M", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k"]);
-            args.AddRange(["-movflags", "+faststart", temporary]);
-            using var deadline = new CancellationTokenSource(TimeSpan.FromMinutes(30));
-            var (code, error) = await CaptureEngine.RunAsync(engine, args, deadline.Token);
-            if (code != 0) throw new IOException("Could not finish the video. " + error);
-            var details = await ReplayMedia.InspectAsync(temporary);
-            if (details.Duration <= 0 || (run.Options.CaptureSystemAudio || run.Options.CaptureMicrophone) && !details.HasAudio)
-                throw new IOException("The saved video is missing a requested track. Recovery segments have been kept.");
+            bool requiresAudio = run.Options.CaptureSystemAudio || run.Options.CaptureMicrophone;
+            string? problem = null;
+            // Segments begin on forced keyframes, so a recording can be copied from its first segment without re-encoding an
+            // hour of video; it may start up to one segment early. Clips stay frame-accurate, and a copy that fails is re-encoded.
+            if (category == "Recordings")
+            {
+                double copied = Math.Min(end, selected[^1].End) - selected[0].Start;
+                problem = await FinalizeAsync(engine, ["-f", "concat", "-safe", "0", "-i", list, "-t", ReplayMedia.Number(copied), "-c", "copy"],
+                    temporary, TimeSpan.FromMinutes(30), requiresAudio);
+            }
+            if (category != "Recordings" || problem is not null)
+            {
+                problem = await FinalizeAsync(engine, ["-f", "concat", "-safe", "0", "-i", list, "-ss", ReplayMedia.Number(offset), "-t", ReplayMedia.Number(duration),
+                    "-c:v", run.Encoder, "-b:v", $"{run.Options.CaptureMbps}M", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k"],
+                    temporary, TimeSpan.FromMinutes(Math.Max(30, duration / 20)), requiresAudio);
+            }
+            if (problem is not null) throw new IOException(problem);
             System.IO.File.Move(temporary, destination, false);
             LastSaved = destination; Saved?.Invoke(destination);
         }
         finally { try { System.IO.File.Delete(list); System.IO.File.Delete(temporary); } catch { } }
+    }
+
+    /// <summary>Writes and verifies one MP4. Returns why it failed, leaving the source segments untouched either way.</summary>
+    internal static async Task<string?> FinalizeAsync(string engine, IEnumerable<string> input, string temporary, TimeSpan limit, bool requiresAudio)
+    {
+        try { System.IO.File.Delete(temporary); } catch (IOException) { }
+        using var deadline = new CancellationTokenSource(limit);
+        int code; string error;
+        try { (code, error) = await CaptureEngine.RunAsync(engine, ["-hide_banner", "-loglevel", "error", "-nostdin", .. input, "-movflags", "+faststart", "-y", temporary], deadline.Token); }
+        catch (OperationCanceledException) { return "Finishing the video took too long. Recovery segments have been kept."; }
+        if (code != 0) return "Could not finish the video. " + error;
+        try
+        {
+            var details = await ReplayMedia.InspectAsync(temporary);
+            if (details.Duration <= 0 || requiresAudio && !details.HasAudio) return "The saved video is missing a requested track. Recovery segments have been kept.";
+        }
+        catch (Exception problem) when (problem is not OperationCanceledException) { return "The saved video couldn't be read back. " + problem.Message; }
+        return null;
     }
 
     async Task ExecuteAsync(Func<Task> action)
@@ -244,4 +268,11 @@ public sealed class CaptureStudio
     }
     public bool StopAndWait(TimeSpan timeout) => Task.Run(ShutdownAsync).Wait(timeout);
     internal sealed record RecoveryRecording(double Start, string Label);
+    /// <summary>The marker is what makes an interrupted recording recoverable, so a crash mid-write must not leave half of one.</summary>
+    internal static void WriteMarker(string directory, RecoveryRecording recording)
+    {
+        string marker = Path.Combine(directory, "recording.json"), tmp = marker + ".tmp";
+        System.IO.File.WriteAllText(tmp, JsonSerializer.Serialize(recording));
+        System.IO.File.Move(tmp, marker, true);
+    }
 }

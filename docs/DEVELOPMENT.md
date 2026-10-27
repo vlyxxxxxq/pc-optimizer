@@ -8,7 +8,8 @@
 - [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0).
 
 The application uses C# and WPF, with Windows Forms used for the notification-area icon.
-It has no third-party runtime packages. The test project uses xUnit and the .NET test SDK.
+Runtime third-party components are NAudio and the pinned FFmpeg capture engine, listed in [THIRD-PARTY.md](THIRD-PARTY.md).
+The test project uses xUnit and the .NET test SDK.
 
 ## Run from source
 
@@ -71,7 +72,8 @@ version, uploads a draft, and then makes the release public. A failed build or t
 The application updater always selects `Rig.exe`. Detached release signatures can be enabled as described in
 [SIGNING.md](SIGNING.md); they are verification files, not another app edition. Authenticode is a separate setup.
 
-The public lineup has one release and one app download. Keep migration support for existing settings even though legacy-named downloads are no longer published. Earlier experimental builds already numbered 2.1.0 need a manual download of the current 2.1.0 release.
+Two releases are kept public: 2.0.0 and the current 2.1.x, each with one Rig.exe download. Publish fixes as a new
+patch version (for example 2.1.1) rather than moving an existing tag. Keep migration support for existing settings even though legacy-named downloads are no longer published. Earlier experimental builds already numbered 2.1.0 need a manual download of the current 2.1.0 release.
 
 ## Clean interface previews
 
@@ -91,6 +93,9 @@ Prepare the pinned native engine before building or testing. The release workflo
 See [recording components](THIRD-PARTY.md). Audio uses NAudio 2.2.1; FFmpeg runs as a child process tied to Rig's lifetime.
 Replay uses two-second video segments in the local capture cache. Export reads completed segments and writes a new
 MP4 before announcing success. A manual recording's marker stays until a verified final file exists.
+Recordings are stream-copied from keyframe-aligned segments (they can start up to one segment early) and re-encoded only
+if the copy fails; replay clips are re-encoded for frame-accurate trims. Encoders are probed at the real output size,
+rate and bitrate, and a hardware encoder that fails a real start is replaced by the software encoder for that session.
 
 `RIG_TEST_CAPTURE_SYNTHETIC=1` replaces display/audio capture with generated video and a test tone. Pair it with
 `RIG_SETTINGS` and `RIG_TEST_INSTALL_ROOT` for UI checks without recording personal activity.
