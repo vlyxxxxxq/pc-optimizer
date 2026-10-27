@@ -131,7 +131,8 @@ public static class KeySender
     {
         ushort vk = (ushort)System.Windows.Input.KeyInterop.VirtualKeyFromKey(key);
         // Windows keys and navigation keys are "extended".
-        uint flags = (up ? 0x2u : 0) | (key is System.Windows.Input.Key.LWin or System.Windows.Input.Key.RWin or System.Windows.Input.Key.PrintScreen ? 0x1u : 0);
+        uint flags = (up ? 0x2u : 0) | (key is System.Windows.Input.Key.LWin or System.Windows.Input.Key.RWin or System.Windows.Input.Key.PrintScreen
+            or System.Windows.Input.Key.MediaPlayPause or System.Windows.Input.Key.MediaNextTrack or System.Windows.Input.Key.MediaPreviousTrack ? 0x1u : 0);
         return new INPUT { type = 1, ki = new KEYBDINPUT { wVk = vk, dwFlags = flags } };
     }
 }

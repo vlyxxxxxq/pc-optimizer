@@ -11,6 +11,8 @@ public sealed class GameProfile
     public bool Priority { get; set; } = true;
     public bool KeepAwake { get; set; } = true;
     public bool CloseApps { get; set; }
+    /// <summary>Resolution and refresh rate while playing, e.g. "1920 × 1080 @ 360 Hz" (see DisplayModes).</summary>
+    public string DisplayMode { get; set; } = DisplayModes.Unchanged;
 }
 
 public enum CrosshairShape { Cross, CrossDot, Dot, Circle, T }
@@ -84,11 +86,19 @@ public sealed class AppSettings
 
     /// <summary>Power plan to restore if the app exited while Game Mode was on.</summary>
     public string? PendingRestorePlan { get; set; }
+    /// <summary>A game profile changed the resolution and the app exited before putting it back.</summary>
+    public bool PendingDisplayRestore { get; set; }
 
     /// <summary>Set PCOPTIMIZER_SETTINGS to use a different file (handy for testing).</summary>
     static string FilePath => Environment.GetEnvironmentVariable("PCOPTIMIZER_SETTINGS") is { Length: > 0 } custom
         ? custom
         : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PCOptimizer", "settings.json");
+
+    /// <summary>A file next to settings.json, where every feature keeps its data (follows PCOPTIMIZER_SETTINGS).</summary>
+    public static string DataFile(string name) => Path.Combine(Path.GetDirectoryName(FilePath)!, name);
+
+    /// <summary>Data files a full backup carries along with the settings.</summary>
+    public static readonly string[] DataFiles = ["sessions.json", "screentime.json", "inputstats.json", "notes.txt", "benchmarks.json", "layouts.json"];
 
     static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
 
@@ -129,6 +139,10 @@ public sealed class AppSettings
     public bool RecordGif { get; set; }
     public bool RecordCursor { get; set; } = true;
     public bool InputStatsEnabled { get; set; }
+    public bool LayoutsLaunchApps { get; set; }
+    public bool ShowNowPlaying { get; set; } = true;
+    /// <summary>Sidebar pages pinned to the Dashboard, by their nav button name.</summary>
+    public List<string> PinnedPages { get; set; } = ["NavGame", "NavClips", "NavCleaner", "NavDisk"];
     public bool ClipboardHistoryEnabled { get; set; } = true;
     public bool ScreenTimeEnabled { get; set; } = true;
     public bool BreakReminders { get; set; }

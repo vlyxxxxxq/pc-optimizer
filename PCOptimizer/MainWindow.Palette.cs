@@ -17,7 +17,7 @@ public partial class MainWindow
     public void OpenPalette()
     {
         _palette ??= new CommandPalette(PaletteCommands);
-        if (_fixedCommands.Count == 0) _fixedCommands = FixedCommands();
+        if (_fixedCommands.Count == 0) _fixedCommands = [.. FixedCommands(), .. SettingCommands()];
         _windowCommands = WindowCommands();
         _palette.Open();
         // Slow lists refresh in the background and show up on the next keystroke.
@@ -51,6 +51,8 @@ public partial class MainWindow
                 Run = () => { try { Clipboard.SetText(result); } catch { } },
             };
         foreach (var c in _fixedCommands) yield return c;
+        foreach (var l in LayoutsPage.Layouts)
+            yield return new PaletteCommand { Title = $"Layout: {l.Name}", Detail = $"Restore windows · {l.Detail}", Glyph = "\uE7C4", Rank = 1, Run = () => LayoutsPage.Restore(l) };
         foreach (var c in _gameCommands) yield return c;
         foreach (var c in _appCommands) yield return c;
         foreach (var c in _windowCommands) yield return c;
@@ -74,6 +76,9 @@ public partial class MainWindow
             new() { Title = "Toggle Game Mode", Detail = "Action", Glyph = "", Run = () => _ = _gameMode.ToggleAsync() },
             new() { Title = "Clean junk now", Detail = "Junk Cleaner", Glyph = "", Run = async () => { ShowPage(NavCleaner); await CleanerPage.CleanAsync(); } },
             new() { Title = "Take a screenshot", Detail = "Clips & Screenshots", Glyph = "", Run = () => Dispatcher.InvokeAsync(async () => { await Task.Delay(400); TakeScreenshot(); }) },
+            new() { Title = "Play / pause music", Detail = "Media key", Glyph = "\uE768", Run = NowPlaying.PlayPause },
+            new() { Title = "Next track", Detail = "Media key", Glyph = "\uE893", Run = NowPlaying.Next },
+            new() { Title = "Previous track", Detail = "Media key", Glyph = "\uE892", Run = NowPlaying.Previous },
             new() { Title = "Record screen", Detail = "MP4 or GIF · Clips & Screenshots", Glyph = "", Run = () => Dispatcher.InvokeAsync(async () => { await Task.Delay(300); ToggleRecording(); }) },
             new() { Title = "Save the last 30 seconds (clip)", Detail = "Clips & Screenshots", Glyph = "", Run = SaveClip },
             new() { Title = "Clipboard history", Detail = "Ctrl+Alt+V", Glyph = "", Run = () => { if (_clipboard.Enabled) (_clipboardPopup ??= new ClipboardPopup(_clipboard)).Open(); } },

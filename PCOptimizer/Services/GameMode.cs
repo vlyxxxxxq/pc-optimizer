@@ -20,7 +20,7 @@ public sealed class GameModeService
     bool _checking;
     int? _suppressedPid;              // user switched off while this game was running
     string? _restorePlan, _restorePlanName;
-    bool _keptAwake, _boostedPriority;
+    bool _keptAwake, _boostedPriority, _displayChanged;
     readonly List<string> _toReopen = [];
 
     public GameDetector Detector { get; } = new();
@@ -75,6 +75,12 @@ public sealed class GameModeService
         {
             PowerPlans.SetActive(pending);
             _settings.PendingRestorePlan = null;
+            _settings.Save();
+        }
+        if (_settings.PendingDisplayRestore)
+        {
+            DisplayModes.Restore();
+            _settings.PendingDisplayRestore = false;
             _settings.Save();
         }
 
@@ -211,6 +217,18 @@ public sealed class GameModeService
             boosts.Add("sleep blocked");
         }
 
+        if (DisplayModes.Parse(profile?.DisplayMode) is { } mode && DisplayModes.Current() != mode)
+        {
+            if (DisplayModes.Apply(mode.W, mode.H, mode.Hz))
+            {
+                _displayChanged = true;
+                _settings.PendingDisplayRestore = true;
+                _settings.Save();
+                boosts.Add(DisplayModes.Format(mode.W, mode.H, mode.Hz));
+            }
+            else Log($"The display refused {DisplayModes.Format(mode.W, mode.H, mode.Hz)}");
+        }
+
         if (wantClose && _settings.AppsToClose.Count > 0)
         {
             var names = _settings.AppsToClose.ToList();
@@ -243,6 +261,7 @@ public sealed class GameModeService
             SetPriority(game.Pid, ProcessPriorityClass.Normal);
 
         RestoreSleep();
+        if (RestoreDisplay()) restored.Add("resolution");
 
         if (_toReopen.Count > 0)
         {
@@ -284,6 +303,17 @@ public sealed class GameModeService
         }
         if (Game is { } game && _boostedPriority) SetPriority(game.Pid, ProcessPriorityClass.Normal);
         RestoreSleep();
+        RestoreDisplay();
+    }
+
+    bool RestoreDisplay()
+    {
+        if (!_displayChanged) return false;
+        DisplayModes.Restore();
+        _displayChanged = false;
+        _settings.PendingDisplayRestore = false;
+        _settings.Save();
+        return true;
     }
 
     void RestoreSleep()

@@ -144,6 +144,11 @@ public partial class GameModeView : UserControl
 
     void Profile_Click(object sender, RoutedEventArgs e) => _settings?.Save();
 
+    void ProfileDisplay_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (e.RemovedItems.Count > 0) _settings?.Save(); // not while the list is first filled in
+    }
+
     void RemoveProfile_Click(object sender, RoutedEventArgs e)
     {
         if (_settings is null || ((Button)sender).Tag is not GameProfile p) return;

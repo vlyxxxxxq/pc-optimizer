@@ -30,9 +30,10 @@ public partial class MainWindow : Window
             [NavApps] = AppsPage, [NavUninstall] = UninstallPage, [NavTools] = ToolsPage, [NavSettings] = SettingsPage,
             [NavNetwork] = NetworkPage, [NavHardware] = HardwarePage, [NavMenu] = MenuPage, [NavSecurity] = SecurityPage,
             [NavLibrary] = LibraryPage, [NavClips] = ClipsPage, [NavClipboard] = ClipboardPage, [NavScreenTime] = ScreenTimePage,
-            [NavCrosshair] = CrosshairPage, [NavController] = ControllerPage, [NavDownloads] = DownloadsPage, [NavInput] = InputPage,
+            [NavCrosshair] = CrosshairPage, [NavController] = ControllerPage, [NavDownloads] = DownloadsPage, [NavInput] = InputPage, [NavLayouts] = LayoutsPage,
         };
 
+        SetUpPins();
         AdminStatus.Text = Elevation.IsElevated ? "● Administrator mode" : "● Standard mode · some features need admin";
         AdminStatus.Foreground = (Brush)FindResource(Elevation.IsElevated ? "GoodBrush" : "MutedBrush");
 
@@ -71,6 +72,13 @@ public partial class MainWindow : Window
 
         // Keyboard and mouse stats, per game while Game Mode is on.
         InputPage.Attach(_settings, _inputStats);
+        LayoutsPage.Attach(_settings);
+        _power = new PowerTimer(() => _gameMode.Detector.Libraries.Where(l => l.Source == "Steam" && l.Name is null).Select(l => l.Root));
+        _power.Due += action => new Views.PowerCountdown(action).Show();
+        ToolsPage.AttachPowerTimer(_power);
+        SettingsPage.NowPlayingChanged += SetNowPlaying;
+        _musicTimer.Tick += async (_, _) => await UpdateMusicAsync();
+        SetNowPlaying(_settings.ShowNowPlaying);
         _gameMode.StateChanged += (_, _) => _inputStats.Game = _gameMode.IsActive ? _gameMode.Game?.Name : null;
         if (_settings.InputStatsEnabled) _inputStats.Start();
         _clipboard.Enabled = _settings.ClipboardHistoryEnabled;
@@ -272,6 +280,29 @@ public partial class MainWindow : Window
     readonly ScreenTime _screenTime;
     HotkeyHost? _hotkeys, _captureKeys;
     readonly InputStats _inputStats = new();
+    PowerTimer? _power;
+    readonly System.Windows.Threading.DispatcherTimer _musicTimer = new() { Interval = TimeSpan.FromSeconds(3) };
+
+    /// <summary>Sidebar mini player: shows the current track (checked every 3 s, off the UI thread).</summary>
+    async Task UpdateMusicAsync()
+    {
+        var track = _settings.ShowNowPlaying ? await Task.Run(NowPlaying.Current) : null;
+        MusicChip.Visibility = track is null ? Visibility.Collapsed : Visibility.Visible;
+        if (track is null) return;
+        MusicTitle.Text = track.Title;
+        MusicDetail.Text = track.Artist is null ? track.App : $"{track.Artist} · {track.App}";
+        MusicChip.ToolTip = $"{track.Title}{(track.Artist is null ? "" : $" — {track.Artist}")} ({track.App})";
+    }
+
+    public void SetNowPlaying(bool on)
+    {
+        if (on) { _musicTimer.Start(); _ = UpdateMusicAsync(); }
+        else { _musicTimer.Stop(); MusicChip.Visibility = Visibility.Collapsed; }
+    }
+
+    void MusicPlay_Click(object sender, RoutedEventArgs e) => NowPlaying.PlayPause();
+    async void MusicNext_Click(object sender, RoutedEventArgs e) { NowPlaying.Next(); await Task.Delay(1200); await UpdateMusicAsync(); }
+    async void MusicPrev_Click(object sender, RoutedEventArgs e) { NowPlaying.Previous(); await Task.Delay(1200); await UpdateMusicAsync(); }
     readonly ScreenRecorder _recorder = new();
     Views.RecordingBar? _recordingBar;
     bool _picking;
@@ -467,6 +498,7 @@ public partial class MainWindow : Window
         if (selected == NavCrosshair) CrosshairPage.EnsureLoaded();
         if (selected == NavDownloads) DownloadsPage.EnsureLoaded();
         if (selected == NavInput) InputPage.EnsureLoaded();
+        if (selected == NavLayouts) LayoutsPage.EnsureLoaded();
     }
 
     /// <summary>Quick fade + slide up when a page opens.</summary>

@@ -9,6 +9,13 @@ public partial class SettingsView : UserControl
     AppSettings? _settings;
 
     public event EventHandler? TestNotificationRequested;
+    public event Action<bool>? NowPlayingChanged;
+
+    void NowPlaying_Click(object sender, RoutedEventArgs e)
+    {
+        _settings?.Save();
+        NowPlayingChanged?.Invoke(_settings?.ShowNowPlaying == true);
+    }
 
     public SettingsView()
     {
@@ -106,10 +113,14 @@ public partial class SettingsView : UserControl
             FileName = $"{Environment.UserName}-pc-optimizer-setup.pcopt",
         };
         if (dialog.ShowDialog() != true) return;
+        // Personal history is only included when asked: the same file is also used to share a setup with friends.
+        bool data = MessageBox.Show("Include your personal data too?\n\nPlay history, screen time, input stats, notes, benchmarks and window layouts. " +
+                                    "Choose Yes for a backup of your own, No for a setup to share.",
+            "Export setup", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes;
         ExportButton.IsEnabled = false;
         try
         {
-            await Backup.ExportAsync(dialog.FileName, _settings, new Progress<string>(s => BackupText.Text = s));
+            await Backup.ExportAsync(dialog.FileName, _settings, new Progress<string>(s => BackupText.Text = s), data);
             BackupText.Text = $"Saved {Path.GetFileName(dialog.FileName)}. Send it to a friend, or keep it as a backup.";
             Shell.Reveal(dialog.FileName);
         }

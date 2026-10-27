@@ -65,10 +65,7 @@ public sealed class ClipboardHistory
 /// <summary>A scratch pad saved next to the settings file.</summary>
 public static class QuickNotes
 {
-    static string FilePath => Path.Combine(
-        Path.GetDirectoryName(Environment.GetEnvironmentVariable("PCOPTIMIZER_SETTINGS") is { Length: > 0 } s ? s
-            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PCOptimizer", "x"))!,
-        "notes.txt");
+    static string FilePath => AppSettings.DataFile("notes.txt");
 
     public static string Load()
     {

@@ -81,10 +81,7 @@ public sealed record GameTotal(string Game, TimeSpan Played, int Sessions)
 /// <summary>Collects samples during one game session and keeps the history in %AppData%\PCOptimizer\sessions.json.</summary>
 public sealed class GameStats
 {
-    static string FilePath => Path.Combine(
-        Path.GetDirectoryName(Environment.GetEnvironmentVariable("PCOPTIMIZER_SETTINGS") is { Length: > 0 } s ? s
-            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PCOptimizer", "x"))!,
-        "sessions.json");
+    static string FilePath => AppSettings.DataFile("sessions.json");
 
     readonly CpuSampler _cpu = new();
     GpuLoad? _gpu;

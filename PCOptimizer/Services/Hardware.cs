@@ -143,8 +143,7 @@ public sealed record BenchResult(DateTime Date, double CpuSingle, double CpuMult
 /// </summary>
 public static class Benchmark
 {
-    static string HistoryPath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PCOptimizer", "benchmarks.json");
+    static string HistoryPath => AppSettings.DataFile("benchmarks.json");
 
     /// <summary>CPU points = MB/s of SHA-256 hashing (one thread, then all threads), 3 s each.</summary>
     public static (double Single, double Multi) Cpu(CancellationToken ct)

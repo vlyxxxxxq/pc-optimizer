@@ -22,8 +22,14 @@
             <TextBlock Text="Your PC's health at a glance, with live resource usage."
                        Style="{StaticResource PageSubtitle}"/>
 
+            <!-- Pinned tools: right-click any sidebar page to pin or unpin it -->
+            <TextBlock Text="PINNED" Style="{StaticResource CardLabel}" Margin="0,20,0,10"/>
+            <WrapPanel x:Name="PinnedPanel" x:FieldModifier="public"/>
+            <TextBlock x:Name="PinnedHint" x:FieldModifier="public" Style="{StaticResource Muted}" Visibility="Collapsed"
+                       Text="Right-click any page in the sidebar and choose Pin to Dashboard to keep it here."/>
+
             <!-- Health -->
-            <Border Style="{StaticResource Card}" Margin="0,20,0,0" Padding="24">
+            <Border Style="{StaticResource Card}" Margin="0,8,0,0" Padding="24">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>

@@ -19,6 +19,28 @@
                 </DockPanel>
             </Border>
 
+            <!-- Power timer -->
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
+                    <TextBlock Text="Power timer" FontSize="15" FontWeight="SemiBold"/>
+                    <TextBlock Style="{StaticResource Muted}" Margin="0,2,0,0" TextWrapping="Wrap"
+                               Text="Shut down, restart or sleep after a while, or once your downloads (browser and Steam) have finished. You always get a one-minute countdown to cancel."/>
+                    <WrapPanel Margin="0,12,0,0">
+                        <ComboBox x:Name="PowerActionBox" Width="120" Margin="0,0,10,6" SelectedIndex="0">
+                            <ComboBoxItem Content="Shut down"/>
+                            <ComboBoxItem Content="Restart"/>
+                            <ComboBoxItem Content="Sleep"/>
+                        </ComboBox>
+                        <RadioButton x:Name="PowerInRadio" Content="in" GroupName="PowerWhen" IsChecked="True" VerticalAlignment="Center" Margin="0,0,6,6"/>
+                        <TextBox x:Name="PowerMinutesBox" Text="60" Width="50" Margin="0,0,6,6" VerticalAlignment="Center"/>
+                        <TextBlock Text="minutes" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="0,0,14,6"/>
+                        <RadioButton x:Name="PowerDownloadsRadio" Content="when downloads finish" GroupName="PowerWhen" VerticalAlignment="Center" Margin="0,0,14,6"/>
+                        <Button x:Name="PowerButton" Content="Start" Style="{StaticResource PrimaryButton}" Click="Power_Click" Margin="0,0,0,6"/>
+                    </WrapPanel>
+                    <TextBlock x:Name="PowerStatus" Style="{StaticResource Muted}" Margin="0,6,0,0" TextWrapping="Wrap" Text="Off."/>
+                </StackPanel>
+            </Border>
+
             <!-- Graphics drivers -->
             <Border Style="{StaticResource Card}" Margin="0,16,0,0">
                 <StackPanel>

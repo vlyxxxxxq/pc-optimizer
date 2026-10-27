@@ -31,6 +31,13 @@
                         </StackPanel>
                     </DockPanel>
                     <DockPanel Margin="0,14,0,0">
+                        <CheckBox DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowNowPlaying}" Click="NowPlaying_Click"/>
+                        <StackPanel>
+                            <TextBlock Text="Now playing in the sidebar" FontSize="14"/>
+                            <TextBlock Style="{StaticResource Muted}" Text="Song and controls for Spotify, Apple Music, YouTube and more."/>
+                        </StackPanel>
+                    </DockPanel>
+                    <DockPanel Margin="0,14,0,0">
                         <Button DockPanel.Dock="Right" Content="Send test" Click="TestNotification_Click" Padding="12,5"/>
                         <TextBlock Text="Check that notifications reach you (Focus / Do not disturb can hide them)."
                                    Style="{StaticResource Muted}" VerticalAlignment="Center" FontSize="13"/>

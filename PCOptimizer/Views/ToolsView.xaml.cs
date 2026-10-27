@@ -32,6 +32,33 @@ public partial class ToolsView : UserControl
 
     AppSettings? _settings;
 
+    PowerTimer? _power;
+
+    public void AttachPowerTimer(PowerTimer power)
+    {
+        _power = power;
+        power.Changed += (_, _) => RenderPower();
+        RenderPower();
+    }
+
+    void RenderPower()
+    {
+        if (_power is null) return;
+        PowerStatus.Text = _power.Status;
+        PowerButton.Content = _power.Armed ? "Cancel" : "Start";
+        PowerButton.Style = (Style)FindResource(_power.Armed ? typeof(Button) : "PrimaryButton");
+    }
+
+    void Power_Click(object sender, RoutedEventArgs e)
+    {
+        if (_power is null) return;
+        if (_power.Armed) { _power.Cancel(); return; }
+        var action = (PowerAction)PowerActionBox.SelectedIndex;
+        if (PowerDownloadsRadio.IsChecked == true) _power.ArmAfterDownloads(action);
+        else if (int.TryParse(PowerMinutesBox.Text, out int minutes) && minutes is >= 1 and <= 1440) _power.ArmIn(action, TimeSpan.FromMinutes(minutes));
+        else PowerStatus.Text = "Enter 1 to 1440 minutes.";
+    }
+
     public void Attach(AppSettings settings)
     {
         _settings = settings;

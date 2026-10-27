@@ -13,6 +13,8 @@ public sealed class BackupFile
     public List<string> Tweaks { get; set; } = [];
     /// <summary>winget ids of catalog apps that were installed.</summary>
     public List<string> Apps { get; set; } = [];
+    /// <summary>Data files (play history, screen time, notes…) by name, when the backup includes personal data.</summary>
+    public Dictionary<string, string> Data { get; set; } = [];
 }
 
 public static class Backup
@@ -20,7 +22,7 @@ public static class Backup
     public const string Filter = "PC Optimizer setup (*.pcopt)|*.pcopt";
     static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
 
-    public static async Task ExportAsync(string path, AppSettings settings, IProgress<string> progress)
+    public static async Task ExportAsync(string path, AppSettings settings, IProgress<string> progress, bool includeData = false)
     {
         progress.Report("Reading tweaks…");
         var tweaks = Services.Tweaks.All().SelectMany(g => g.Tweaks).ToList();
@@ -43,6 +45,9 @@ public static class Backup
             Tweaks = tweaks.Where(t => t.IsOn).Select(t => t.Name).ToList(),
             Apps = apps,
         };
+        if (includeData)
+            foreach (var name in AppSettings.DataFiles)
+                if (File.Exists(AppSettings.DataFile(name))) file.Data[name] = await File.ReadAllTextAsync(AppSettings.DataFile(name));
         await File.WriteAllTextAsync(path, JsonSerializer.Serialize(file, Json));
     }
 
@@ -56,6 +61,10 @@ public static class Backup
         var catalog = Winget.Catalog().SelectMany(g => g.Packages).Select(p => p.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
         settings.PendingInstallIds = backup.Apps.Where(catalog.Contains).ToList(); // only known, vetted packages
         settings.Save();
+        // Only known file names are written back, never paths taken from the file.
+        foreach (var (name, content) in backup.Data)
+            if (AppSettings.DataFiles.Contains(name))
+                try { File.WriteAllText(AppSettings.DataFile(name), content); } catch { }
 
         var skipped = new List<string>();
         var tweaks = Services.Tweaks.All().SelectMany(g => g.Tweaks).ToDictionary(t => t.Name, StringComparer.OrdinalIgnoreCase);
@@ -84,6 +93,8 @@ public static class Backup
             $"  • {b.Apps.Count} app(s) to offer for install (you choose on the Apps page)",
             $"  • Auto-clean {(s.AutoClean ? $"every {s.AutoCleanDays} day(s)" : "off")}, updates {(s.AutoCheckUpdates ? "automatic" : "manual")}",
         };
+        if (b.Data.Count > 0)
+            lines.Add($"  • Personal data: {string.Join(", ", b.Data.Keys.Select(Path.GetFileNameWithoutExtension))} (replaces yours)");
         return string.Join("\n", lines);
     }
 }

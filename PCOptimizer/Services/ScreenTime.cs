@@ -25,10 +25,7 @@ public sealed class ScreenTime
     const int TickSeconds = 5;
     static readonly TimeSpan IdleAfter = TimeSpan.FromMinutes(2), BreakResetsAfter = TimeSpan.FromMinutes(5);
 
-    static string FilePath => Path.Combine(
-        Path.GetDirectoryName(Environment.GetEnvironmentVariable("PCOPTIMIZER_SETTINGS") is { Length: > 0 } s ? s
-            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PCOptimizer", "x"))!,
-        "screentime.json");
+    static string FilePath => AppSettings.DataFile("screentime.json");
 
     readonly AppSettings _settings;
     readonly Func<bool> _gaming;

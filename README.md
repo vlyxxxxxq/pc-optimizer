@@ -33,7 +33,8 @@ The EXE isn't code-signed, so the first time you run it Windows SmartScreen may 
 
 ## Features
 
-- **Dashboard** – health score (0–100) on launch with one-click fixes, live CPU/memory charts, drives.
+- **Dashboard** – your pinned tools (right-click any sidebar page to pin it), a health score (0–100) with one-click
+  fixes, live CPU/memory charts, drives.
 - **Game Mode** – toggle it yourself (page, sidebar chip or tray menu) or let it turn on automatically.
   - Detects games only when one is the window you're using and it lives in a game library
     (Steam incl. all library folders, Epic, GOG, Ubisoft, EA, Riot, Xbox, `X:\Games`) or your own list.
@@ -45,7 +46,7 @@ The EXE isn't code-signed, so the first time you run it Windows SmartScreen may 
     with a reason for each, plus one-click adding of any other open app.
   - Everything is undone when the game closes, including after a crash (the old power plan is restored on next launch).
   - Live CPU / GPU / game RAM while you play, and a play history: time per game plus average and peak load per session.
-  - Per-game profiles: different boosts for different games.
+  - Per-game profiles: different boosts for different games, including their own resolution and refresh rate.
   - Optional performance overlay: a click-through CPU / GPU / RAM / ping readout in a corner of the screen.
   - Windows notifications when Game Mode turns on or off.
   - Optional FPS counter (with 1% lows) in the overlay for DirectX games, in administrator mode.
@@ -62,8 +63,10 @@ The EXE isn't code-signed, so the first time you run it Windows SmartScreen may 
   an MP4 (Windows' H.264 encoder, GPU-accelerated when available) or a small GIF (up to 60 s). Video only.
 - **Clipboard & Notes** – Ctrl+Alt+V opens your last 50 copies anywhere (memory only; password-manager copies
   are skipped), plus quick notes that save as you type.
-- **Command palette** – Ctrl+Alt+P (or Ctrl+Alt+Space when free) from anywhere: jump to pages, run actions, launch
-  games and apps, end stuck windows, quick maths.
+- **Command palette** – Ctrl+Alt+P (or Ctrl+Alt+Space when free) from anywhere: jump to pages, find any setting,
+  run actions, restore window layouts, control music, launch games and apps, end stuck windows, quick maths.
+- **Window Layouts** – save where your windows are (Gaming, Study…) and put them back in one click.
+- **Now playing** – a sidebar mini player for Spotify, Apple Music, YouTube and more, with media controls.
 - **Screen Time** – time per app per day and a 7-day chart, counting only active use, with optional break reminders.
 - **Input Stats** – optional key, click, scroll and cursor-travel counts with keyboard and mouse heatmaps and per-game
   APM and most-used keys. Counts only, never what you type; stays on your PC.
@@ -91,13 +94,15 @@ The EXE isn't code-signed, so the first time you run it Windows SmartScreen may 
 - **Uninstaller** – every installed program with icon, size and install date; search, tick several and
   uninstall them in one go with each program's own uninstaller. Plus removable Windows extras (Clipchamp, News, Solitaire…).
 - **Tools** – graphics driver check (version, age, one click to AMD / NVIDIA / Intel downloads),
-  pause Windows Update for 1–5 weeks, power plans
+  pause Windows Update for 1–5 weeks, a power timer (shut down / restart / sleep after a delay or when downloads
+  finish), power plans
   (+ add Ultimate Performance), flush DNS, restart Explorer, repair Windows (DISM/SFC, network reset,
   Windows Update fix, chkdsk), shortcuts to Windows tools. Maintenance night: a weekly scheduled clean
   and app-update check that catches up if the PC was off, and skips itself while you're gaming.
 - **Security** – Windows Defender status, quick / full scans, definition updates, and game-folder exclusions (admin).
 - **Settings** – start with Windows (in the tray), close to tray, notifications, automatic updates, and
-  backup & share: export your whole setup to one file and import it on another PC or a friend's.
+  backup & share: export your whole setup to one file (optionally with your play history, screen time, notes and
+  layouts) and import it on another PC or a friend's.
 
 Deliberately left out: "RAM cleaners" (trimming other apps' memory just makes them page back in from disk)
 and registry cleaners (no measurable benefit, real risk).

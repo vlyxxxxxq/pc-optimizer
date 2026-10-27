@@ -69,10 +69,7 @@ public sealed class InputStats
     [DllImport("user32.dll")] static extern int ReleaseDC(IntPtr hwnd, IntPtr dc);
     [DllImport("gdi32.dll")] static extern int GetDeviceCaps(IntPtr dc, int index);
 
-    static string FilePath => Path.Combine(
-        Path.GetDirectoryName(Environment.GetEnvironmentVariable("PCOPTIMIZER_SETTINGS") is { Length: > 0 } s ? s
-            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PCOptimizer", "x"))!,
-        "inputstats.json");
+    static string FilePath => AppSettings.DataFile("inputstats.json");
 
     readonly object _lock = new();
     readonly bool[] _down = new bool[256];

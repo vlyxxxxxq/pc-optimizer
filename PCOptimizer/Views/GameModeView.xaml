@@ -1,6 +1,7 @@
 <UserControl x:Class="PCOptimizer.Views.GameModeView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:services="clr-namespace:PCOptimizer.Services">
     <UserControl.Resources>
         <!-- One labelled row with a switch on the right -->
         <Style x:Key="RowTitle" TargetType="TextBlock">
@@ -90,7 +91,15 @@
                                             <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding CloseApps}" Click="Profile_Click"/>
                                             <TextBlock Text="Close apps" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="6,0,0,0"/>
                                         </StackPanel>
-                                        <TextBlock Text="{Binding Game}" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Game}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                                <TextBlock Text="Display" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <ComboBox Width="190" ItemsSource="{x:Static services:DisplayModes.Choices}" SelectedItem="{Binding DisplayMode}"
+                                                          SelectionChanged="ProfileDisplay_Changed"
+                                                          ToolTip="Switch the main display to this resolution and refresh rate while playing; it goes back afterwards"/>
+                                            </StackPanel>
+                                        </StackPanel>
                                     </DockPanel>
                                 </Border>
                             </DataTemplate>

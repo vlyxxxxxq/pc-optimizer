@@ -57,6 +57,21 @@
                             </StackPanel>
                         </DockPanel>
                     </Border>
+                    <!-- Now playing: read from music apps and YouTube tabs; buttons send media keys -->
+                    <Border x:Name="MusicChip" CornerRadius="8" Padding="12,8,6,8" Background="#1B1F2A" Margin="0,0,0,8"
+                            BorderThickness="1" BorderBrush="{StaticResource CardBorderBrush}" Visibility="Collapsed">
+                        <DockPanel>
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button Content="&#xE892;" Style="{StaticResource MediaButton}" Click="MusicPrev_Click" ToolTip="Previous"/>
+                                <Button Content="&#xE769;" Style="{StaticResource MediaButton}" Click="MusicPlay_Click" ToolTip="Play / pause"/>
+                                <Button Content="&#xE893;" Style="{StaticResource MediaButton}" Click="MusicNext_Click" ToolTip="Next"/>
+                            </StackPanel>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock x:Name="MusicTitle" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock x:Name="MusicDetail" Style="{StaticResource Muted}" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
                     <!-- Game Mode quick toggle -->
                     <Border x:Name="GameChip" CornerRadius="8" Padding="12,10" Background="#1B1F2A" Cursor="Hand"
                             BorderThickness="1" BorderBrush="{StaticResource CardBorderBrush}"
@@ -114,6 +129,8 @@
                                      Tag="&#xE896;" Checked="Nav_Checked"/>
                         <RadioButton x:Name="NavInput" Style="{StaticResource NavButton}" Content="Input Stats"
                                      Tag="&#xE765;" Checked="Nav_Checked"/>
+                        <RadioButton x:Name="NavLayouts" Style="{StaticResource NavButton}" Content="Window Layouts"
+                                     Tag="&#xE7C4;" Checked="Nav_Checked"/>
 
                         <TextBlock Text="CLEAN UP" Style="{StaticResource NavSection}"/>
                         <RadioButton x:Name="NavCleaner" Style="{StaticResource NavButton}" Content="Junk Cleaner"
@@ -172,6 +189,7 @@
             <views:ControllerView x:Name="ControllerPage" Visibility="Collapsed"/>
             <views:DownloadsView x:Name="DownloadsPage" Visibility="Collapsed"/>
             <views:InputStatsView x:Name="InputPage" Visibility="Collapsed"/>
+            <views:LayoutsView x:Name="LayoutsPage" Visibility="Collapsed"/>
             <views:CleanerView x:Name="CleanerPage" Visibility="Collapsed"/>
             <views:DiskView x:Name="DiskPage" Visibility="Collapsed"/>
             <views:NetworkView x:Name="NetworkPage" Visibility="Collapsed"/>
