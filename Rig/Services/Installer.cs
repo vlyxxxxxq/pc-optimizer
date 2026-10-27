@@ -11,14 +11,13 @@ namespace Rig.Services;
 /// </summary>
 public static class Installer
 {
-    const string UninstallKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\PCOptimizer";
+    const string UninstallKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\Rig";
     const string ShortcutName = "Rig.lnk";
 
-    public static string InstallDir => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "Rig");
-    public static string InstalledExe => Path.Combine(InstallDir, "PCOptimizer.exe");
-    static string StartMenuShortcut => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Programs), ShortcutName);
-    static string DesktopShortcut => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), ShortcutName);
+    public static string InstallDir => Path.Combine(Places.LocalAppData, "Programs", "Rig");
+    public static string InstalledExe => Path.Combine(InstallDir, "Rig.exe");
+    static string StartMenuShortcut => Path.Combine(Places.StartMenuPrograms, ShortcutName);
+    static string DesktopShortcut => Path.Combine(Places.Desktop, ShortcutName);
 
     /// <summary>True when this copy is the installed one.</summary>
     public static bool IsRunningInstalled =>
@@ -29,18 +28,23 @@ public static class Installer
         Directory.CreateDirectory(InstallDir);
         if (!IsRunningInstalled) File.Copy(Environment.ProcessPath!, InstalledExe, overwrite: true);
 
-        CreateShortcut(StartMenuShortcut, InstalledExe);
-        if (desktopShortcut) CreateShortcut(DesktopShortcut, InstalledExe);
+        CreateShortcuts(desktopShortcut);
         Register();
         if (AutoStart.IsEnabled) AutoStart.Set(true, InstalledExe); // point "start with Windows" at the installed copy
+    }
+
+    public static void CreateShortcuts(bool desktop)
+    {
+        CreateShortcut(StartMenuShortcut, InstalledExe);
+        if (desktop) CreateShortcut(DesktopShortcut, InstalledExe);
     }
 
     /// <summary>Writes the Settings → Apps entry (also refreshes the version after an update).</summary>
     public static void Register()
     {
-        using var k = Registry.CurrentUser.CreateSubKey(UninstallKey);
+        using var k = Places.OpenUserKey(UninstallKey, write: true)!;
         k.SetValue("DisplayName", "Rig");
-        k.SetValue("DisplayVersion", Updater.CurrentVersion.ToString(3));
+        k.SetValue("DisplayVersion", Updater.CurrentVersion.ToString());
         k.SetValue("Publisher", "Rig");
         k.SetValue("DisplayIcon", $"{InstalledExe},0");
         k.SetValue("InstallLocation", InstallDir);
@@ -67,7 +71,7 @@ public static class Installer
         link.TargetPath = target;
         link.WorkingDirectory = Path.GetDirectoryName(target);
         link.IconLocation = $"{target},0";
-        link.Description = "Rig: clean up, tweak and boost your PC";
+        link.Description = "Rig: your PC toolkit";
         link.Save();
     }
 
@@ -81,7 +85,7 @@ public static class Installer
             "Uninstall Rig", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes;
 
         // Close other running copies so their files can be removed (they restore Game Mode changes on exit).
-        foreach (var p in Process.GetProcessesByName("PCOptimizer").Where(p => p.Id != Environment.ProcessId))
+        foreach (var p in Process.GetProcessesByName("Rig").Concat(Process.GetProcessesByName("PCOptimizer")).Where(p => p.Id != Environment.ProcessId))
         {
             try { p.CloseMainWindow(); if (!p.WaitForExit(4000)) p.Kill(); } catch { }
             finally { p.Dispose(); }
@@ -90,9 +94,11 @@ public static class Installer
         try { AutoStart.Set(false); } catch { }
         try { Maintenance.Unschedule(); } catch { }
         foreach (var link in new[] { StartMenuShortcut, DesktopShortcut }) try { File.Delete(link); } catch { }
-        try { Registry.CurrentUser.DeleteSubKeyTree(UninstallKey, throwOnMissingSubKey: false); } catch { }
+        try { Places.DeleteUserKey(UninstallKey); } catch { }
+        Migration.RemoveLeftovers();
         if (wipe)
-            try { Directory.Delete(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PCOptimizer"), true); } catch { }
+            foreach (var name in new[] { "Rig", "PCOptimizer" })
+                try { Directory.Delete(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), name), true); } catch { }
 
         // This EXE can't delete itself while running: a hidden cmd removes the folder a moment after we exit.
         if (Directory.Exists(InstallDir))

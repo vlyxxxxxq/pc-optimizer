@@ -164,6 +164,8 @@ public sealed class AppSettings
     public bool RecordCursor { get; set; } = true;
     public bool InputStatsEnabled { get; set; }
     public bool LayoutsLaunchApps { get; set; }
+    /// <summary>Offer pre-releases (betas) as updates.</summary>
+    public bool BetaUpdates { get; set; }
     public string ColorHotkey { get; set; } = "Ctrl+Shift+F7";
     /// <summary>Picked colours as #RRGGBB, newest first.</summary>
     public List<string> ColorHistory { get; set; } = [];
@@ -207,21 +209,21 @@ public sealed class AppSettings
 /// <summary>Launches the app in the tray at sign-in via the per-user Run key.</summary>
 public static class AutoStart
 {
-    const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
-    const string ValueName = "PCOptimizer";
+    public const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
+    const string ValueName = "Rig";
 
     public static bool IsEnabled
     {
         get
         {
-            using var key = Registry.CurrentUser.OpenSubKey(RunKey);
+            using var key = Places.OpenUserKey(RunKey);
             return key?.GetValue(ValueName) is string;
         }
     }
 
     public static void Set(bool enabled, string? exe = null)
     {
-        using var key = Registry.CurrentUser.CreateSubKey(RunKey);
+        using var key = Places.OpenUserKey(RunKey, write: true)!;
         if (enabled) key.SetValue(ValueName, $"\"{exe ?? Environment.ProcessPath}\" --tray");
         else key.DeleteValue(ValueName, throwOnMissingValue: false);
     }

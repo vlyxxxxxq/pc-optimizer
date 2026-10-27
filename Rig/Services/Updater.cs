@@ -6,7 +6,46 @@ using System.Windows;
 
 namespace Rig.Services;
 
-public sealed record UpdateInfo(Version Version, string Tag, string Notes, string DownloadUrl, long Size, string PageUrl);
+public sealed record UpdateInfo(AppVersion Version, string Tag, string Notes, string DownloadUrl, long Size, string PageUrl);
+
+/// <summary>A version like 2.0.0 or 2.0.0-beta.1. A pre-release sorts before its final release.</summary>
+public sealed record AppVersion(Version Core, string? Pre) : IComparable<AppVersion>
+{
+    public static AppVersion? Parse(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return null;
+        text = text.Trim().TrimStart('v', 'V').Split('+')[0];
+        var dash = text.IndexOf('-');
+        var core = dash < 0 ? text : text[..dash];
+        if (!Version.TryParse(core, out var v)) return null;
+        return new AppVersion(new Version(v.Major, v.Minor, Math.Max(0, v.Build)), dash < 0 ? null : text[(dash + 1)..]);
+    }
+
+    public bool IsPreRelease => Pre is not null;
+
+    public int CompareTo(AppVersion? other)
+    {
+        if (other is null) return 1;
+        int c = Core.CompareTo(other.Core);
+        if (c != 0) return c;
+        if (Pre == other.Pre) return 0;
+        if (Pre is null) return 1;
+        if (other.Pre is null) return -1;
+        // beta.2 < beta.10: compare dot-separated parts, numbers as numbers.
+        var a = Pre.Split('.'); var b = other.Pre.Split('.');
+        for (int i = 0; i < Math.Min(a.Length, b.Length); i++)
+        {
+            bool na = int.TryParse(a[i], out var ia), nb = int.TryParse(b[i], out var ib);
+            int d = na && nb ? ia.CompareTo(ib) : string.CompareOrdinal(a[i], b[i]);
+            if (d != 0) return d;
+        }
+        return a.Length.CompareTo(b.Length);
+    }
+
+    public static bool operator >(AppVersion a, AppVersion b) => a.CompareTo(b) > 0;
+    public static bool operator <(AppVersion a, AppVersion b) => a.CompareTo(b) < 0;
+    public override string ToString() => Core.ToString(3) + (Pre is null ? "" : "-" + Pre);
+}
 
 /// <summary>
 /// Checks GitHub for a newer release and updates in place: download next to the EXE, rename the
@@ -27,40 +66,43 @@ public static class Updater
         return c;
     }
 
-    public static Version CurrentVersion
-    {
-        get
-        {
-            var info = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
-            return Version.TryParse(info?.Split('+')[0], out var v) ? v : new Version(0, 0);
-        }
-    }
+    public static AppVersion CurrentVersion { get; } =
+        AppVersion.Parse(Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion)
+        ?? new AppVersion(new Version(0, 0, 0), null);
 
     /// <summary>The lite build uses the installed .NET runtime; the full build carries its own.</summary>
     public static bool IsLite =>
         System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory()
             .Contains(@"\shared\Microsoft.NETCore.App", StringComparison.OrdinalIgnoreCase);
 
-    public static string AssetName => IsLite ? "PCOptimizer-lite.exe" : "PCOptimizer.exe";
+    public static string AssetName => IsLite ? "Rig-lite.exe" : "Rig.exe";
 
-    /// <summary>Latest release if it's newer than this build, otherwise null.</summary>
-    public static async Task<UpdateInfo?> CheckAsync()
+    /// <summary>
+    /// The newest release that's newer than this build, otherwise null. Pre-releases count only with the beta channel on
+    /// (or when this build is itself a beta, so beta testers get the final release and later betas).
+    /// </summary>
+    public static async Task<UpdateInfo?> CheckAsync(bool beta = false)
     {
-        using var response = await Http.GetAsync($"https://api.github.com/repos/{Repo}/releases/latest");
+        beta |= CurrentVersion.IsPreRelease;
+        using var response = await Http.GetAsync($"https://api.github.com/repos/{Repo}/releases?per_page=20");
         response.EnsureSuccessStatusCode();
         using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        var root = doc.RootElement;
-        var tag = root.GetProperty("tag_name").GetString() ?? "";
-        if (!Version.TryParse(tag.TrimStart('v', 'V'), out var latest) || latest <= CurrentVersion) return null;
-
-        foreach (var asset in root.GetProperty("assets").EnumerateArray())
+        UpdateInfo? best = null;
+        foreach (var release in doc.RootElement.EnumerateArray())
         {
-            if (!string.Equals(asset.GetProperty("name").GetString(), AssetName, StringComparison.OrdinalIgnoreCase)) continue;
-            return new UpdateInfo(latest, tag, root.GetProperty("body").GetString() ?? "",
-                asset.GetProperty("browser_download_url").GetString()!, asset.GetProperty("size").GetInt64(),
-                root.GetProperty("html_url").GetString() ?? ReleasesPage);
+            if (release.GetProperty("draft").GetBoolean()) continue;
+            if (release.GetProperty("prerelease").GetBoolean() && !beta) continue;
+            var tag = release.GetProperty("tag_name").GetString() ?? "";
+            if (AppVersion.Parse(tag) is not { } version || !(version > CurrentVersion) || (best is not null && !(version > best.Version))) continue;
+            foreach (var asset in release.GetProperty("assets").EnumerateArray())
+            {
+                if (!string.Equals(asset.GetProperty("name").GetString(), AssetName, StringComparison.OrdinalIgnoreCase)) continue;
+                best = new UpdateInfo(version, tag, release.GetProperty("body").GetString() ?? "",
+                    asset.GetProperty("browser_download_url").GetString()!, asset.GetProperty("size").GetInt64(),
+                    release.GetProperty("html_url").GetString() ?? ReleasesPage);
+            }
         }
-        return null; // newer release exists but not for this flavour
+        return best;
     }
 
     /// <summary>Downloads and swaps in the new EXE, then restarts. Returns false if it couldn't (e.g. no write access).</summary>

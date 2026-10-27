@@ -115,6 +115,13 @@
                         <CheckBox DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding AutoCheckUpdates}" Click="Save_Click"/>
                         <TextBlock Text="Check for updates automatically (once a day)" FontSize="14" VerticalAlignment="Center"/>
                     </DockPanel>
+                    <DockPanel Margin="0,14,0,0">
+                        <CheckBox x:Name="BetaSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding BetaUpdates}" Click="Save_Click"/>
+                        <StackPanel>
+                            <TextBlock Text="Beta updates" FontSize="14"/>
+                            <TextBlock Style="{StaticResource Muted}" Text="Get new versions early, before everyone else. They may have rough edges."/>
+                        </StackPanel>
+                    </DockPanel>
                 </StackPanel>
             </Border>
 

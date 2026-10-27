@@ -39,7 +39,7 @@ public static class Backup
 
         var file = new BackupFile
         {
-            Version = Updater.CurrentVersion.ToString(3),
+            Version = Updater.CurrentVersion.ToString(),
             Created = DateTime.Now,
             Settings = settings,
             Tweaks = tweaks.Where(t => t.IsOn).Select(t => t.Name).ToList(),

@@ -14,7 +14,7 @@
     <RootNamespace>Rig</RootNamespace>
     <Product>Rig</Product>
     <AssemblyTitle>Rig</AssemblyTitle>
-    <Version>1.9.0</Version>
+    <Version>2.0.0-beta.1</Version>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
   </PropertyGroup>
 

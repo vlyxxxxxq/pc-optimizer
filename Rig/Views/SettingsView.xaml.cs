@@ -111,8 +111,8 @@ public partial class SettingsView : UserControl
     public SettingsView()
     {
         InitializeComponent();
-        VersionText.Text = $"Rig {Updater.CurrentVersion.ToString(3)} · {(Updater.IsLite ? "lite build (uses installed .NET)" : "standalone build")}";
-        UpdateText.Text = $"Version {Updater.CurrentVersion.ToString(3)}.";
+        VersionText.Text = $"Rig {Updater.CurrentVersion.ToString()} · {(Updater.IsLite ? "lite build (uses installed .NET)" : "standalone build")}";
+        UpdateText.Text = $"Version {Updater.CurrentVersion.ToString()}.";
     }
 
     UpdateInfo? _update;
@@ -132,17 +132,17 @@ public partial class SettingsView : UserControl
         if (!quiet) UpdateText.Text = "Checking GitHub…";
         try
         {
-            _update = await Updater.CheckAsync();
+            _update = await Updater.CheckAsync(_settings?.BetaUpdates == true);
             if (_update is null)
             {
                 UpdateTitle.Text = "You're up to date";
-                UpdateText.Text = $"Version {Updater.CurrentVersion.ToString(3)} is the latest. Checked {DateTime.Now:t}.";
+                UpdateText.Text = $"Version {Updater.CurrentVersion.ToString()} is the latest. Checked {DateTime.Now:t}.";
                 InstallUpdateButton.Visibility = Visibility.Collapsed;
             }
             else
             {
-                UpdateTitle.Text = $"Version {_update.Version.ToString(3)} is available";
-                UpdateText.Text = $"You have {Updater.CurrentVersion.ToString(3)}. Download {Fmt.Bytes(_update.Size)}; the app restarts by itself.";
+                UpdateTitle.Text = $"Version {_update.Version.ToString()} is available";
+                UpdateText.Text = $"You have {Updater.CurrentVersion.ToString()}. Download {Fmt.Bytes(_update.Size)}; the app restarts by itself.";
                 InstallUpdateButton.Visibility = Visibility.Visible;
                 UpdateFound?.Invoke(_update);
             }
@@ -165,7 +165,7 @@ public partial class SettingsView : UserControl
         if (_update is null) return;
         InstallUpdateButton.IsEnabled = CheckUpdateButton.IsEnabled = false;
         UpdateProgress.Visibility = Visibility.Visible;
-        UpdateTitle.Text = $"Downloading version {_update.Version.ToString(3)}…";
+        UpdateTitle.Text = $"Downloading version {_update.Version.ToString()}…";
         var progress = new Progress<double>(p => { UpdateProgress.Value = p; UpdateText.Text = $"{p:P0} of {Fmt.Bytes(_update.Size)}"; });
         if (!await Updater.InstallAsync(_update, progress))
         {

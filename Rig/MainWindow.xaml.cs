@@ -14,7 +14,7 @@ public partial class MainWindow : Window
     readonly GameModeService _gameMode;
     readonly AutoCleaner _autoCleaner;
     readonly System.Windows.Threading.DispatcherTimer _updateTimer = new() { Interval = TimeSpan.FromSeconds(20) };
-    Version? _notifiedUpdate;
+    AppVersion? _notifiedUpdate;
     readonly TrayIcon _tray = new();
     bool _exiting, _cleanedUp, _healthChecked;
 
@@ -92,6 +92,10 @@ public partial class MainWindow : Window
             _settings.Save();
             Loaded += (_, _) => Go("Apps");
         }
+
+        if (Migration.JustMigrated)
+            Loaded += (_, _) => _tray.Notify("PC Optimizer is now Rig",
+                "Same app, new name and a lot more in it. Your settings, games and history came along.");
 
         _tray.OpenRequested += (_, _) => ShowFromTray();
         _tray.GameModeRequested += async (_, _) => await _gameMode.ToggleAsync();
@@ -251,12 +255,12 @@ public partial class MainWindow : Window
             p.ModuleChanged += ApplyModule;
             p.UpdateFound += info =>
             {
-                UpdateChipTitle.Text = $"Version {info.Version.ToString(3)} available";
+                UpdateChipTitle.Text = $"Version {info.Version.ToString()} available";
                 UpdateChip.Visibility = Visibility.Visible;
                 if (_notifiedUpdate != info.Version)
                 {
                     _notifiedUpdate = info.Version;
-                    Notify("Update available", $"Rig {info.Version.ToString(3)} is out. Open the app to update in one click.");
+                    Notify("Update available", $"Rig {info.Version.ToString()} is out. Open the app to update in one click.");
                 }
             };
             return p;

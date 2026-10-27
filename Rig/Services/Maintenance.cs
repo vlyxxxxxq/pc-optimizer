@@ -3,7 +3,7 @@ using System.Text;
 namespace Rig.Services;
 
 /// <summary>
-/// Weekly "maintenance night": a Windows scheduled task starts "PCOptimizer.exe --maintenance", which cleans
+/// Weekly "maintenance night": a Windows scheduled task starts "Rig.exe --maintenance", which cleans
 /// the safe junk categories, checks (and optionally installs) app updates, then shows a summary notification.
 /// Runs late if the PC was off or asleep at the scheduled time; skips itself if a game is being played.
 /// </summary>
@@ -24,13 +24,17 @@ public static class Maintenance
             $"$t = New-ScheduledTaskTrigger -Weekly -DaysOfWeek {s.MaintenanceDay} -At {at}; " +
             "$o = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Hours 2); " +
             $"Register-ScheduledTask -TaskName '{TaskName}' -Action $a -Trigger $t -Settings $o -Description 'Weekly cleanup by Rig' -Force | Out-Null";
+        if (Places.TaskLog is { } log) { File.AppendAllText(log, $"schedule {TaskName} -> {Exe}\n"); return (true, ""); }
         var (code, output) = await Shell.RunAsync("powershell", $"-NoProfile -Command \"{script}\"", Encoding.UTF8);
         return (code == 0, output.Trim());
     }
 
-    public static void Unschedule()
+    public static void Unschedule() => DeleteTask(TaskName);
+
+    public static void DeleteTask(string name)
     {
-        using var p = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("schtasks", $"/delete /tn \"{TaskName}\" /f")
+        if (Places.TaskLog is { } log) { File.AppendAllText(log, $"delete {name}\n"); return; }
+        using var p = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("schtasks", $"/delete /tn \"{name}\" /f")
         {
             CreateNoWindow = true, UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true,
         });

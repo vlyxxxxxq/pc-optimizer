@@ -47,6 +47,7 @@ public partial class App : Application
         // First run: welcome tour. Choosing "Install" relaunches from the installed copy.
         var settings = Services.AppSettings.Load();
         Services.Theme.Apply(Resources, settings.Theme != "Light", settings.Accent);
+        if (Services.Migration.Run(settings, e.Args)) { Shutdown(); return; } // continues from the new Rig folder
         if (settings.IsFirstRun && !tray)
         {
             var welcome = new WelcomeWindow(settings);
