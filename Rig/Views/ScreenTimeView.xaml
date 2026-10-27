@@ -1,0 +1,90 @@
+<UserControl x:Class="Rig.Views.ScreenTimeView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="32,28,32,32">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
+                    <TextBlock Text="Track screen time" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <CheckBox x:Name="TrackSwitch" Style="{StaticResource Switch}" Click="TrackSwitch_Click"/>
+                </StackPanel>
+                <TextBlock Text="Screen Time" Style="{StaticResource PageTitle}"/>
+            </DockPanel>
+            <TextBlock Style="{StaticResource PageSubtitle}"
+                       Text="Where your time at the PC goes, app by app. Only counted while you're actually using it, and it never leaves this PC."/>
+
+            <Grid Margin="0,20,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="260"/>
+                    <ColumnDefinition Width="16"/>
+                    <ColumnDefinition/>
+                </Grid.ColumnDefinitions>
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock x:Name="DayLabel" Text="TODAY" Style="{StaticResource CardLabel}"/>
+                        <TextBlock x:Name="DayTotal" Text="0m" Style="{StaticResource BigNumber}" Margin="0,6,0,0"/>
+                        <TextBlock x:Name="DayCompare" Style="{StaticResource Muted}" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+                <!-- Last 7 days: click a bar to see that day -->
+                <Border Grid.Column="2" Style="{StaticResource Card}">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Text="LAST 7 DAYS" Style="{StaticResource CardLabel}"/>
+                        <UniformGrid x:Name="WeekBars" Rows="1" Height="120" Margin="0,10,0,0"/>
+                    </DockPanel>
+                </Border>
+            </Grid>
+
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
+                    <TextBlock x:Name="AppsTitle" Text="Apps today" FontSize="15" FontWeight="SemiBold"/>
+                    <TextBlock x:Name="EmptyText" Style="{StaticResource Muted}" Margin="0,8,0,0" Visibility="Collapsed"
+                               Text="Nothing recorded for this day yet."/>
+                    <ItemsControl x:Name="AppList" Margin="0,10,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="28"/>
+                                        <ColumnDefinition Width="220"/>
+                                        <ColumnDefinition/>
+                                        <ColumnDefinition Width="80"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Image Source="{Binding Icon}" Width="18" Height="18" HorizontalAlignment="Left"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                    <Border Grid.Column="2" Height="8" CornerRadius="4" Background="{DynamicResource InputBrush}" VerticalAlignment="Center">
+                                        <Border HorizontalAlignment="Left" CornerRadius="4" Background="{DynamicResource AccentBrush}" Width="{Binding BarWidth}"/>
+                                    </Border>
+                                    <TextBlock Grid.Column="3" Text="{Binding TimeText}" HorizontalAlignment="Right" VerticalAlignment="Center" Style="{StaticResource Muted}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
+                    <DockPanel>
+                        <CheckBox x:Name="BreakSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" Click="BreakSwitch_Click" VerticalAlignment="Top"/>
+                        <StackPanel>
+                            <TextBlock Text="Break reminders" FontSize="15" FontWeight="SemiBold"/>
+                            <TextBlock Style="{StaticResource Muted}" Margin="0,2,16,0" TextWrapping="Wrap"
+                                       Text="A gentle notification after a long stretch at the screen. Stepping away for 5 minutes resets it, and it stays quiet while Game Mode is on."/>
+                        </StackPanel>
+                    </DockPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <TextBlock Text="Remind me every" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <RadioButton x:Name="Break30" Content="30 min" GroupName="Break" Tag="30" Checked="BreakLength_Checked" Margin="0,0,6,0"/>
+                        <RadioButton x:Name="Break45" Content="45 min" GroupName="Break" Tag="45" Checked="BreakLength_Checked" Margin="0,0,6,0"/>
+                        <RadioButton x:Name="Break60" Content="1 hour" GroupName="Break" Tag="60" Checked="BreakLength_Checked" Margin="0,0,6,0"/>
+                        <RadioButton x:Name="Break90" Content="1.5 hours" GroupName="Break" Tag="90" Checked="BreakLength_Checked" Margin="0,0,6,0"/>
+                        <RadioButton x:Name="Break120" Content="2 hours" GroupName="Break" Tag="120" Checked="BreakLength_Checked"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <Button Content="Delete screen time history" Click="Clear_Click" HorizontalAlignment="Left" Margin="0,16,0,0"/>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

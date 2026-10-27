@@ -1,6 +1,7 @@
 name: Release
 
-# Push a tag like v1.4.0 (matching <Version> in PCOptimizer.csproj) to build and publish both EXEs.
+# Push a tag like v2.0.0 (matching <Version> in Rig.csproj) to build and publish both EXEs.
+# A tag with a suffix (v2.0.0-beta.1) is published as a pre-release, which only beta-channel users are offered.
 on:
   push:
     tags: ['v*']
@@ -21,21 +22,24 @@ jobs:
       - name: Check the tag matches the app version
         shell: pwsh
         run: |
-          $version = ([xml](Get-Content PCOptimizer/PCOptimizer.csproj)).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
-          if ("v$version" -ne "${{ github.ref_name }}") { throw "PCOptimizer.csproj says $version but the tag is ${{ github.ref_name }}" }
+          $version = ([xml](Get-Content Rig/Rig.csproj)).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
+          if ("v$version" -ne "${{ github.ref_name }}") { throw "Rig.csproj says $version but the tag is ${{ github.ref_name }}" }
 
       - name: Build full (self-contained) EXE
-        run: dotnet publish PCOptimizer -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -o out/full
+        run: dotnet publish Rig -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -o out/full
 
       - name: Build lite EXE
-        run: dotnet publish PCOptimizer -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:DebugType=none -o out/lite
+        run: dotnet publish Rig -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:DebugType=none -o out/lite
 
       - name: Name the assets (the in-app updater looks for these names)
         shell: pwsh
         run: |
           New-Item -ItemType Directory dist | Out-Null
-          Copy-Item out/full/PCOptimizer.exe dist/PCOptimizer.exe
-          Copy-Item out/lite/PCOptimizer.exe dist/PCOptimizer-lite.exe
+          Copy-Item out/full/Rig.exe dist/Rig.exe
+          Copy-Item out/lite/Rig.exe dist/Rig-lite.exe
+          # PC Optimizer 1.x looks for these names, so it can update itself into Rig.
+          Copy-Item out/full/Rig.exe dist/PCOptimizer.exe
+          Copy-Item out/lite/Rig.exe dist/PCOptimizer-lite.exe
           Get-ChildItem dist | ForEach-Object { "{0} {1:N1} MB" -f $_.Name, ($_.Length / 1MB) }
 
       - name: Publish the GitHub release
@@ -45,6 +49,7 @@ jobs:
         run: |
           $tag = "${{ github.ref_name }}"
           $notes = "docs/release-notes/$tag.md"
-          $ghArgs = @('release', 'create', $tag, 'dist/PCOptimizer.exe', 'dist/PCOptimizer-lite.exe', '--title', "PC Optimizer $tag", '--latest')
+          $ghArgs = @('release', 'create', $tag, 'dist/Rig.exe', 'dist/Rig-lite.exe', 'dist/PCOptimizer.exe', 'dist/PCOptimizer-lite.exe', '--title', "Rig $tag")
+          $ghArgs += $(if ($tag.Contains('-')) { '--prerelease' } else { '--latest' })
           if (Test-Path $notes) { $ghArgs += @('--notes-file', $notes) } else { $ghArgs += '--generate-notes' }
           gh @ghArgs

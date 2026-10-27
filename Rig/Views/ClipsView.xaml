@@ -1,0 +1,129 @@
+<UserControl x:Class="Rig.Views.ClipsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <DockPanel Margin="32,28,32,24">
+        <StackPanel DockPanel.Dock="Top">
+            <TextBlock Text="Clips &amp; Screenshots" Style="{StaticResource PageTitle}"/>
+            <TextBlock Style="{StaticResource PageSubtitle}"
+                       Text="Save the last 30 seconds of a game, grab a screenshot, or record any part of your screen as a video or GIF."/>
+
+            <Grid Margin="0,20,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition/>
+                    <ColumnDefinition Width="16"/>
+                    <ColumnDefinition/>
+                </Grid.ColumnDefinitions>
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <DockPanel>
+                            <Button x:Name="ClipKeyButton" DockPanel.Dock="Right" Tag="clip" Click="ChangeKey_Click" PreviewKeyDown="KeyCapture_PreviewKeyDown"
+                                    LostKeyboardFocus="KeyCapture_LostFocus" Padding="10,3" FontSize="11" VerticalAlignment="Top"
+                                    ToolTip="Click, then press the keys you want"/>
+                            <TextBlock Text="Save the last 30 seconds" FontSize="15" FontWeight="SemiBold"/>
+                        </DockPanel>
+                        <TextBlock x:Name="ClipStatus" Style="{StaticResource Muted}" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                            <Button x:Name="RecordButton" Content="Turn on background recording" Style="{StaticResource PrimaryButton}"
+                                    Click="Record_Click" Margin="0,0,8,0"/>
+                            <Button Content="Open clips folder" Click="ClipFolder_Click"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="2" Style="{StaticResource Card}">
+                    <StackPanel>
+                        <DockPanel>
+                            <Button x:Name="ShotKeyButton" DockPanel.Dock="Right" Tag="shot" Click="ChangeKey_Click" PreviewKeyDown="KeyCapture_PreviewKeyDown"
+                                    LostKeyboardFocus="KeyCapture_LostFocus" Padding="10,3" FontSize="11" VerticalAlignment="Top"
+                                    ToolTip="Click, then press the keys you want"/>
+                            <TextBlock Text="Screenshot" FontSize="15" FontWeight="SemiBold"/>
+                        </DockPanel>
+                        <TextBlock x:Name="ShotStatus" Style="{StaticResource Muted}" Margin="0,4,0,0" TextWrapping="Wrap"
+                                   Text="Captures the whole screen the game is on and saves a PNG to Pictures\Rig, named after the game."/>
+                        <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                            <Button Content="Take one in 3 s" Click="Shot_Click" Margin="0,0,8,0"/>
+                            <Button Content="Open screenshots folder" Click="ShotFolder_Click"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Grid>
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
+                    <DockPanel>
+                        <Button x:Name="RecordKeyButton" DockPanel.Dock="Right" Tag="record" Click="ChangeKey_Click" PreviewKeyDown="KeyCapture_PreviewKeyDown"
+                                LostKeyboardFocus="KeyCapture_LostFocus" Padding="10,3" FontSize="11" VerticalAlignment="Top"
+                                ToolTip="Click, then press the keys you want"/>
+                        <TextBlock Text="Record your screen" FontSize="15" FontWeight="SemiBold"/>
+                    </DockPanel>
+                    <TextBlock x:Name="RecordStatus" Style="{StaticResource Muted}" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Text="Drag out an area (or click for a whole screen) and it records until you press Stop or the hotkey again. Saved to Videos\Rig. Video only, no sound."/>
+                    <DockPanel Margin="0,14,0,0">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                            <RadioButton x:Name="FormatMp4" Content="MP4" GroupName="RecFormat" Checked="Format_Click" Margin="0,0,6,0"/>
+                            <RadioButton x:Name="FormatGif" Content="GIF (up to 60 s)" GroupName="RecFormat" Checked="Format_Click" Margin="0,0,14,0"/>
+                            <CheckBox x:Name="CursorCheck" Content="Show cursor" Click="Format_Click" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <Button x:Name="RecordAreaButton" Content="Record an area" Style="{StaticResource PrimaryButton}" Click="RecordArea_Click" Margin="0,0,8,0"/>
+                            <Button Content="Open recordings folder" Click="RecordFolder_Click"/>
+                        </StackPanel>
+                    </DockPanel>
+                </StackPanel>
+            </Border>
+            <DockPanel Margin="2,12,0,0">
+                <CheckBox x:Name="HotkeySwitch" DockPanel.Dock="Left" Style="{StaticResource Switch}" Click="HotkeySwitch_Click" Margin="0,0,10,0"/>
+                <TextBlock x:Name="HotkeyText" Style="{StaticResource Muted}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+            </DockPanel>
+
+            <DockPanel Margin="0,22,0,10">
+                <Button DockPanel.Dock="Right" Content="Refresh" Click="Refresh_Click"/>
+                <TextBlock Text="Gallery" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                <TextBlock x:Name="GalleryText" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+            </DockPanel>
+        </StackPanel>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <ItemsControl x:Name="Gallery">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Button Click="Open_Click" Margin="0,0,12,14" Cursor="Hand" ToolTip="{Binding Path}">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <StackPanel Width="240">
+                                        <Border x:Name="Frame" Height="135" CornerRadius="8" ClipToBounds="True" Background="{DynamicResource DeepBrush}"
+                                                BorderThickness="1" BorderBrush="{DynamicResource CardBorderBrush}">
+                                            <Grid>
+                                                <Image Source="{Binding Thumb}" Stretch="UniformToFill"/>
+                                                <Border CornerRadius="4" Background="#CC0F1117" Padding="6,2" Margin="6"
+                                                        HorizontalAlignment="Left" VerticalAlignment="Top"
+                                                        Visibility="{Binding HasBadge, Converter={StaticResource BoolToVis}}">
+                                                    <TextBlock Text="{Binding Kind, StringFormat='&#xE714; {0}'}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets, Segoe UI" FontSize="10" Foreground="White"/>
+                                                </Border>
+                                            </Grid>
+                                        </Border>
+                                        <TextBlock Text="{Binding Name}" Margin="2,6,2,0" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding Detail}" Margin="2,1,2,0" Style="{StaticResource Muted}" FontSize="11"/>
+                                    </StackPanel>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                            <Button.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Open" Click="Open_Click"/>
+                                    <MenuItem Header="Show in folder" Click="Reveal_Click"/>
+                                    <MenuItem Header="Move to Recycle Bin" Click="Delete_Click"/>
+                                </ContextMenu>
+                            </Button.ContextMenu>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

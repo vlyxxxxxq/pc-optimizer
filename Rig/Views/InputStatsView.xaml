@@ -1,0 +1,148 @@
+<UserControl x:Class="Rig.Views.InputStatsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="32,28,32,32">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
+                    <TextBlock Text="Count my input" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <CheckBox x:Name="TrackSwitch" Style="{StaticResource Switch}" Click="TrackSwitch_Click"/>
+                </StackPanel>
+                <TextBlock Text="Input Stats" Style="{StaticResource PageTitle}"/>
+            </DockPanel>
+            <TextBlock Style="{StaticResource PageSubtitle}"
+                       Text="Keys pressed, clicks, scrolling and how far your cursor travels, overall and per game. Only counts are kept, never what you type, and nothing leaves this PC."/>
+
+            <UniformGrid Rows="1" Margin="0,20,0,0">
+                <Border Style="{StaticResource Card}" Margin="0,0,8,0">
+                    <StackPanel>
+                        <TextBlock Text="KEYS TODAY" Style="{StaticResource CardLabel}"/>
+                        <TextBlock x:Name="KeysToday" Text="0" Style="{StaticResource BigNumber}" Margin="0,6,0,0"/>
+                        <TextBlock x:Name="KeysAll" Style="{StaticResource Muted}" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}" Margin="8,0,8,0">
+                    <StackPanel>
+                        <TextBlock Text="CLICKS TODAY" Style="{StaticResource CardLabel}"/>
+                        <TextBlock x:Name="ClicksToday" Text="0" Style="{StaticResource BigNumber}" Margin="0,6,0,0"/>
+                        <TextBlock x:Name="ClicksDetail" Style="{StaticResource Muted}" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}" Margin="8,0,8,0">
+                    <StackPanel>
+                        <TextBlock Text="CURSOR TRAVEL TODAY" Style="{StaticResource CardLabel}"/>
+                        <TextBlock x:Name="DistanceToday" Text="0 m" Style="{StaticResource BigNumber}" Margin="0,6,0,0"/>
+                        <TextBlock x:Name="DistanceAll" Style="{StaticResource Muted}" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}" Margin="8,0,0,0">
+                    <StackPanel>
+                        <TextBlock Text="SCROLLING TODAY" Style="{StaticResource CardLabel}"/>
+                        <TextBlock x:Name="ScrollToday" Text="0" Style="{StaticResource BigNumber}" Margin="0,6,0,0"/>
+                        <TextBlock x:Name="ScrollAll" Style="{StaticResource Muted}" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <RadioButton x:Name="KeysAllTime" Content="All time" GroupName="KeyScope" IsChecked="True" Checked="Scope_Checked" Margin="0,0,6,0"/>
+                            <RadioButton x:Name="KeysGame" Content="In a game" GroupName="KeyScope" Checked="Scope_Checked"/>
+                            <ComboBox x:Name="GamePicker" Width="200" Margin="8,0,0,0" SelectionChanged="GamePicker_SelectionChanged" Visibility="Collapsed"/>
+                        </StackPanel>
+                        <TextBlock Text="Keyboard heatmap" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    </DockPanel>
+                    <TextBlock x:Name="TopKeysText" Style="{StaticResource Muted}" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                    <Viewbox Stretch="Uniform" StretchDirection="DownOnly" HorizontalAlignment="Left" Margin="0,14,0,0">
+                        <Canvas x:Name="Keyboard"/>
+                    </Viewbox>
+                </StackPanel>
+            </Border>
+
+            <Grid Margin="0,16,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="3*"/>
+                    <ColumnDefinition Width="16"/>
+                    <ColumnDefinition Width="2*"/>
+                </Grid.ColumnDefinitions>
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <DockPanel>
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                <RadioButton x:Name="HeatMove" Content="Movement" GroupName="Heat" IsChecked="True" Checked="Heat_Checked" Margin="0,0,6,0"/>
+                                <RadioButton x:Name="HeatClick" Content="Clicks" GroupName="Heat" Checked="Heat_Checked"/>
+                            </StackPanel>
+                            <TextBlock Text="Mouse heatmap" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        </DockPanel>
+                        <TextBlock Style="{StaticResource Muted}" Margin="0,4,0,0" Text="Where your cursor goes across all your screens, all time."/>
+                        <Border x:Name="HeatFrame" Margin="0,12,0,0" CornerRadius="8" ClipToBounds="True" Background="{DynamicResource DeepBrush}"
+                                BorderThickness="1" BorderBrush="{DynamicResource CardBorderBrush}" HorizontalAlignment="Left">
+                            <Image x:Name="HeatImage" Stretch="Fill" RenderOptions.BitmapScalingMode="HighQuality"/>
+                        </Border>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="2" Style="{StaticResource Card}">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Text="LAST 7 DAYS (KEYS + CLICKS)" Style="{StaticResource CardLabel}"/>
+                        <UniformGrid x:Name="WeekBars" Rows="1" Height="150" Margin="0,10,0,0"/>
+                    </DockPanel>
+                </Border>
+            </Grid>
+
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
+                    <TextBlock Text="Per game" FontSize="15" FontWeight="SemiBold"/>
+                    <TextBlock Style="{StaticResource Muted}" Margin="0,2,0,0" TextWrapping="Wrap"
+                               Text="Counted while Game Mode is on for a game. APM is keys plus clicks per minute of active play."/>
+                    <TextBlock x:Name="NoGamesText" Style="{StaticResource Muted}" Margin="0,10,0,0" Visibility="Collapsed"
+                               Text="No games played since tracking started."/>
+                    <Grid x:Name="GamesHeader" Margin="0,14,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="220"/>
+                            <ColumnDefinition Width="90"/>
+                            <ColumnDefinition Width="90"/>
+                            <ColumnDefinition Width="90"/>
+                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="GAME" Style="{StaticResource CardLabel}"/>
+                        <TextBlock Grid.Column="1" Text="PLAYED" Style="{StaticResource CardLabel}"/>
+                        <TextBlock Grid.Column="2" Text="KEYS" Style="{StaticResource CardLabel}"/>
+                        <TextBlock Grid.Column="3" Text="CLICKS" Style="{StaticResource CardLabel}"/>
+                        <TextBlock Grid.Column="4" Text="APM" Style="{StaticResource CardLabel}"/>
+                        <TextBlock Grid.Column="5" Text="MOST USED KEYS" Style="{StaticResource CardLabel}"/>
+                    </Grid>
+                    <ItemsControl x:Name="GameList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="220"/>
+                                        <ColumnDefinition Width="90"/>
+                                        <ColumnDefinition Width="90"/>
+                                        <ColumnDefinition Width="90"/>
+                                        <ColumnDefinition Width="80"/>
+                                        <ColumnDefinition/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Margin="0,0,12,0"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding Played}" Style="{StaticResource Muted}"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding Keys}"/>
+                                    <TextBlock Grid.Column="3" Text="{Binding Clicks}"/>
+                                    <TextBlock Grid.Column="4" Text="{Binding Apm}" Foreground="{DynamicResource AccentBrush}" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Column="5" Text="{Binding TopKeys}" Style="{StaticResource Muted}" TextTrimming="CharacterEllipsis"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                <Button Content="Delete input stats" Click="Clear_Click"/>
+                <TextBlock x:Name="SinceText" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="14,0,0,0"/>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

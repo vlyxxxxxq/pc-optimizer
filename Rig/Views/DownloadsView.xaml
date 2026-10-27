@@ -1,0 +1,71 @@
+<UserControl x:Class="Rig.Views.DownloadsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="32,28,32,32">
+            <TextBlock Text="Downloads" Style="{StaticResource PageTitle}"/>
+            <TextBlock Style="{StaticResource PageSubtitle}" TextWrapping="Wrap"
+                       Text="Sort the loose files in your Downloads folder into Installers, Archives, Images, Videos, Documents and more. Folders aren't touched, and you can undo."/>
+
+            <Border Style="{StaticResource Card}" Margin="0,20,0,0">
+                <StackPanel>
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
+                            <Button x:Name="UndoButton" Content="Undo last" Click="Undo_Click" Margin="0,0,8,0"/>
+                            <Button x:Name="OrganizeButton" Content="Organize now" Style="{StaticResource PrimaryButton}" Click="Organize_Click"/>
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock x:Name="SummaryTitle" Text="Looking at Downloads…" FontSize="15" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="FolderText" Style="{StaticResource Muted}" Margin="0,2,16,0" TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <WrapPanel x:Name="CategoryChips" Margin="0,12,0,0"/>
+                    <ItemsControl x:Name="PlanList" Margin="0,6,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <DockPanel Margin="0,0,0,4">
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding Category}" Style="{StaticResource Muted}" Margin="12,0,0,0"/>
+                                    <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+                                </DockPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock x:Name="MoreText" Style="{StaticResource Muted}" Margin="0,4,0,0"/>
+                    <DockPanel Margin="0,14,0,0">
+                        <CheckBox x:Name="AutoSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" Click="Auto_Click"/>
+                        <StackPanel>
+                            <TextBlock Text="Sort new downloads automatically" FontWeight="SemiBold"/>
+                            <TextBlock Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,2,16,0"
+                                       Text="A couple of minutes after a download finishes, it's moved into its folder. Runs while Rig is open or in the tray."/>
+                        </StackPanel>
+                    </DockPanel>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
+                    <DockPanel>
+                        <Button x:Name="RecycleButton" DockPanel.Dock="Right" Content="Move to Recycle Bin" Style="{StaticResource DangerButton}"
+                                Click="Recycle_Click" VerticalAlignment="Top" IsEnabled="False"/>
+                        <StackPanel>
+                            <TextBlock x:Name="InstallersTitle" Text="Old installers" FontSize="15" FontWeight="SemiBold"/>
+                            <TextBlock Style="{StaticResource Muted}" Margin="0,2,16,0" TextWrapping="Wrap"
+                                       Text="Setup files you downloaded more than a month ago. Once a program is installed you rarely need its installer again."/>
+                        </StackPanel>
+                    </DockPanel>
+                    <ItemsControl x:Name="InstallerList" Margin="0,12,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <DockPanel Margin="0,0,0,8">
+                                    <CheckBox DockPanel.Dock="Left" IsChecked="{Binding IsChecked}" Click="InstallerCheck_Click" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding Detail}" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                                    <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                                </DockPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

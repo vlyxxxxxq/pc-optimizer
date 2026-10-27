@@ -1,0 +1,61 @@
+<UserControl x:Class="Rig.Views.PhotosView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <DockPanel Margin="32,28,32,24">
+        <StackPanel DockPanel.Dock="Top">
+            <TextBlock Text="Similar Photos" Style="{StaticResource PageTitle}"/>
+            <TextBlock Style="{StaticResource PageSubtitle}"
+                       Text="Finds photos that look the same, even resized or re-saved copies, keeps the best one of each and lets you recycle the rest."/>
+            <Border Style="{StaticResource Card}" Margin="0,20,0,0">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                        <CheckBox x:Name="SubfoldersCheck" Content="Include subfolders" IsChecked="True" Margin="0,0,14,0" VerticalAlignment="Center"/>
+                        <Button Content="Choose folder…" Click="ChooseFolder_Click" Margin="0,0,8,0"/>
+                        <Button x:Name="ScanButton" Content="Scan" Style="{StaticResource PrimaryButton}" Click="Scan_Click" IsEnabled="False"/>
+                    </StackPanel>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock x:Name="FolderText" Text="Pick a folder, like Pictures" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock x:Name="StatusText" Style="{StaticResource Muted}" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+            <DockPanel Margin="0,16,0,8">
+                <Button x:Name="RecycleButton" DockPanel.Dock="Right" Content="Move ticked to Recycle Bin" Style="{StaticResource DangerButton}"
+                        Click="Recycle_Click" IsEnabled="False"/>
+                <TextBlock x:Name="SummaryText" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"/>
+            </DockPanel>
+        </StackPanel>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <ItemsControl x:Name="Groups">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="{Binding Title}" Style="{StaticResource CardLabel}"/>
+                                <ItemsControl ItemsSource="{Binding Photos}" Margin="0,10,0,0">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Width="190" Margin="0,0,12,6">
+                                                <Border Height="120" CornerRadius="8" ClipToBounds="True" Background="{DynamicResource DeepBrush}" Cursor="Hand"
+                                                        MouseLeftButtonUp="Photo_Click" Tag="{Binding Path}" ToolTip="{Binding Path}">
+                                                    <Image Source="{Binding Thumb}" Stretch="UniformToFill"/>
+                                                </Border>
+                                                <CheckBox IsChecked="{Binding Remove}" Content="Recycle" Margin="0,6,0,0" Click="Tick_Click"/>
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
+                                                <TextBlock Text="{Binding Detail}" Style="{StaticResource Muted}" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

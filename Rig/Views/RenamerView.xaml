@@ -1,0 +1,84 @@
+<UserControl x:Class="Rig.Views.RenamerView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <DockPanel Margin="32,28,32,24">
+        <StackPanel DockPanel.Dock="Top">
+            <TextBlock Text="Batch Rename" Style="{StaticResource PageTitle}"/>
+            <TextBlock Style="{StaticResource PageSubtitle}"
+                       Text="Rename a whole folder of files at once: find and replace, numbering, case and more. Check the preview, then rename; Undo puts everything back."/>
+
+            <Border Style="{StaticResource Card}" Margin="0,20,0,0">
+                <StackPanel>
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Content="Choose folder…" Click="ChooseFolder_Click" Margin="8,0,0,0"/>
+                        <TextBox x:Name="FilterBox" DockPanel.Dock="Right" Width="110" Text="*" ToolTip="Which files, e.g. *.jpg" TextChanged="Rules_Changed"/>
+                        <TextBlock x:Name="FolderText" Text="No folder chosen" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,12,0"/>
+                    </DockPanel>
+                    <WrapPanel Margin="0,14,0,0">
+                        <StackPanel Margin="0,0,18,8">
+                            <TextBlock Text="Find" Style="{StaticResource Muted}"/>
+                            <TextBox x:Name="FindBox" Width="140" Margin="0,4,0,0" TextChanged="Rules_Changed"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,18,8">
+                            <TextBlock Text="Replace with" Style="{StaticResource Muted}"/>
+                            <TextBox x:Name="ReplaceBox" Width="140" Margin="0,4,0,0" TextChanged="Rules_Changed"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,18,8">
+                            <TextBlock Text="Add before" Style="{StaticResource Muted}"/>
+                            <TextBox x:Name="PrefixBox" Width="110" Margin="0,4,0,0" TextChanged="Rules_Changed"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,18,8">
+                            <TextBlock Text="Add after" Style="{StaticResource Muted}"/>
+                            <TextBox x:Name="SuffixBox" Width="110" Margin="0,4,0,0" TextChanged="Rules_Changed"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,18,8">
+                            <TextBlock Text="Numbering" Style="{StaticResource Muted}"/>
+                            <ComboBox x:Name="NumberingBox" Width="130" Margin="0,4,0,0" SelectedIndex="0" SelectionChanged="Rules_Changed">
+                                <ComboBoxItem Content="None" Tag="none"/>
+                                <ComboBoxItem Content="Before the name" Tag="prefix"/>
+                                <ComboBoxItem Content="After the name" Tag="suffix"/>
+                                <ComboBoxItem Content="Replace the name" Tag="name"/>
+                            </ComboBox>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,18,8">
+                            <TextBlock Text="From / digits" Style="{StaticResource Muted}"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                <TextBox x:Name="StartBox" Width="50" Text="1" TextChanged="Rules_Changed" Margin="0,0,6,0"/>
+                                <TextBox x:Name="DigitsBox" Width="40" Text="2" TextChanged="Rules_Changed"/>
+                            </StackPanel>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,18,8">
+                            <TextBlock Text="Case" Style="{StaticResource Muted}"/>
+                            <ComboBox x:Name="CaseBox" Width="120" Margin="0,4,0,0" SelectedIndex="0" SelectionChanged="Rules_Changed">
+                                <ComboBoxItem Content="Keep" Tag="keep"/>
+                                <ComboBoxItem Content="lowercase" Tag="lower"/>
+                                <ComboBoxItem Content="UPPERCASE" Tag="upper"/>
+                                <ComboBoxItem Content="Title Case" Tag="title"/>
+                            </ComboBox>
+                        </StackPanel>
+                    </WrapPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                        <CheckBox x:Name="MatchCaseCheck" Content="Match case when finding" Checked="Rules_Changed" Unchecked="Rules_Changed" Margin="0,0,18,0"/>
+                        <CheckBox x:Name="LowerExtCheck" Content="Lowercase extensions (.JPG → .jpg)" Checked="Rules_Changed" Unchecked="Rules_Changed"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <DockPanel Margin="0,16,0,10">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button x:Name="UndoButton" Content="Undo last rename" Click="Undo_Click" Margin="0,0,8,0"/>
+                    <Button x:Name="RenameButton" Content="Rename" Style="{StaticResource PrimaryButton}" Click="Rename_Click" IsEnabled="False"/>
+                </StackPanel>
+                <TextBlock x:Name="SummaryText" Text="Preview" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"/>
+            </DockPanel>
+        </StackPanel>
+
+        <DataGrid x:Name="Preview">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Now" Binding="{Binding Old}" Width="*"/>
+                <DataGridTextColumn Header="After" Binding="{Binding New}" Width="*"/>
+                <DataGridTextColumn Header="" Binding="{Binding Display}" Width="140"/>
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</UserControl>

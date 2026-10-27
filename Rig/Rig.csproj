@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <!-- Only for the notification-area icon (NotifyIcon). -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <!-- Disk benchmark uses aligned native buffers for unbuffered I/O. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>Rig</AssemblyName>
+    <RootNamespace>Rig</RootNamespace>
+    <Product>Rig</Product>
+    <AssemblyTitle>Rig</AssemblyTitle>
+    <Version>1.9.0</Version>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\app.ico" />
+    <!-- WinForms is referenced only for the tray icon; keep its namespaces out of WPF code. -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+</Project>

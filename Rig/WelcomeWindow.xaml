@@ -1,0 +1,139 @@
+<Window x:Class="Rig.WelcomeWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Welcome to Rig" Width="640" SizeToContent="Height" ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen" Icon="Assets/app.ico"
+        Background="{DynamicResource BgBrush}" Foreground="{DynamicResource TextBrush}"
+        FontFamily="Segoe UI Variable Text, Segoe UI" FontSize="13">
+    <Window.Resources>
+        <!-- Big selectable option card -->
+        <Style x:Key="Choice" TargetType="RadioButton">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Margin" Value="0,10,0,0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="bd" CornerRadius="10" Padding="16,12" Background="{DynamicResource CardBrush}"
+                                BorderBrush="{DynamicResource CardBorderBrush}" BorderThickness="1.5">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource StrongBorderBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource InfoTintBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <StackPanel Margin="32,28,32,24">
+        <!-- Step 1: hello -->
+        <StackPanel x:Name="Step1">
+            <Border Width="64" Height="64" CornerRadius="16" HorizontalAlignment="Left">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#6CA0FF" Offset="0"/>
+                        <GradientStop Color="#3A6BE8" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+                <Viewbox Width="64" Height="64">
+                    <Canvas Width="36" Height="36">
+                        <Path Data="M10.65,26.75 A10.4,10.4 0 1 1 25.35,26.75" Stroke="White" StrokeThickness="3" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                        <Line X1="18" Y1="19.4" X2="24.2" Y2="14.2" Stroke="White" StrokeThickness="3" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                        <Ellipse Canvas.Left="15.3" Canvas.Top="16.7" Width="5.4" Height="5.4" Fill="White"/>
+                    </Canvas>
+                </Viewbox>
+            </Border>
+            <TextBlock Text="Welcome to Rig" Style="{StaticResource PageTitle}" Margin="0,18,0,0"/>
+            <TextBlock Style="{StaticResource PageSubtitle}" FontSize="14"
+                       Text="Everything to keep a gaming PC fast and tidy, in one place. Nothing changes until you choose to."/>
+            <ItemsControl x:Name="Highlights" Margin="0,16,0,0">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <DockPanel Margin="0,8,0,0">
+                            <Border DockPanel.Dock="Left" Width="34" Height="34" CornerRadius="9" Background="{DynamicResource InfoTintBrush}" Margin="0,0,14,0">
+                                <TextBlock Text="{Binding Glyph}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="16"
+                                           Foreground="{DynamicResource AccentLightBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="14"/>
+                                <TextBlock Text="{Binding Text}" Style="{StaticResource Muted}"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+
+        <!-- Step 2: preferences -->
+        <StackPanel x:Name="Step2" Visibility="Collapsed">
+            <TextBlock Text="Set it up your way" Style="{StaticResource PageTitle}"/>
+            <TextBlock Style="{StaticResource PageSubtitle}" FontSize="14" Text="You can change all of these later in Settings and Game Mode."/>
+            <Border Style="{StaticResource Card}" Margin="0,18,0,0">
+                <StackPanel>
+                    <DockPanel>
+                        <CheckBox x:Name="AutoGame" DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="True"/>
+                        <StackPanel>
+                            <TextBlock Text="Turn Game Mode on automatically" FontSize="14"/>
+                            <TextBlock Style="{StaticResource Muted}" Text="When a game from Steam, Epic, Xbox and others is in focus. Everything is undone when you quit."/>
+                        </StackPanel>
+                    </DockPanel>
+                    <DockPanel Margin="0,16,0,0">
+                        <CheckBox x:Name="StartWithWindows" DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="True"/>
+                        <StackPanel>
+                            <TextBlock Text="Start with Windows (quietly, in the tray)" FontSize="14"/>
+                            <TextBlock Style="{StaticResource Muted}" Text="Needed for automatic Game Mode, update checks and scheduled cleaning."/>
+                        </StackPanel>
+                    </DockPanel>
+                    <DockPanel Margin="0,16,0,0">
+                        <CheckBox x:Name="Notify" DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="True"/>
+                        <StackPanel>
+                            <TextBlock Text="Notifications" FontSize="14"/>
+                            <TextBlock Style="{StaticResource Muted}" Text="Game Mode on/off, updates and cleanup results."/>
+                        </StackPanel>
+                    </DockPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <!-- Step 3: install or run -->
+        <StackPanel x:Name="Step3" Visibility="Collapsed">
+            <TextBlock Text="Install it, or just run it?" Style="{StaticResource PageTitle}"/>
+            <TextBlock Style="{StaticResource PageSubtitle}" FontSize="14" Text="No administrator rights needed either way."/>
+            <RadioButton x:Name="InstallChoice" Style="{StaticResource Choice}" GroupName="Mode" IsChecked="True" Margin="0,16,0,0">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Install for me" FontSize="15" FontWeight="SemiBold"/>
+                        <Border Style="{StaticResource Badge}" Background="{DynamicResource GoodTintBrush}">
+                            <TextBlock Text="Recommended" FontSize="11" Foreground="{DynamicResource GoodBrush}"/>
+                        </Border>
+                    </StackPanel>
+                    <TextBlock Style="{StaticResource Muted}" Margin="0,3,0,0"
+                               Text="Adds it to the Start menu and Settings → Apps (so you can uninstall it normally), and keeps it updating smoothly."/>
+                    <CheckBox x:Name="DesktopShortcut" Content="Also put a shortcut on my desktop" IsChecked="True" Margin="0,10,0,0"/>
+                </StackPanel>
+            </RadioButton>
+            <RadioButton x:Name="PortableChoice" Style="{StaticResource Choice}" GroupName="Mode">
+                <StackPanel>
+                    <TextBlock Text="Just run it from here" FontSize="15" FontWeight="SemiBold"/>
+                    <TextBlock Style="{StaticResource Muted}" Margin="0,3,0,0" Text="Portable: nothing is added to your PC. Good for a USB stick or a quick try."/>
+                </StackPanel>
+            </RadioButton>
+        </StackPanel>
+
+        <!-- Footer -->
+        <DockPanel Margin="0,26,0,0">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <Button x:Name="BackButton" Content="Back" Click="Back_Click" Margin="0,0,8,0" Visibility="Hidden"/>
+                <Button x:Name="NextButton" Content="Next" Style="{StaticResource PrimaryButton}" Click="Next_Click" MinWidth="110"/>
+            </StackPanel>
+            <StackPanel x:Name="Dots" Orientation="Horizontal" VerticalAlignment="Center"/>
+        </DockPanel>
+    </StackPanel>
+</Window>
