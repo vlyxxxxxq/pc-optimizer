@@ -112,6 +112,8 @@
                                      Tag="&#xE916;" Checked="Nav_Checked"/>
                         <RadioButton x:Name="NavDownloads" Style="{StaticResource NavButton}" Content="Downloads"
                                      Tag="&#xE896;" Checked="Nav_Checked"/>
+                        <RadioButton x:Name="NavInput" Style="{StaticResource NavButton}" Content="Input Stats"
+                                     Tag="&#xE765;" Checked="Nav_Checked"/>
 
                         <TextBlock Text="CLEAN UP" Style="{StaticResource NavSection}"/>
                         <RadioButton x:Name="NavCleaner" Style="{StaticResource NavButton}" Content="Junk Cleaner"
@@ -169,6 +171,7 @@
             <views:CrosshairView x:Name="CrosshairPage" Visibility="Collapsed"/>
             <views:ControllerView x:Name="ControllerPage" Visibility="Collapsed"/>
             <views:DownloadsView x:Name="DownloadsPage" Visibility="Collapsed"/>
+            <views:InputStatsView x:Name="InputPage" Visibility="Collapsed"/>
             <views:CleanerView x:Name="CleanerPage" Visibility="Collapsed"/>
             <views:DiskView x:Name="DiskPage" Visibility="Collapsed"/>
             <views:NetworkView x:Name="NetworkPage" Visibility="Collapsed"/>

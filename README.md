@@ -58,11 +58,15 @@ The EXE isn't code-signed, so the first time you run it Windows SmartScreen may 
 - **Controller Tester** – live buttons, sticks and triggers for XInput controllers, a stick-drift check and rumble tests.
 - **Clips & Screenshots** – Ctrl+Shift+F9 (changeable) saves the last 30 seconds (via Windows Game Bar's background
   recording), Ctrl+Shift+F10 saves a screenshot named after the game; a gallery of everything captured.
+- **Screen recorder** – Ctrl+Shift+F11 (changeable): drag out an area (or click for a whole screen) and record it as
+  an MP4 (Windows' H.264 encoder, GPU-accelerated when available) or a small GIF (up to 60 s). Video only.
 - **Clipboard & Notes** – Ctrl+Alt+V opens your last 50 copies anywhere (memory only; password-manager copies
   are skipped), plus quick notes that save as you type.
 - **Command palette** – Ctrl+Alt+P (or Ctrl+Alt+Space when free) from anywhere: jump to pages, run actions, launch
   games and apps, end stuck windows, quick maths.
 - **Screen Time** – time per app per day and a 7-day chart, counting only active use, with optional break reminders.
+- **Input Stats** – optional key, click, scroll and cursor-travel counts with keyboard and mouse heatmaps and per-game
+  APM and most-used keys. Counts only, never what you type; stays on your PC.
 - **Downloads** – sorts loose files in Downloads into folders by type (with undo and optional auto-sorting) and
   lists old installers to clear out.
 - **Junk Cleaner** – temp files, browser caches, Recycle Bin, thumbnails, shader cache, crash dumps.

@@ -14,7 +14,11 @@ public sealed class CaptureItem : ObservableObject
     public required long Size { get; init; }
     public bool IsVideo => System.IO.Path.GetExtension(Path).ToLowerInvariant() is ".mp4" or ".mkv" or ".mov" or ".webm";
     public string Name => System.IO.Path.GetFileNameWithoutExtension(Path);
-    public string Detail => $"{(IsVideo ? "Clip" : "Screenshot")} · {Taken:g} · {Fmt.Bytes(Size)}";
+    public bool IsGif => System.IO.Path.GetExtension(Path).Equals(".gif", StringComparison.OrdinalIgnoreCase);
+    public bool IsRecording => IsVideo && System.IO.Path.GetDirectoryName(Path)!.Equals(ScreenRecorder.Folder, StringComparison.OrdinalIgnoreCase);
+    public string Kind => IsGif ? "GIF" : IsRecording ? "Recording" : IsVideo ? "Clip" : "Screenshot";
+    public bool HasBadge => IsVideo || IsGif;
+    public string Detail => $"{Kind} · {Taken:g} · {Fmt.Bytes(Size)}";
     ImageSource? _thumb;
     public ImageSource? Thumb { get => _thumb; set => Set(ref _thumb, value); }
 }
@@ -87,7 +91,7 @@ public static class Captures
     public static List<CaptureItem> List()
     {
         var items = new List<CaptureItem>();
-        foreach (var (folder, pattern) in new[] { (ClipFolder, "*.mp4"), (ClipFolder, "*.png"), (ScreenshotFolder, "*.png") })
+        foreach (var (folder, pattern) in new[] { (ClipFolder, "*.mp4"), (ClipFolder, "*.png"), (ScreenshotFolder, "*.png"), (ScreenRecorder.Folder, "*.mp4"), (ScreenRecorder.Folder, "*.gif") })
         {
             try
             {

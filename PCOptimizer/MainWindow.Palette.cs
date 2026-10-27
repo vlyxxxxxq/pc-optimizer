@@ -74,6 +74,7 @@ public partial class MainWindow
             new() { Title = "Toggle Game Mode", Detail = "Action", Glyph = "", Run = () => _ = _gameMode.ToggleAsync() },
             new() { Title = "Clean junk now", Detail = "Junk Cleaner", Glyph = "", Run = async () => { ShowPage(NavCleaner); await CleanerPage.CleanAsync(); } },
             new() { Title = "Take a screenshot", Detail = "Clips & Screenshots", Glyph = "", Run = () => Dispatcher.InvokeAsync(async () => { await Task.Delay(400); TakeScreenshot(); }) },
+            new() { Title = "Record screen", Detail = "MP4 or GIF · Clips & Screenshots", Glyph = "", Run = () => Dispatcher.InvokeAsync(async () => { await Task.Delay(300); ToggleRecording(); }) },
             new() { Title = "Save the last 30 seconds (clip)", Detail = "Clips & Screenshots", Glyph = "", Run = SaveClip },
             new() { Title = "Clipboard history", Detail = "Ctrl+Alt+V", Glyph = "", Run = () => { if (_clipboard.Enabled) (_clipboardPopup ??= new ClipboardPopup(_clipboard)).Open(); } },
             new() { Title = "Flush DNS cache", Detail = "Network fix", Glyph = "", Run = async () => { await Shell.RunAsync("ipconfig", "/flushdns"); Notify("DNS cache flushed", "Websites will look up fresh addresses."); } },

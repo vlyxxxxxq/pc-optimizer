@@ -17,6 +17,8 @@ public partial class ClipsView : UserControl
     public event EventHandler? HotkeysChanged;
     /// <summary>"Take one in 3 s" was clicked; the main window takes it so the game's name is used.</summary>
     public event EventHandler? ScreenshotRequested;
+    /// <summary>"Record an area" was clicked (or Stop, while recording).</summary>
+    public event EventHandler? RecordRequested;
 
     public ClipsView()
     {
@@ -26,15 +28,34 @@ public partial class ClipsView : UserControl
 
     public void Attach(AppSettings settings)
     {
+        // Before _settings is set, so filling these in doesn't save anything.
+        FormatMp4.IsChecked = !settings.RecordGif;
+        FormatGif.IsChecked = settings.RecordGif;
+        CursorCheck.IsChecked = settings.RecordCursor;
         _settings = settings;
         HotkeySwitch.IsChecked = settings.CaptureHotkeys;
     }
 
+    public void ShowRecording(bool recording) =>
+        RecordAreaButton.Content = recording ? "Stop recording" : "Record an area";
+
+    void RecordArea_Click(object sender, RoutedEventArgs e) => RecordRequested?.Invoke(this, EventArgs.Empty);
+    void RecordFolder_Click(object sender, RoutedEventArgs e) => OpenFolder(ScreenRecorder.Folder);
+
+    void Format_Click(object sender, RoutedEventArgs e)
+    {
+        if (_settings is null) return;
+        _settings.RecordGif = FormatGif.IsChecked == true;
+        _settings.RecordCursor = CursorCheck.IsChecked == true;
+        _settings.Save();
+    }
+
     /// <summary>Shows whether the hotkeys could be registered (another app may own them).</summary>
-    public void ShowHotkeyState(bool clipOk, bool shotOk)
+    public void ShowHotkeyState(bool clipOk, bool shotOk, bool recordOk)
     {
         RenderKeys();
-        var taken = new[] { clipOk ? null : _settings?.ClipHotkey, shotOk ? null : _settings?.ScreenshotHotkey }.OfType<string>().ToList();
+        var taken = new[] { clipOk ? null : _settings?.ClipHotkey, shotOk ? null : _settings?.ScreenshotHotkey,
+                            recordOk ? null : _settings?.RecordHotkey }.OfType<string>().ToList();
         HotkeyText.Text = _settings?.CaptureHotkeys != true
             ? "Hotkeys are off."
             : taken.Count == 0 ? "Hotkeys work everywhere, even while a game has focus. Click a key to change it."
@@ -53,6 +74,7 @@ public partial class ClipsView : UserControl
         if (_settings is null) return;
         ClipKeyButton.Content = _settings.ClipHotkey.Replace("+", " + ");
         ShotKeyButton.Content = _settings.ScreenshotHotkey.Replace("+", " + ");
+        RecordKeyButton.Content = _settings.RecordHotkey.Replace("+", " + ");
     }
 
     void ChangeKey_Click(object sender, RoutedEventArgs e)
@@ -81,14 +103,16 @@ public partial class ClipsView : UserControl
             _capturing.Content = "Add Ctrl or Alt (or use an F-key)";
             return;
         }
-        var other = _capturing == ClipKeyButton ? _settings.ScreenshotHotkey : _settings.ClipHotkey;
-        if (hotkey.ToString() == other)
+        var others = new[] { (ClipKeyButton, _settings.ClipHotkey), (ShotKeyButton, _settings.ScreenshotHotkey), (RecordKeyButton, _settings.RecordHotkey) }
+            .Where(o => o.Item1 != _capturing).Select(o => o.Item2);
+        if (others.Contains(hotkey.ToString()))
         {
-            _capturing.Content = "Already used for the other one";
+            _capturing.Content = "Already used for another one";
             return;
         }
         if (_capturing == ClipKeyButton) _settings.ClipHotkey = hotkey.ToString();
-        else _settings.ScreenshotHotkey = hotkey.ToString();
+        else if (_capturing == ShotKeyButton) _settings.ScreenshotHotkey = hotkey.ToString();
+        else _settings.RecordHotkey = hotkey.ToString();
         _settings.Save();
         EndCapture();
     }

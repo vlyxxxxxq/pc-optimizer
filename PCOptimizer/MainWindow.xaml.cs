@@ -30,7 +30,7 @@ public partial class MainWindow : Window
             [NavApps] = AppsPage, [NavUninstall] = UninstallPage, [NavTools] = ToolsPage, [NavSettings] = SettingsPage,
             [NavNetwork] = NetworkPage, [NavHardware] = HardwarePage, [NavMenu] = MenuPage, [NavSecurity] = SecurityPage,
             [NavLibrary] = LibraryPage, [NavClips] = ClipsPage, [NavClipboard] = ClipboardPage, [NavScreenTime] = ScreenTimePage,
-            [NavCrosshair] = CrosshairPage, [NavController] = ControllerPage, [NavDownloads] = DownloadsPage,
+            [NavCrosshair] = CrosshairPage, [NavController] = ControllerPage, [NavDownloads] = DownloadsPage, [NavInput] = InputPage,
         };
 
         AdminStatus.Text = Elevation.IsElevated ? "● Administrator mode" : "● Standard mode · some features need admin";
@@ -66,6 +66,13 @@ public partial class MainWindow : Window
         ClipsPage.HotkeysChanged += (_, _) => RegisterCaptureHotkeys();
         ClipsPage.HotkeysPaused += (_, _) => { _captureKeys?.Dispose(); _captureKeys = null; };
         ClipsPage.ScreenshotRequested += (_, _) => TakeScreenshot();
+        ClipsPage.RecordRequested += (_, _) => ToggleRecording();
+        _recorder.Finished += (file, error) => Dispatcher.Invoke(() => RecordingFinished(file, error));
+
+        // Keyboard and mouse stats, per game while Game Mode is on.
+        InputPage.Attach(_settings, _inputStats);
+        _gameMode.StateChanged += (_, _) => _inputStats.Game = _gameMode.IsActive ? _gameMode.Game?.Name : null;
+        if (_settings.InputStatsEnabled) _inputStats.Start();
         _clipboard.Enabled = _settings.ClipboardHistoryEnabled;
         ClipboardPage.Attach(_settings, _clipboard);
         _screenTime = new ScreenTime(_settings, () => _gameMode.IsActive);
@@ -264,6 +271,10 @@ public partial class MainWindow : Window
     readonly ClipboardHistory _clipboard = new();
     readonly ScreenTime _screenTime;
     HotkeyHost? _hotkeys, _captureKeys;
+    readonly InputStats _inputStats = new();
+    readonly ScreenRecorder _recorder = new();
+    Views.RecordingBar? _recordingBar;
+    bool _picking;
     Views.ClipboardPopup? _clipboardPopup;
 
     /// <summary>Global hotkeys: Ctrl+Alt+V for clipboard history (always), capture keys if switched on.</summary>
@@ -287,14 +298,47 @@ public partial class MainWindow : Window
     {
         _captureKeys?.Dispose();
         _captureKeys = null;
-        bool clipOk = true, shotOk = true;
+        bool clipOk = true, shotOk = true, recordOk = true;
         if (_settings.CaptureHotkeys)
         {
             _captureKeys = new HotkeyHost();
             clipOk = Hotkey.Parse(_settings.ClipHotkey) is { } clip && _captureKeys.Register(clip, SaveClip);
             shotOk = Hotkey.Parse(_settings.ScreenshotHotkey) is { } shot && _captureKeys.Register(shot, TakeScreenshot);
+            recordOk = Hotkey.Parse(_settings.RecordHotkey) is { } rec && _captureKeys.Register(rec, ToggleRecording);
         }
-        ClipsPage.ShowHotkeyState(clipOk, shotOk);
+        ClipsPage.ShowHotkeyState(clipOk, shotOk, recordOk);
+    }
+
+    /// <summary>Starts a recording (after picking an area) or stops the one running.</summary>
+    async void ToggleRecording()
+    {
+        if (_recorder.IsRecording) { _recorder.Stop(); return; }
+        if (_picking) return;
+        _picking = true;
+        ScreenArea? area;
+        try { area = await new Views.RegionPicker().PickAsync(); }
+        finally { _picking = false; }
+        if (area is not { Width: >= 16, Height: >= 16 } a) return;
+        _recorder.Start(a, _settings.RecordGif, _settings.RecordCursor, _gameMode.Game?.Name ?? "Recording");
+        _recordingBar = new Views.RecordingBar(a, () => _recorder.Elapsed, _settings.RecordHotkey);
+        _recordingBar.StopRequested += (_, _) => _recorder.Stop();
+        _recordingBar.Show();
+        ClipsPage.ShowRecording(true);
+    }
+
+    void RecordingFinished(string? file, string? error)
+    {
+        _recordingBar?.Close();
+        _recordingBar = null;
+        ClipsPage.ShowRecording(false);
+        if (file is null)
+        {
+            Notify("Recording failed", error ?? "Nothing was saved.");
+            if (!_settings.Notifications) MessageBox.Show($"The recording couldn't be saved.\n{error}", "PC Optimizer");
+            return;
+        }
+        Notify(file.EndsWith(".gif", StringComparison.OrdinalIgnoreCase) ? "GIF saved" : "Recording saved", Path.GetFileName(file));
+        if (ClipsPage.IsVisible) ClipsPage.Reload();
     }
 
     void SaveClip()
@@ -378,6 +422,8 @@ public partial class MainWindow : Window
         _crosshair?.Close();
         _crosshairKeys?.Dispose();
         _screenTime.Stop();
+        _recorder.Stop();
+        _inputStats.Stop();
         ClipboardPage.FlushNotes();
         _hotkeys?.Dispose();
         _captureKeys?.Dispose();
@@ -420,6 +466,7 @@ public partial class MainWindow : Window
         if (selected == NavScreenTime) ScreenTimePage.EnsureLoaded();
         if (selected == NavCrosshair) CrosshairPage.EnsureLoaded();
         if (selected == NavDownloads) DownloadsPage.EnsureLoaded();
+        if (selected == NavInput) InputPage.EnsureLoaded();
     }
 
     /// <summary>Quick fade + slide up when a page opens.</summary>

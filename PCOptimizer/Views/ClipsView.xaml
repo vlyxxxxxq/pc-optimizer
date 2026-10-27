@@ -5,7 +5,7 @@
         <StackPanel DockPanel.Dock="Top">
             <TextBlock Text="Clips &amp; Screenshots" Style="{StaticResource PageTitle}"/>
             <TextBlock Style="{StaticResource PageSubtitle}"
-                       Text="Save the last 30 seconds of a game or grab a screenshot with a hotkey, from inside any game."/>
+                       Text="Save the last 30 seconds of a game, grab a screenshot, or record any part of your screen as a video or GIF."/>
 
             <Grid Margin="0,20,0,0">
                 <Grid.ColumnDefinitions>
@@ -46,6 +46,29 @@
                     </StackPanel>
                 </Border>
             </Grid>
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
+                    <DockPanel>
+                        <Button x:Name="RecordKeyButton" DockPanel.Dock="Right" Tag="record" Click="ChangeKey_Click" PreviewKeyDown="KeyCapture_PreviewKeyDown"
+                                LostKeyboardFocus="KeyCapture_LostFocus" Padding="10,3" FontSize="11" VerticalAlignment="Top"
+                                ToolTip="Click, then press the keys you want"/>
+                        <TextBlock Text="Record your screen" FontSize="15" FontWeight="SemiBold"/>
+                    </DockPanel>
+                    <TextBlock x:Name="RecordStatus" Style="{StaticResource Muted}" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Text="Drag out an area (or click for a whole screen) and it records until you press Stop or the hotkey again. Saved to Videos\PC Optimizer. Video only, no sound."/>
+                    <DockPanel Margin="0,14,0,0">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                            <RadioButton x:Name="FormatMp4" Content="MP4" GroupName="RecFormat" Checked="Format_Click" Margin="0,0,6,0"/>
+                            <RadioButton x:Name="FormatGif" Content="GIF (up to 60 s)" GroupName="RecFormat" Checked="Format_Click" Margin="0,0,14,0"/>
+                            <CheckBox x:Name="CursorCheck" Content="Show cursor" Click="Format_Click" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <Button x:Name="RecordAreaButton" Content="Record an area" Style="{StaticResource PrimaryButton}" Click="RecordArea_Click" Margin="0,0,8,0"/>
+                            <Button Content="Open recordings folder" Click="RecordFolder_Click"/>
+                        </StackPanel>
+                    </DockPanel>
+                </StackPanel>
+            </Border>
             <DockPanel Margin="2,12,0,0">
                 <CheckBox x:Name="HotkeySwitch" DockPanel.Dock="Left" Style="{StaticResource Switch}" Click="HotkeySwitch_Click" Margin="0,0,10,0"/>
                 <TextBlock x:Name="HotkeyText" Style="{StaticResource Muted}" VerticalAlignment="Center" TextWrapping="Wrap"/>
@@ -75,8 +98,8 @@
                                                 <Image Source="{Binding Thumb}" Stretch="UniformToFill"/>
                                                 <Border CornerRadius="4" Background="#CC0F1117" Padding="6,2" Margin="6"
                                                         HorizontalAlignment="Left" VerticalAlignment="Top"
-                                                        Visibility="{Binding IsVideo, Converter={StaticResource BoolToVis}}">
-                                                    <TextBlock Text="&#xE714; Clip" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets, Segoe UI" FontSize="10" Foreground="White"/>
+                                                        Visibility="{Binding HasBadge, Converter={StaticResource BoolToVis}}">
+                                                    <TextBlock Text="{Binding Kind, StringFormat='&#xE714; {0}'}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets, Segoe UI" FontSize="10" Foreground="White"/>
                                                 </Border>
                                             </Grid>
                                         </Border>
