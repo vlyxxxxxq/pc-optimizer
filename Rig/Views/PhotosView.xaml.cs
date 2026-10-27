@@ -19,6 +19,9 @@ public partial class PhotosView : UserControl
         else SetFolder(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures));
     }
 
+    /// <summary>Stops a scan in progress (the module was switched off).</summary>
+    public void Cancel() => _scan?.Cancel();
+
     void SetFolder(string folder)
     {
         _folder = folder;

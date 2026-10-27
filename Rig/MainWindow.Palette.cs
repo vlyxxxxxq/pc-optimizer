@@ -16,6 +16,7 @@ public partial class MainWindow
 
     public void OpenPalette()
     {
+        Perf.UntilIdle(Dispatcher, _palette is null ? "palette-first" : "palette-repeat");
         _palette ??= new CommandPalette(PaletteCommands);
         if (_fixedCommands.Count == 0) _fixedCommands = [.. FixedCommands(), .. SettingCommands()];
         _windowCommands = WindowCommands();
@@ -34,6 +35,7 @@ public partial class MainWindow
                     _appCommands = apps.Where(a => !gameNames.Contains(a.Title)).ToList(); // the game entry covers it
                     _gameCommands = games.Select(g => new PaletteCommand
                     {
+                        Module = "Library",
                         Title = g.Name, Detail = $"Play · {g.Store}", Glyph = "", Rank = 2,
                         Run = () => { InstalledGames.Start(g); if (_settings is { LaunchWithGameMode: true, AutoGameMode: false } && !_gameMode.IsActive) _ = _gameMode.ToggleAsync(); },
                     }).ToList();
@@ -42,7 +44,10 @@ public partial class MainWindow
         }
     }
 
-    IEnumerable<PaletteCommand> PaletteCommands(string query)
+    /// <summary>Everything on offer for this query; a switched-off module's commands are never offered (one rule for every entry point).</summary>
+    IEnumerable<PaletteCommand> PaletteCommands(string query) => AllCommands(query).Where(c => c.Module is null || IsOn(c.Module));
+
+    IEnumerable<PaletteCommand> AllCommands(string query)
     {
         if (Calculate(query) is { } result)
             yield return new PaletteCommand
@@ -51,7 +56,7 @@ public partial class MainWindow
                 Run = () => { try { Clipboard.SetText(result); } catch { } },
             };
         if (IsOn("Timers") && _timers.Parse(query) is { } timer)
-            yield return new PaletteCommand { Title = timer.Title, Detail = timer.Detail, Glyph = "\uE823", Rank = -1, AlwaysMatch = true, Run = timer.Run };
+            yield return new PaletteCommand { Module = "Timers", Title = timer.Title, Detail = timer.Detail, Glyph = "\uE823", Rank = -1, AlwaysMatch = true, Run = timer.Run };
         foreach (var a in QuickAnswers.For(query))
             yield return new PaletteCommand
             {
@@ -60,7 +65,7 @@ public partial class MainWindow
             };
         foreach (var c in _fixedCommands) yield return c;
         foreach (var l in IsOn("Layouts") ? ((Views.LayoutsView)Page("Layouts")).Layouts : [])
-            yield return new PaletteCommand { Title = $"Layout: {l.Name}", Detail = $"Restore windows · {l.Detail}", Glyph = "\uE7C4", Rank = 1, Run = () => ((Views.LayoutsView)Page("Layouts")).Restore(l) };
+            yield return new PaletteCommand { Module = "Layouts", Title = $"Layout: {l.Name}", Detail = $"Restore windows · {l.Detail}", Glyph = "\uE7C4", Rank = 1, Run = () => ((Views.LayoutsView)Page("Layouts")).Restore(l) };
         foreach (var c in _gameCommands) yield return c;
         foreach (var c in _appCommands) yield return c;
         foreach (var c in _windowCommands) yield return c;
@@ -71,23 +76,23 @@ public partial class MainWindow
         var list = new List<PaletteCommand>();
         // One "go to" entry per module that's switched on.
         foreach (var m in Modules.All.Where(m => IsOn(m.Id)))
-            list.Add(new PaletteCommand { Title = m.Title, Detail = m.Category is "" ? "Open page" : $"Open page · {m.Category}", Glyph = m.Glyph, Run = () => ShowPage(m.Id) });
+            list.Add(new PaletteCommand { Module = m.Id, Title = m.Title, Detail = m.Category is "" ? "Open page" : $"Open page · {m.Category}", Glyph = m.Glyph, Run = () => ShowPage(m.Id) });
 
         list.AddRange(
         [
             new() { Title = "Toggle Game Mode", Detail = "Action", Glyph = "", Run = () => _ = _gameMode.ToggleAsync() },
-            new() { Title = "Clean junk now", Detail = "Junk Cleaner", Glyph = "", Run = async () => { ShowPage("Cleaner"); await CleanerPage.CleanAsync(); } },
-            new() { Title = "Take a screenshot", Detail = "Clips & Screenshots", Glyph = "", Run = () => Dispatcher.InvokeAsync(async () => { await Task.Delay(400); TakeScreenshot(); }) },
-            new() { Title = "Pick a colour from the screen", Detail = "Color Picker · copies the HEX", Glyph = "\uE790", Run = () => Dispatcher.InvokeAsync(async () => { await Task.Delay(300); await PickColorAsync(); }) },
-            new() { Title = "Measure on screen", Detail = "Ruler · size in pixels", Glyph = "\uE790", Run = () => Dispatcher.InvokeAsync(async () => { await Task.Delay(300); await MeasureAsync(); }) },
+            new() { Module = "Cleaner", Title = "Clean junk now", Detail = "Junk Cleaner", Glyph = "", Run = async () => { ShowPage("Cleaner"); await CleanerPage.CleanAsync(); } },
+            new() { Module = "Clips", Title = "Take a screenshot", Detail = "Clips & Screenshots", Glyph = "", Run = () => Dispatcher.InvokeAsync(async () => { await Task.Delay(400); TakeScreenshot(); }) },
+            new() { Module = "ColorPicker", Title = "Pick a colour from the screen", Detail = "Color Picker · copies the HEX", Glyph = "\uE790", Run = () => Dispatcher.InvokeAsync(async () => { await Task.Delay(300); await PickColorAsync(); }) },
+            new() { Module = "ColorPicker", Title = "Measure on screen", Detail = "Ruler · size in pixels", Glyph = "\uE790", Run = () => Dispatcher.InvokeAsync(async () => { await Task.Delay(300); await MeasureAsync(); }) },
             new() { Title = "File recovery", Detail = "Unfinished renames and Downloads sorts", Glyph = "", Run = () => new RecoveryWindow { Owner = this }.ShowDialog() },
             new() { Title = "Play / pause music", Detail = "Media key", Glyph = "\uE768", Run = NowPlaying.PlayPause },
             new() { Title = "Next track", Detail = "Media key", Glyph = "\uE893", Run = NowPlaying.Next },
             new() { Title = "Previous track", Detail = "Media key", Glyph = "\uE892", Run = NowPlaying.Previous },
-            new() { Title = "Record screen", Detail = "MP4 or GIF · Clips & Screenshots", Glyph = "", Run = () => Dispatcher.InvokeAsync(async () => { await Task.Delay(300); ToggleRecording(); }) },
-            new() { Title = "Save the last 30 seconds (clip)", Detail = "Clips & Screenshots", Glyph = "", Run = SaveClip },
-            new() { Title = "Clipboard history", Detail = "Ctrl+Alt+V", Glyph = "", Run = () => { if (_clipboard.Enabled) (_clipboardPopup ??= new ClipboardPopup(_clipboard)).Open(); } },
-            new() { Title = "Flush DNS cache", Detail = "Network fix", Glyph = "", Run = async () => { await Shell.RunAsync("ipconfig", "/flushdns"); Notify("DNS cache flushed", "Websites will look up fresh addresses."); } },
+            new() { Module = "Clips", Title = "Record screen", Detail = "MP4 or GIF · Clips & Screenshots", Glyph = "", Run = () => Dispatcher.InvokeAsync(async () => { await Task.Delay(300); ToggleRecording(); }) },
+            new() { Module = "Clips", Title = "Save the last 30 seconds (clip)", Detail = "Clips & Screenshots", Glyph = "", Run = SaveClip },
+            new() { Module = "Clipboard", Title = "Clipboard history", Detail = "Ctrl+Alt+V", Glyph = "", Run = () => { if (_clipboard.Enabled) (_clipboardPopup ??= new ClipboardPopup(_clipboard)).Open(); } },
+            new() { Module = "Network", Title = "Flush DNS cache", Detail = "Network fix", Glyph = "", Run = async () => { await Shell.RunAsync("ipconfig", "/flushdns"); Notify("DNS cache flushed", "Websites will look up fresh addresses."); } },
             new() { Title = "Restart Explorer", Detail = "Fixes a stuck taskbar", Glyph = "", Run = RestartExplorer },
             new() { Title = "Task Manager", Detail = "Windows", Glyph = "", Run = () => Shell.Open("taskmgr.exe") },
             new() { Title = "Windows Settings", Detail = "Windows", Glyph = "", Run = () => Shell.Open("ms-settings:") },

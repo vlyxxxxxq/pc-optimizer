@@ -38,6 +38,7 @@ public partial class MainWindow : Window
         _power.Due += action => new Views.PowerCountdown(action).Show();
         _recorder.Finished += (file, error) => Dispatcher.BeginInvoke(() => RecordingFinished(file, error));
         _timers.Fired += TimerFired;
+        _timers.Enabled = IsOn("Timers");
         RegisterPages();
 
         // Background services, each only while its module is on.
@@ -54,7 +55,7 @@ public partial class MainWindow : Window
 
         // Crosshair: follows the chosen games, the "Show now" switch and its hotkey.
         _crosshairTimer.Tick += (_, _) => UpdateCrosshair();
-        if (IsOn("Crosshair")) { RegisterCrosshairHotkey(); _crosshairTimer.Start(); }
+        if (IsOn("Crosshair")) { RegisterCrosshairHotkey(); SyncCrosshairTimer(); }
 
         // Automatic sorting watches the Downloads folder from its page.
         if (IsOn("Downloads") && _settings.DownloadsAutoOrganize) _ = Page("Downloads");
@@ -67,6 +68,7 @@ public partial class MainWindow : Window
         _freeTimer.Start();
 
         // Updates: clean up after a previous update, then check shortly after start and once a day.
+        if (Perf.On) ContentRendered += (_, _) => Perf.Write("startup-to-first-render", (DateTime.Now - System.Diagnostics.Process.GetCurrentProcess().StartTime).TotalMilliseconds);
         // Once the window has been up for a bit, this version counts as healthy and the previous one can go.
         Loaded += async (_, _) => { await Task.Delay(TimeSpan.FromSeconds(5)); Updater.MarkHealthy(Environment.ProcessPath!); };
         _updateTimer.Tick += async (_, _) =>
@@ -134,9 +136,18 @@ public partial class MainWindow : Window
     DateTime _freeGamesAt;
 
     /// <summary>Fills Home's cards from the services (every 5 s while Home is on screen).</summary>
+    bool _refreshingHome;
+
     async Task RefreshHomeAsync()
     {
-        if (Created<Views.DashboardView>(Modules.Home) is not { } home) return;
+        if (_refreshingHome || Created<Views.DashboardView>(Modules.Home) is not { } home) return; // the last refresh is still running
+        _refreshingHome = true;
+        try { await RefreshHomeCoreAsync(home); }
+        finally { _refreshingHome = false; }
+    }
+
+    async Task RefreshHomeCoreAsync(Views.DashboardView home)
+    {
         if (home.Shows("gamemode"))
         {
             if (_lastSession is null || !_lastSessionLoaded)
@@ -246,6 +257,12 @@ public partial class MainWindow : Window
             return p;
         });
         _homeTimer.Tick += async (_, _) => { if (Created<Views.DashboardView>(Modules.Home) is { IsVisible: true }) await RefreshHomeAsync(); };
+        // Background work that only feeds what's on screen pauses while the window is hidden in the tray.
+        IsVisibleChanged += (_, _) =>
+        {
+            if (IsVisible) { if (_settings.ShowNowPlaying) { _musicTimer.Start(); _ = UpdateMusicAsync(); } _homeTimer.Start(); }
+            else { _musicTimer.Stop(); _homeTimer.Stop(); }
+        };
         _homeTimer.Start();
         _gameMode.StateChanged += async (_, _) => await RefreshHomeAsync();
         _gameMode.SessionEnded += _ => _lastSession = null; // reloaded on the next refresh
@@ -321,8 +338,8 @@ public partial class MainWindow : Window
         {
             var p = new Views.CrosshairView();
             p.Attach(_settings);
-            p.Changed += (_, _) => UpdateCrosshair();
-            p.ShowRequested += on => { _crosshairManual = on; UpdateCrosshair(); };
+            p.Changed += (_, _) => { SyncCrosshairTimer(); UpdateCrosshair(); };
+            p.ShowRequested += on => { _crosshairManual = on; SyncCrosshairTimer(); UpdateCrosshair(); };
             p.HotkeyPaused += (_, _) => { _crosshairKeys?.Dispose(); _crosshairKeys = null; };
             p.HotkeyChanged += (_, _) => RegisterCrosshairHotkey();
             p.ShowHotkeyState(_crosshairKeyOk);
@@ -361,9 +378,17 @@ public partial class MainWindow : Window
         {
             _crosshairManual = !_crosshairManual;
             Created<Views.CrosshairView>("Crosshair")?.SetShowing(_crosshairManual);
+            SyncCrosshairTimer();
             UpdateCrosshair();
         });
         Created<Views.CrosshairView>("Crosshair")?.ShowHotkeyState(_crosshairKeyOk);
+    }
+
+    /// <summary>The once-a-second foreground check only runs while there are games to watch or it's on by hand.</summary>
+    void SyncCrosshairTimer()
+    {
+        if (IsOn("Crosshair") && (_settings.CrosshairGames.Count > 0 || _crosshairManual)) _crosshairTimer.Start();
+        else { _crosshairTimer.Stop(); if (!_crosshairManual) _crosshair?.Hide(); }
     }
 
     /// <summary>Shows the crosshair when switched on by hand, or while a chosen game is the foreground window.</summary>
@@ -457,7 +482,17 @@ public partial class MainWindow : Window
     readonly System.Windows.Threading.DispatcherTimer _musicTimer = new() { Interval = TimeSpan.FromSeconds(3) };
 
     /// <summary>Sidebar mini player: shows the current track (checked every 3 s, off the UI thread).</summary>
+    bool _readingMusic;
+
     async Task UpdateMusicAsync()
+    {
+        if (_readingMusic) return;
+        _readingMusic = true;
+        try { await UpdateMusicCoreAsync(); }
+        finally { _readingMusic = false; }
+    }
+
+    async Task UpdateMusicCoreAsync()
     {
         var track = _settings.ShowNowPlaying && !_settings.SidebarCollapsed ? await Task.Run(NowPlaying.Current) : null;
         MusicChip.Visibility = track is null ? Visibility.Collapsed : Visibility.Visible;

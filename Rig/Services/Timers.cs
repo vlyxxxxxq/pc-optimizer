@@ -77,8 +77,12 @@ public sealed class Timers
 
     public void Remove(TimerItem t) { Items.Remove(t); Save(); }
 
+    /// <summary>Off while the Timers module is switched off: nothing goes off, and anything due meanwhile goes off when it's back on.</summary>
+    public bool Enabled { get; set; } = true;
+
     void Tick()
     {
+        if (!Enabled) return;
         foreach (var t in Items.ToList())
         {
             if (t.EndsAt is { } e && e <= DateTime.Now)

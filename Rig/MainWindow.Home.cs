@@ -65,48 +65,36 @@ public partial class MainWindow
     /// Every card title and switch on every page, so typing "break reminders" or "rumble" in the palette jumps
     /// straight to it. Read from the pages themselves, so new settings show up without being listed anywhere.
     /// </summary>
-    List<PaletteCommand> SettingCommands()
-    {
-        var list = new List<PaletteCommand>();
-        // Reading the labels means creating every page once, the first time the palette opens.
-        foreach (var m in Modules.All.Where(m => IsOn(m.Id)))
+    /// <summary>
+    /// Every heading and switch on every page, from the static index (no page is built until you pick one).
+    /// </summary>
+    List<PaletteCommand> SettingCommands() =>
+        SettingsIndex.All.Where(e => IsOn(e.Module)).Select(e => new PaletteCommand
         {
-            var page = Page(m.Id);
-            var pageName = m.Title;
-            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { pageName };
-            foreach (var (text, element) in Labels(page))
+            Title = e.Title, Detail = $"Setting · {Modules.Get(e.Module).Title}", Glyph = "\uE713", Rank = 3, NeedsQuery = true,
+            Module = e.Module, Keywords = e.Keywords,
+            Run = () => RevealTitle(e.Module, e.Title),
+        }).ToList();
+
+    /// <summary>Opens the page and brings the heading with this text into view.</summary>
+    void RevealTitle(string module, string title)
+    {
+        ShowPage(module);
+        Dispatcher.InvokeAsync(() =>
+        {
+            if (Find(_created.GetValueOrDefault(module), title) is { } element) Reveal(module, element);
+        }, System.Windows.Threading.DispatcherPriority.Loaded);
+
+        static FrameworkElement? Find(DependencyObject? root, string text)
+        {
+            if (root is null) return null;
+            foreach (var child in LogicalTreeHelper.GetChildren(root).OfType<DependencyObject>())
             {
-                if (text.Length is < 4 or > 48 || !seen.Add(text)) continue;
-                list.Add(new PaletteCommand
-                {
-                    Title = text, Detail = $"Setting · {pageName}", Glyph = "", Rank = 3, NeedsQuery = true,
-                    Run = () => Reveal(m.Id, element),
-                });
+                if (child is TextBlock tb && tb.Text.Trim() == text) return tb;
+                if (Find(child, text) is { } hit) return hit;
             }
+            return null;
         }
-        return list;
-    }
-
-    /// <summary>Headings (semi-bold, 14 px or more, but not the page title) and switch/checkbox captions.</summary>
-    static IEnumerable<(string Text, FrameworkElement Element)> Labels(DependencyObject root)
-    {
-        foreach (var child in LogicalTreeHelper.GetChildren(root).OfType<DependencyObject>())
-        {
-            if (child is TextBlock { Text: { Length: > 0 } t } tb && tb.FontSize is >= 14 and < 24 &&
-                (tb.FontWeight >= FontWeights.SemiBold || IsSwitchRow(tb)))
-                yield return (t.Trim(), tb);
-            else if (child is CheckBox { Content: string c } cb && cb.Style != (Style)Application.Current.Resources["Switch"])
-                yield return (c.Trim(), cb);
-            foreach (var x in Labels(child)) yield return x;
-        }
-    }
-
-    /// <summary>A row's caption: the first text in a row (DockPanel) that has a switch or checkbox.</summary>
-    static bool IsSwitchRow(TextBlock tb)
-    {
-        var holder = tb.Parent as Panel;
-        if (holder is StackPanel s && s.Children.IndexOf(tb) == 0) holder = s.Parent as Panel;
-        return holder is DockPanel d && d.Children.OfType<CheckBox>().Any();
     }
 
     void Reveal(string id, FrameworkElement element)

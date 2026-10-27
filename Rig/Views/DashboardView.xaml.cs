@@ -71,8 +71,9 @@ public partial class DashboardView : UserControl
 
         _cpu.Sample(); // prime the delta
         _timer.Tick += (_, _) => Update();
-        Loaded += (_, _) => { Update(); _timer.Start(); SizeCards(); };
-        Unloaded += (_, _) => _timer.Stop();
+        Loaded += (_, _) => SizeCards();
+        // Pages stay loaded when you switch away (they're only hidden), so follow visibility, not Loaded/Unloaded.
+        IsVisibleChanged += (_, _) => { if (IsVisible) { Update(); _timer.Start(); } else _timer.Stop(); };
     }
 
     public void ShowChecking()

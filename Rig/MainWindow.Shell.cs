@@ -54,6 +54,7 @@ public partial class MainWindow
 
     void Show(string id)
     {
+        Services.Perf.UntilIdle(Dispatcher, (_created.ContainsKey(id) ? "nav-repeat " : "nav-first ") + id);
         var page = Page(id);
         foreach (var (key, p) in _created) p.Visibility = key == id ? Visibility.Visible : Visibility.Collapsed;
         _current = id;
@@ -161,9 +162,23 @@ public partial class MainWindow
             case "Clipboard": _clipboard.Enabled = on && _settings.ClipboardHistoryEnabled; break;
             case "ScreenTime": if (on) _screenTime.Start(); else _screenTime.Stop(); break;
             case "Input": if (on && _settings.InputStatsEnabled) _inputStats.Start(); else if (!on) _inputStats.Stop(); break;
-            case "Clips" or "ColorPicker": RegisterCaptureHotkeys(); break;
+            case "Clips" or "ColorPicker":
+                // A recording in progress is finished and saved first, never cut off.
+                if (id == "Clips" && !on && _recorder.IsRecording)
+                {
+                    _recorder.StopAndWait(TimeSpan.FromSeconds(30));
+                    Notify("Recording saved", "Clips & Recording was switched off, so the recording in progress was finished and saved.");
+                }
+                RegisterCaptureHotkeys();
+                break;
+            case "Timers":
+                _timers.Enabled = on;
+                if (!on && _timers.Items.Count > 0)
+                    Notify("Reminders paused", $"{_timers.Items.Count} timer(s) and reminder(s) won't go off while Timers is switched off. Any that come due meanwhile go off when it's back on.");
+                break;
+            case "Photos": Created<PhotosView>("Photos")?.Cancel(); break;
             case "Crosshair":
-                if (on) { RegisterCrosshairHotkey(); _crosshairTimer.Start(); }
+                if (on) { RegisterCrosshairHotkey(); SyncCrosshairTimer(); }
                 else { _crosshairKeys?.Dispose(); _crosshairKeys = null; _crosshairTimer.Stop(); _crosshairManual = false; _crosshair?.Hide(); }
                 break;
             case "Downloads":
