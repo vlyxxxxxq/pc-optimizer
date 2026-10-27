@@ -54,7 +54,7 @@ public sealed record AppVersion(Version Core, string? Pre) : IComparable<AppVers
 /// </summary>
 public static class Updater
 {
-    const string Repo = "vlyxxxxxq/pc-optimizer";
+    const string Repo = "vlyxxxxxq/rig";
     public const string ReleasesPage = $"https://github.com/{Repo}/releases";
 
     static readonly HttpClient Http = CreateClient();
