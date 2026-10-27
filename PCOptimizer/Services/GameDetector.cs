@@ -134,7 +134,11 @@ public sealed class GameDetector
     {
         try
         {
-            var product = FileVersionInfo.GetVersionInfo(path).ProductName?.Trim();
+            var info = FileVersionInfo.GetVersionInfo(path);
+            // Some version resources are double-encoded ("Â®"); and Windows' own tools all say "Operating System".
+            static string? Clean(string? s) => s?.Replace("Â®", "®").Replace("Â©", "©").Replace("â„¢", "™").Trim();
+            var product = Clean(info.ProductName);
+            if (product?.Contains("Operating System", StringComparison.OrdinalIgnoreCase) == true) product = Clean(info.FileDescription);
             if (!string.IsNullOrEmpty(product)) return product;
         }
         catch { }

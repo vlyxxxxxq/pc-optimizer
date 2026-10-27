@@ -30,7 +30,7 @@ public partial class MainWindow : Window
             [NavApps] = AppsPage, [NavUninstall] = UninstallPage, [NavTools] = ToolsPage, [NavSettings] = SettingsPage,
             [NavNetwork] = NetworkPage, [NavHardware] = HardwarePage, [NavMenu] = MenuPage, [NavSecurity] = SecurityPage,
             [NavLibrary] = LibraryPage, [NavClips] = ClipsPage, [NavClipboard] = ClipboardPage, [NavScreenTime] = ScreenTimePage,
-            [NavAsk] = AskPage,
+            [NavCrosshair] = CrosshairPage, [NavController] = ControllerPage, [NavDownloads] = DownloadsPage,
         };
 
         AdminStatus.Text = Elevation.IsElevated ? "● Administrator mode" : "● Standard mode · some features need admin";
@@ -72,9 +72,27 @@ public partial class MainWindow : Window
         _screenTime.Notify += Notify;
         ScreenTimePage.Attach(_settings, _screenTime);
         _screenTime.Start();
-        AskPage.Attach(() => string.Join("\n", Health.Evaluate(CleanerPage.JunkBytes, StartupPage.EnabledCount).Findings
-            .Select(f => $"  [{f.Severity}] {f.Title}: {f.Detail}")));
         SetUpHotkeys(); // own hidden window, so they work while the app sits in the tray
+
+        // Crosshair: follows the chosen games, the "Show now" switch and its hotkey.
+        CrosshairPage.Attach(_settings);
+        CrosshairPage.Changed += (_, _) => UpdateCrosshair();
+        CrosshairPage.ShowRequested += on => { _crosshairManual = on; UpdateCrosshair(); };
+        CrosshairPage.HotkeyPaused += (_, _) => { _crosshairKeys?.Dispose(); _crosshairKeys = null; };
+        CrosshairPage.HotkeyChanged += (_, _) => RegisterCrosshairHotkey();
+        RegisterCrosshairHotkey();
+        _crosshairTimer.Tick += (_, _) => UpdateCrosshair();
+        _crosshairTimer.Start();
+
+        DownloadsPage.Attach(_settings);
+        DownloadsPage.Notify += Notify;
+
+        // After each game: a recap card with playtime, FPS and anything captured during it.
+        _gameMode.SessionEnded += ShowRecap;
+
+        // Free games: check a minute after start, then every 6 hours; each giveaway is announced once.
+        _freeTimer.Tick += async (_, _) => { _freeTimer.Interval = TimeSpan.FromHours(6); await CheckFreeGamesAsync(); };
+        _freeTimer.Start();
 
         // Updates: clean up after a previous update, then check shortly after start and once a day.
         Updater.CleanUpOld();
@@ -141,6 +159,75 @@ public partial class MainWindow : Window
                 UninstallPage.EnsureLoaded();
             }
         };
+    }
+
+    Views.CrosshairOverlay? _crosshair;
+    bool _crosshairManual;
+    HotkeyHost? _crosshairKeys;
+    readonly System.Windows.Threading.DispatcherTimer _crosshairTimer = new() { Interval = TimeSpan.FromSeconds(1) };
+
+    void RegisterCrosshairHotkey()
+    {
+        _crosshairKeys?.Dispose();
+        _crosshairKeys = new HotkeyHost();
+        bool ok = Hotkey.Parse(_settings.CrosshairHotkey) is { } key && _crosshairKeys.Register(key, () =>
+        {
+            _crosshairManual = !_crosshairManual;
+            CrosshairPage.SetShowing(_crosshairManual);
+            UpdateCrosshair();
+        });
+        CrosshairPage.ShowHotkeyState(ok);
+    }
+
+    /// <summary>Shows the crosshair when switched on by hand, or while a chosen game is the foreground window.</summary>
+    void UpdateCrosshair()
+    {
+        IntPtr gameWindow = IntPtr.Zero;
+        if (_settings.CrosshairGames.Count > 0)
+        {
+            var hwnd = Native.GetForegroundWindow();
+            Native.GetWindowThreadProcessId(hwnd, out int pid);
+            // A minimised game can stay "foreground" until something else is clicked; treat it as left.
+            if (pid != 0 && pid != Environment.ProcessId && !Native.IsIconic(hwnd) && Native.ProcessPath(pid) is { } path &&
+                _settings.CrosshairGames.Any(g =>
+                    (g.Folder is { Length: > 3 } f && path.StartsWith(f.TrimEnd('\\') + "\\", StringComparison.OrdinalIgnoreCase)) ||
+                    (g.Exe is { } exe && Path.GetFileName(path).Equals(exe, StringComparison.OrdinalIgnoreCase))))
+                gameWindow = hwnd;
+        }
+        if (_crosshairManual || gameWindow != IntPtr.Zero)
+        {
+            _crosshair ??= new Views.CrosshairOverlay();
+            _crosshair.Apply(_settings.Crosshair);
+            _crosshair.ShowOn(gameWindow);
+        }
+        else _crosshair?.Hide();
+    }
+
+    public void ShowRecap(GameSession session)
+    {
+        if (!_settings.SessionRecap) return;
+        var end = session.Start + session.Duration;
+        int captures = Captures.List().Count(c => c.Taken >= session.Start && c.Taken <= end.AddMinutes(1));
+        var recap = new Views.SessionRecap(session, captures);
+        recap.OpenRequested += (_, _) => ShowPage(NavGame);
+        recap.Show();
+    }
+
+    readonly System.Windows.Threading.DispatcherTimer _freeTimer = new() { Interval = TimeSpan.FromMinutes(1) };
+
+    async Task CheckFreeGamesAsync()
+    {
+        if (!_settings.FreeGameAlerts) return;
+        List<Giveaway> free;
+        try { free = await GameFeeds.FreeGamesAsync(); }
+        catch { return; } // offline; try again next time
+        var fresh = free.Where(g => !_settings.SeenGiveaways.Contains(g.Id)).ToList();
+        if (fresh.Count == 0) return;
+        _settings.SeenGiveaways = free.Select(g => g.Id).ToList(); // ended giveaways drop off the list
+        _settings.Save();
+        Notify(fresh.Count == 1 ? "Free game to claim" : $"{fresh.Count} free games to claim",
+            string.Join(", ", fresh.Take(3).Select(g => $"{g.Title} ({g.Platform})")) + (fresh.Count > 3 ? "…" : "") +
+            ". Open Game Library to claim.");
     }
 
     void Notify(string title, string message)
@@ -288,6 +375,8 @@ public partial class MainWindow : Window
         _cleanedUp = true;
         _gameMode.Shutdown();
         _overlay?.Close();
+        _crosshair?.Close();
+        _crosshairKeys?.Dispose();
         _screenTime.Stop();
         ClipboardPage.FlushNotes();
         _hotkeys?.Dispose();
@@ -329,6 +418,8 @@ public partial class MainWindow : Window
         if (selected == NavLibrary) LibraryPage.EnsureLoaded();
         if (selected == NavClips) ClipsPage.EnsureLoaded();
         if (selected == NavScreenTime) ScreenTimePage.EnsureLoaded();
+        if (selected == NavCrosshair) CrosshairPage.EnsureLoaded();
+        if (selected == NavDownloads) DownloadsPage.EnsureLoaded();
     }
 
     /// <summary>Quick fade + slide up when a page opens.</summary>

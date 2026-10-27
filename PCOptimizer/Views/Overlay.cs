@@ -17,7 +17,8 @@ public sealed class Overlay : Window
     readonly GpuLoad _gpu = new();
     readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(1) };
     readonly TextBlock _fpsText = Value(), _cpuText = Value(), _gpuText = Value(), _ramText = Value(), _pingText = Value();
-    readonly FpsMonitor _fps = new();
+    static FpsMonitor _fps => FpsMonitor.Shared;
+    bool _fpsHeld;
     readonly Func<int?> _gamePid;
     int _tick;
     bool _pinging;
@@ -78,14 +79,14 @@ public sealed class Overlay : Window
     public void ShowAt(int corner)
     {
         _corner = corner;
-        if (!IsVisible) { Show(); _cpu.Sample(); _gpu.Sample(); _fps.Start(); _timer.Start(); }
+        if (!IsVisible) { Show(); _cpu.Sample(); _gpu.Sample(); _fps.Acquire(); _fpsHeld = true; _timer.Start(); }
         Place();
     }
 
     public void HideOverlay()
     {
         _timer.Stop();
-        _fps.Stop();
+        if (_fpsHeld) { _fps.Release(); _fpsHeld = false; }
         Hide();
     }
 
@@ -128,7 +129,7 @@ public sealed class Overlay : Window
     protected override void OnClosed(EventArgs e)
     {
         _timer.Stop();
-        _fps.Dispose();
+        if (_fpsHeld) { _fps.Release(); _fpsHeld = false; }
         _gpu.Dispose();
         base.OnClosed(e);
     }

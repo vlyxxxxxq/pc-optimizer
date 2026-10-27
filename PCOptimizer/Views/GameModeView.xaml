@@ -294,7 +294,7 @@
                                 <StackPanel>
                                     <TextBlock Text="Performance overlay" Style="{StaticResource RowTitle}"/>
                                     <TextBlock Style="{StaticResource Muted}"
-                                               Text="CPU, GPU, RAM and ping in a corner while you play. Click-through. Shows over borderless/windowed games."/>
+                                               Text="FPS, CPU, GPU, RAM and ping in a corner while you play. Click-through. Shows over borderless/windowed games."/>
                                 </StackPanel>
                             </DockPanel>
                             <WrapPanel Margin="0,8,0,0">
@@ -304,6 +304,15 @@
                                 <RadioButton Content="↘ Bottom right" GroupName="OverlayCorner" Tag="3" Click="Corner_Click" x:Name="Corner3" Margin="0,0,12,6"/>
                                 <Button x:Name="PreviewOverlayButton" Content="Preview" Click="PreviewOverlay_Click" Padding="12,4" Margin="0,0,0,6"/>
                             </WrapPanel>
+                            <DockPanel Style="{StaticResource Row}">
+                                <CheckBox DockPanel.Dock="Right" Style="{StaticResource Switch}"
+                                          IsChecked="{Binding SessionRecap}" Click="Setting_Click"/>
+                                <StackPanel>
+                                    <TextBlock Text="Session recap" Style="{StaticResource RowTitle}"/>
+                                    <TextBlock Style="{StaticResource Muted}"
+                                               Text="When a game closes: playtime, average FPS and 1% lows, load, and clips you saved. FPS needs admin mode."/>
+                                </StackPanel>
+                            </DockPanel>
 
                             <!-- Recommended apps found on this PC -->
                             <DockPanel Margin="0,18,0,0">

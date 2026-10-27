@@ -14,7 +14,7 @@
     <RootNamespace>PCOptimizer</RootNamespace>
     <Product>PC Optimizer</Product>
     <AssemblyTitle>PC Optimizer</AssemblyTitle>
-    <Version>1.6.0</Version>
+    <Version>1.7.0</Version>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
   </PropertyGroup>
 
@@ -23,10 +23,6 @@
     <!-- WinForms is referenced only for the tray icon; keep its namespaces out of WPF code. -->
     <Using Remove="System.Windows.Forms" />
     <Using Remove="System.Drawing" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Anthropic" Version="13.3.0" />
   </ItemGroup>
 
 </Project>

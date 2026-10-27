@@ -1,6 +1,6 @@
 # PC Optimizer
 
-A native Windows desktop app (C# / WPF, .NET 10; the only package is the official Anthropic SDK for Ask AI). Runs in the notification
+A native Windows desktop app (C# / WPF, .NET 10, no third-party packages). Runs in the notification
 area so Game Mode can kick in automatically. Inspired by Chris Titus Tech's WinUtil, game boosters
 like Razer Cortex and Process Lasso, and Windows' own maintenance tools.
 
@@ -49,17 +49,22 @@ The EXE isn't code-signed, so the first time you run it Windows SmartScreen may 
   - Optional performance overlay: a click-through CPU / GPU / RAM / ping readout in a corner of the screen.
   - Windows notifications when Game Mode turns on or off.
   - Optional FPS counter (with 1% lows) in the overlay for DirectX games, in administrator mode.
+  - Session recap card when a game closes: playtime, load, game RAM, clips captured, and FPS in admin mode.
 - **Game Library** – every installed Steam, Epic and GOG game with cover art and playtime; click to play,
-  optionally with Game Mode switched on.
+  optionally with Game Mode switched on. NEW badges and patch notes from Steam developers, plus free-to-keep
+  games on Epic, Steam, GOG and others (via GamerPower) with optional notifications.
+- **Crosshair** – a click-through custom crosshair (5 styles, colour, size, gap, outline) that turns on in the
+  games you pick and off when you leave them; Ctrl+Shift+F8 toggles it.
+- **Controller Tester** – live buttons, sticks and triggers for XInput controllers, a stick-drift check and rumble tests.
 - **Clips & Screenshots** – Ctrl+Shift+F9 (changeable) saves the last 30 seconds (via Windows Game Bar's background
   recording), Ctrl+Shift+F10 saves a screenshot named after the game; a gallery of everything captured.
 - **Clipboard & Notes** – Ctrl+Alt+V opens your last 50 copies anywhere (memory only; password-manager copies
   are skipped), plus quick notes that save as you type.
 - **Command palette** – Ctrl+Alt+P (or Ctrl+Alt+Space when free) from anywhere: jump to pages, run actions, launch
-  games and apps, end stuck windows, quick maths, or ask AI.
-- **Ask AI** – questions about your PC answered by Claude using a live snapshot (load, memory hogs, disks, health
-  checks). Needs your own Anthropic API key, stored encrypted with Windows DPAPI.
+  games and apps, end stuck windows, quick maths.
 - **Screen Time** – time per app per day and a 7-day chart, counting only active use, with optional break reminders.
+- **Downloads** – sorts loose files in Downloads into folders by type (with undo and optional auto-sorting) and
+  lists old installers to clear out.
 - **Junk Cleaner** – temp files, browser caches, Recycle Bin, thumbnails, shader cache, crash dumps.
   Optional automatic cleaning (daily / weekly / monthly), skipped while you're gaming. Browser privacy:
   cookies and history per browser (never passwords, autofill or bookmarks).

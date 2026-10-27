@@ -100,14 +100,18 @@
                                      Tag="&#xE8F1;" Checked="Nav_Checked"/>
                         <RadioButton x:Name="NavClips" Style="{StaticResource NavButton}" Content="Clips &amp; Screenshots"
                                      Tag="&#xE714;" Checked="Nav_Checked"/>
+                        <RadioButton x:Name="NavCrosshair" Style="{StaticResource NavButton}" Content="Crosshair"
+                                     Tag="&#xE710;" Checked="Nav_Checked"/>
+                        <RadioButton x:Name="NavController" Style="{StaticResource NavButton}" Content="Controller Tester"
+                                     Tag="&#xE7FC;" Checked="Nav_Checked"/>
 
                         <TextBlock Text="EVERYDAY" Style="{StaticResource NavSection}"/>
                         <RadioButton x:Name="NavClipboard" Style="{StaticResource NavButton}" Content="Clipboard &amp; Notes"
                                      Tag="&#xE77F;" Checked="Nav_Checked"/>
                         <RadioButton x:Name="NavScreenTime" Style="{StaticResource NavButton}" Content="Screen Time"
                                      Tag="&#xE916;" Checked="Nav_Checked"/>
-                        <RadioButton x:Name="NavAsk" Style="{StaticResource NavButton}" Content="Ask AI"
-                                     Tag="&#xE99A;" Checked="Nav_Checked"/>
+                        <RadioButton x:Name="NavDownloads" Style="{StaticResource NavButton}" Content="Downloads"
+                                     Tag="&#xE896;" Checked="Nav_Checked"/>
 
                         <TextBlock Text="CLEAN UP" Style="{StaticResource NavSection}"/>
                         <RadioButton x:Name="NavCleaner" Style="{StaticResource NavButton}" Content="Junk Cleaner"
@@ -162,7 +166,9 @@
             <views:ClipsView x:Name="ClipsPage" Visibility="Collapsed"/>
             <views:ClipboardView x:Name="ClipboardPage" Visibility="Collapsed"/>
             <views:ScreenTimeView x:Name="ScreenTimePage" Visibility="Collapsed"/>
-            <views:AskView x:Name="AskPage" Visibility="Collapsed"/>
+            <views:CrosshairView x:Name="CrosshairPage" Visibility="Collapsed"/>
+            <views:ControllerView x:Name="ControllerPage" Visibility="Collapsed"/>
+            <views:DownloadsView x:Name="DownloadsPage" Visibility="Collapsed"/>
             <views:CleanerView x:Name="CleanerPage" Visibility="Collapsed"/>
             <views:DiskView x:Name="DiskPage" Visibility="Collapsed"/>
             <views:NetworkView x:Name="NetworkPage" Visibility="Collapsed"/>

@@ -63,11 +63,13 @@ public sealed class GpuLoad : IDisposable
 }
 
 public sealed record GameSession(string Game, DateTime Start, TimeSpan Duration,
-    double AvgCpu, double PeakCpu, double AvgGpu, double PeakGpu, long PeakGameRam)
+    double AvgCpu, double PeakCpu, double AvgGpu, double PeakGpu, long PeakGameRam,
+    double? AvgFps = null, double? LowFps = null)
 {
     [System.Text.Json.Serialization.JsonIgnore] public string When => Start.ToString("g");
     [System.Text.Json.Serialization.JsonIgnore] public string DurationText => Fmt.Duration(Duration);
-    [System.Text.Json.Serialization.JsonIgnore] public string Summary => $"CPU {AvgCpu:0}% avg / {PeakCpu:0}% peak · GPU {AvgGpu:0}% avg / {PeakGpu:0}% peak · " +
+    [System.Text.Json.Serialization.JsonIgnore] public string Summary => (AvgFps is { } f ? $"{f:0} FPS avg / {LowFps:0} 1% low · " : "") +
+                            $"CPU {AvgCpu:0}% avg / {PeakCpu:0}% peak · GPU {AvgGpu:0}% avg / {PeakGpu:0}% peak · " +
                             $"game RAM {Fmt.Bytes(PeakGameRam)} peak";
 }
 
@@ -92,6 +94,9 @@ public sealed class GameStats
     int _samples;
     double _cpuSum, _cpuPeak, _gpuSum, _gpuPeak;
     long _ramPeak;
+    bool _fpsHeld;
+    int _fpsSamples;
+    double _fpsSum, _lowSum;
 
     public bool Running => _game is not null;
     public double LastCpu { get; private set; }
@@ -109,6 +114,9 @@ public sealed class GameStats
         _cpu.Sample();
         _gpu ??= new GpuLoad();
         _gpu.Sample();
+        // Frame rate needs admin (Windows' rule for event tracing); without it the recap just leaves FPS out.
+        _fpsSamples = 0; _fpsSum = _lowSum = 0;
+        if (Elevation.IsElevated && !_fpsHeld) { FpsMonitor.Shared.Acquire(); _fpsHeld = true; }
     }
 
     public void Sample()
@@ -126,6 +134,12 @@ public sealed class GameStats
         _cpuSum += LastCpu; _cpuPeak = Math.Max(_cpuPeak, LastCpu);
         _gpuSum += LastGpu; _gpuPeak = Math.Max(_gpuPeak, LastGpu);
         _ramPeak = Math.Max(_ramPeak, LastGameRam);
+        if (_fpsHeld && FpsMonitor.Shared.Read(_pid) is { } fps)
+        {
+            _fpsSamples++;
+            _fpsSum += fps.Fps;
+            _lowSum += fps.Low1;
+        }
     }
 
     /// <summary>Ends the session; sessions shorter than a minute aren't kept.</summary>
@@ -134,8 +148,10 @@ public sealed class GameStats
         if (_game is null) return null;
         var duration = DateTime.Now - _start;
         var session = _samples == 0 ? null : new GameSession(_game, _start, duration,
-            _cpuSum / _samples, _cpuPeak, _gpuSum / _samples, _gpuPeak, _ramPeak);
+            _cpuSum / _samples, _cpuPeak, _gpuSum / _samples, _gpuPeak, _ramPeak,
+            _fpsSamples > 0 ? _fpsSum / _fpsSamples : null, _fpsSamples > 0 ? _lowSum / _fpsSamples : null);
         _game = null;
+        if (_fpsHeld) { FpsMonitor.Shared.Release(); _fpsHeld = false; }
         if (session is null || duration < TimeSpan.FromMinutes(1)) return null;
         var all = Load();
         all.Insert(0, session);

@@ -30,6 +30,7 @@
         </StackPanel>
 
         <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel>
             <ItemsControl x:Name="Games">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
@@ -58,6 +59,11 @@
                                                         HorizontalAlignment="Left" VerticalAlignment="Top">
                                                     <TextBlock Text="{Binding Store}" FontSize="10" FontWeight="SemiBold" Foreground="#C9D4F0"/>
                                                 </Border>
+                                                <Border CornerRadius="4" Background="#E64F8CFF" Padding="6,2" Margin="6"
+                                                        HorizontalAlignment="Right" VerticalAlignment="Top" ToolTip="New update or announcement this week. Right-click → What's new"
+                                                        Visibility="{Binding HasNews, Converter={StaticResource BoolToVis}}">
+                                                    <TextBlock Text="NEW" FontSize="10" FontWeight="Bold" Foreground="White"/>
+                                                </Border>
                                             </Grid>
                                         </Border>
                                         <TextBlock Text="{Binding Name}" Margin="2,8,2,0" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
@@ -74,6 +80,7 @@
                             <Button.ContextMenu>
                                 <ContextMenu>
                                     <MenuItem Header="Play" Click="Play_Click"/>
+                                    <MenuItem Header="What's new" Click="News_Click"/>
                                     <MenuItem Header="Open install folder" Click="Folder_Click"/>
                                 </ContextMenu>
                             </Button.ContextMenu>
@@ -81,6 +88,43 @@
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
+
+            <!-- Free-to-keep games right now -->
+            <Border Style="{StaticResource Card}" Margin="0,10,14,0">
+                <StackPanel>
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
+                            <TextBlock Text="Notify me" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                            <CheckBox x:Name="FreeAlertSwitch" Style="{StaticResource Switch}" Click="FreeAlertSwitch_Click"/>
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Text="Free to keep right now" FontSize="15" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="FreeText" Style="{StaticResource Muted}" Margin="0,2,16,0" TextWrapping="Wrap"
+                                       Text="Games you can claim for free on Epic, Steam, GOG and others. Claim them before the date and they're yours forever."/>
+                        </StackPanel>
+                    </DockPanel>
+                    <ItemsControl x:Name="FreeGames" Margin="0,12,0,0">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Width="250" Margin="0,0,12,12" CornerRadius="8" Background="{StaticResource InputBrush}" ClipToBounds="True">
+                                    <StackPanel>
+                                        <Image Source="{Binding Image}" Height="117" Stretch="UniformToFill"/>
+                                        <StackPanel Margin="10,8,10,10">
+                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip="{Binding Title}"/>
+                                            <TextBlock Text="{Binding Detail}" Style="{StaticResource Muted}" FontSize="11" Margin="0,2,0,8"/>
+                                            <Button Content="Claim" Style="{StaticResource PrimaryButton}" Click="Claim_Click" HorizontalAlignment="Left" Padding="14,4"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+          </StackPanel>
         </ScrollViewer>
     </DockPanel>
 </UserControl>

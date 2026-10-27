@@ -17,13 +17,13 @@ public sealed class PaletteCommand
     public int Rank { get; init; }
     /// <summary>Only listed once the user has typed something (long lists like apps).</summary>
     public bool NeedsQuery { get; init; }
-    /// <summary>Shown whatever was typed (calculator result, Ask AI).</summary>
+    /// <summary>Shown whatever was typed (calculator result).</summary>
     public bool AlwaysMatch { get; init; }
 }
 
 /// <summary>
 /// Ctrl+Alt+Space: one search box for everything. Type to filter pages, actions, games, apps and running windows;
-/// math is calculated as you type; anything else can go to Ask AI. Enter runs the top match.
+/// math is calculated as you type. Enter runs the top match.
 /// </summary>
 public sealed class CommandPalette : Window
 {

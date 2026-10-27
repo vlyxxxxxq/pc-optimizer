@@ -13,6 +13,8 @@ public sealed class LibraryGame : ObservableObject
     /// <summary>URI or exe path that starts the game through its launcher.</summary>
     public required string Launch { get; init; }
     public string? Folder { get; init; }
+    /// <summary>Steam app id, for news.</summary>
+    public string? AppId { get; init; }
     public string? Exe { get; init; }
     public string? CoverPath { get; init; }
     public TimeSpan Played { get; set; }
@@ -25,6 +27,10 @@ public sealed class LibraryGame : ObservableObject
     ImageSource? _cover;
     public ImageSource? Cover { get => _cover; set => Set(ref _cover, value); }
     public bool HasCover => Cover is not null;
+
+    bool _hasNews;
+    /// <summary>The developer posted news in the last week (shown as a badge on the cover).</summary>
+    public bool HasNews { get => _hasNews; set => Set(ref _hasNews, value); }
 }
 
 /// <summary>Finds installed games across Steam, Epic and GOG, with cover art where the launcher caches it.</summary>
@@ -84,7 +90,7 @@ public static class InstalledGames
                 playtime.TryGetValue(id, out var pt);
                 yield return new LibraryGame
                 {
-                    Name = name, Store = "Steam", Launch = $"steam://rungameid/{id}",
+                    Name = name, Store = "Steam", Launch = $"steam://rungameid/{id}", AppId = id,
                     Folder = Field("installdir") is { } dir ? Path.Combine(apps, "common", dir) : null,
                     CoverPath = SteamCover(steam, id),
                     Played = TimeSpan.FromMinutes(pt.Minutes),

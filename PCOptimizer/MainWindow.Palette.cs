@@ -54,12 +54,6 @@ public partial class MainWindow
         foreach (var c in _gameCommands) yield return c;
         foreach (var c in _appCommands) yield return c;
         foreach (var c in _windowCommands) yield return c;
-        if (query.Length > 2)
-            yield return new PaletteCommand
-            {
-                Title = $"Ask AI: {query}", Detail = "Ask AI", Glyph = "", Rank = 9, AlwaysMatch = true,
-                Run = () => { ShowPage(NavAsk); AskPage.AskNow(query); },
-            };
     }
 
     void ShowPage(RadioButton nav)

@@ -18,6 +18,7 @@ public partial class LibraryView : UserControl
         _settings = settings;
         _gameMode = gameMode;
         GameModeSwitch.IsChecked = settings.LaunchWithGameMode;
+        FreeAlertSwitch.IsChecked = settings.FreeGameAlerts;
     }
 
     public async void EnsureLoaded()
@@ -35,9 +36,52 @@ public partial class LibraryView : UserControl
         _all = await Task.Run(InstalledGames.Find);
         Render();
         _loading = false;
-        // Covers load in the background so the grid appears at once.
+        // Covers, news badges and free games load in the background so the grid appears at once.
+        _ = LoadFreeGamesAsync();
         foreach (var g in _all.ToList())
             if (await Task.Run(() => InstalledGames.LoadCover(g)) is { } cover) g.Cover = cover;
+        foreach (var g in _all.Where(g => g.AppId is not null).ToList())
+        {
+            try { g.HasNews = (await GameFeeds.SteamNewsAsync(g.AppId!, 1)).Any(n => n.IsRecent); }
+            catch { /* offline: no badges */ }
+        }
+    }
+
+    async Task LoadFreeGamesAsync()
+    {
+        try
+        {
+            var free = await GameFeeds.FreeGamesAsync();
+            FreeGames.ItemsSource = free;
+            FreeText.Text = free.Count == 0
+                ? "No free games at the moment. Check back later."
+                : $"{free.Count} games you can claim for free right now. Claim them before the date and they're yours to keep.";
+        }
+        catch { FreeText.Text = "Couldn't load free games (are you offline?)."; }
+    }
+
+    void Claim_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is Giveaway g && g.Url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            Shell.Open(g.Url);
+    }
+
+    void FreeAlertSwitch_Click(object sender, RoutedEventArgs e)
+    {
+        if (_settings is null) return;
+        _settings.FreeGameAlerts = FreeAlertSwitch.IsChecked == true;
+        _settings.Save();
+    }
+
+    void News_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not LibraryGame game) return;
+        if (game.AppId is null)
+        {
+            MessageBox.Show($"News is only available for Steam games so far.", "What's new");
+            return;
+        }
+        new NewsWindow(game) { Owner = Window.GetWindow(this) }.Show();
     }
 
     void Render()

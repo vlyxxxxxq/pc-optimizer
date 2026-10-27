@@ -69,7 +69,17 @@ public sealed unsafe class FpsMonitor : IDisposable
     /// <summary>Why it isn't running, for display ("needs admin").</summary>
     public string? Problem { get; private set; }
 
-    public FpsMonitor() => _callback = OnEvent;
+    FpsMonitor() => _callback = OnEvent;
+
+    /// <summary>Windows allows one trace session per name, so the overlay and session stats share this one.</summary>
+    public static FpsMonitor Shared { get; } = new();
+    int _users;
+    readonly object _usersLock = new(); // separate from _lock: Stop() waits for the trace thread, which takes _lock
+
+    /// <summary>Starts the trace for the first user; each Acquire needs a matching Release.</summary>
+    public void Acquire() { lock (_usersLock) { if (_users++ == 0) Start(); } }
+
+    public void Release() { lock (_usersLock) { if (_users > 0 && --_users == 0) Stop(); } }
 
     public void Start()
     {

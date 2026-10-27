@@ -13,6 +13,27 @@ public sealed class GameProfile
     public bool CloseApps { get; set; }
 }
 
+public enum CrosshairShape { Cross, CrossDot, Dot, Circle, T }
+
+public sealed class CrosshairStyle
+{
+    public CrosshairShape Shape { get; set; } = CrosshairShape.CrossDot;
+    public string Color { get; set; } = "#00FF66";
+    public double Size { get; set; } = 7;       // arm length (circle radius)
+    public double Thickness { get; set; } = 2;
+    public double Gap { get; set; } = 4;
+    public bool Outline { get; set; } = true;
+    public double Opacity { get; set; } = 1;
+}
+
+/// <summary>A game the crosshair turns on for: matched by install folder, or by exe name for games added by hand.</summary>
+public sealed class CrosshairGame
+{
+    public string Name { get; set; } = "";
+    public string? Folder { get; set; }
+    public string? Exe { get; set; }
+}
+
 /// <summary>User preferences, stored as JSON in %AppData%\PCOptimizer\settings.json.</summary>
 public sealed class AppSettings
 {
@@ -91,6 +112,16 @@ public sealed class AppSettings
 
     // Library, clips, clipboard, screen time
     public bool LaunchWithGameMode { get; set; } = true;
+    public bool FreeGameAlerts { get; set; } = true;
+    public bool SessionRecap { get; set; } = true;
+    public bool DownloadsAutoOrganize { get; set; }
+
+    // Crosshair
+    public CrosshairStyle Crosshair { get; set; } = new();
+    public List<CrosshairGame> CrosshairGames { get; set; } = [];
+    public string CrosshairHotkey { get; set; } = "Ctrl+Shift+F8";
+    /// <summary>Giveaway ids already announced, so each free game is only mentioned once.</summary>
+    public List<int> SeenGiveaways { get; set; } = [];
     public bool CaptureHotkeys { get; set; } = true;
     public string ClipHotkey { get; set; } = "Ctrl+Shift+F9";
     public string ScreenshotHotkey { get; set; } = "Ctrl+Shift+F10";
