@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="236" height="54" viewBox="0 0 236 54" role="img" aria-label="Download Rig 2.1.0 for Windows">
+<svg xmlns="http://www.w3.org/2000/svg" width="236" height="54" viewBox="0 0 236 54" role="img" aria-label="Download Rig 2.0.0 for Windows">
   <defs><linearGradient id="blue" x2="1" y2="1"><stop stop-color="#639bff"/><stop offset="1" stop-color="#3d6de6"/></linearGradient></defs>
   <rect x=".5" y=".5" width="235" height="53" rx="10" fill="url(#blue)" stroke="#80aaff"/>
   <g stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M28 17v14m-5-5 5 5 5-5m-12 8v3h14v-3"/></g>
-  <text x="49" y="32" font-family="Segoe UI,Arial,sans-serif" font-size="16" font-weight="600" fill="white">Download Rig 2.1.0</text>
+  <text x="49" y="32" font-family="Segoe UI,Arial,sans-serif" font-size="16" font-weight="600" fill="white">Download Rig 2.0.0</text>
 </svg>

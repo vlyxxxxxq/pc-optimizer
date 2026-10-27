@@ -1,6 +1,6 @@
 # Inside Rig
 
-[Download Rig 2.1.0](https://github.com/vlyxxxxxq/rig/releases/download/v2.1.0/Rig.exe) Â· [Back to the overview](../README.md)
+[Download Rig 2.0.0](https://github.com/vlyxxxxxq/rig/releases/download/v2.0.0/Rig.exe) Â· [Back to the overview](../README.md)
 
 Rig groups its tools into Gaming, Media, Productivity, Files, and System. Turn off unused modules in Settings.
 Pin tools to Home, arrange the cards, or choose a compact preset.
