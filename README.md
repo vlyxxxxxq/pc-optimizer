@@ -7,12 +7,12 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/vlyxxxxxq/rig/releases/download/v2.0.0/Rig.exe"><img src="docs/assets/download-rig.svg" alt="Download Rig 2.0.0" width="236" height="54"></a>
+  <a href="https://github.com/vlyxxxxxq/rig/releases/download/v2.1.0/Rig.exe"><img src="docs/assets/download-rig.svg" alt="Download Rig 2.1.0" width="236" height="54"></a>
 </p>
 
 <p align="center">
   Windows 10 &amp; 11 · 64-bit · Standalone EXE · Install or run portable<br>
-  <a href="https://github.com/vlyxxxxxq/rig/releases/tag/v2.0.0">Release notes</a> &nbsp;·&nbsp;
+  <a href="https://github.com/vlyxxxxxq/rig/releases/tag/v2.1.0">Release notes</a> &nbsp;·&nbsp;
   <a href="docs/FEATURES.md">Explore the tools</a> &nbsp;·&nbsp;
   <a href="https://github.com/vlyxxxxxq/rig/issues">Report a problem</a>
 </p>
@@ -21,6 +21,8 @@
 
 ## A home for your PC tools
 
+**New in 2.1:** a clearer Home, recent tools for this session, and a redesigned Game Mode with installed-game profiles.
+
 Rig brings gaming controls, maintenance, and everyday utilities into one desktop app. Pin the tools you use,
 choose what appears on Home, and switch off the modules you don't need. Keep it in the notification area
 for automatic Game Mode, reminders, and shortcuts.
@@ -28,6 +30,8 @@ for automatic Game Mode, reminders, and shortcuts.
 <p align="center">
   <img src="docs/screenshots/home.png" alt="Rig Home with pinned tools, a maintenance checklist, and live system information" width="100%">
 </p>
+
+<p align="center"><sub>Home preview with sample data.</sub></p>
 
 <table>
   <tr>
@@ -58,7 +62,7 @@ for automatic Game Mode, reminders, and shortcuts.
 
 ## Start in a minute
 
-1. **Download [Rig.exe](https://github.com/vlyxxxxxq/rig/releases/download/v2.0.0/Rig.exe).** One download includes the runtime; no separate .NET installation is needed.
+1. **Download [Rig.exe](https://github.com/vlyxxxxxq/rig/releases/download/v2.1.0/Rig.exe).** One download includes the runtime; no separate .NET installation is needed.
 2. **Choose a home.** Install for your Windows account, or keep the EXE where it is and run portable.
 3. **Make your choices.** Review Game Mode, sign-in startup, notifications, and the optional clipboard and screen-time tools.
 4. **Open Rig.** Pin a few favorites and make Home yours.
@@ -103,6 +107,8 @@ Shortcuts are listed in Settings, and capture shortcuts can be changed on their 
   </tr>
 </table>
 
+<p align="center"><sub>Interface previews use sample data. Your live readings and installed games will differ.</sub></p>
+
 ## Good to know
 
 <details>
@@ -139,7 +145,7 @@ and depends on its recording settings.
 <details>
 <summary><strong>Why might Windows show a publisher warning?</strong></summary>
 
-Rig 2.0.0 is not Authenticode-signed, so Windows may show an unknown-publisher or SmartScreen warning.
+Rig 2.1.0 is not Authenticode-signed, so Windows may show an unknown-publisher or SmartScreen warning.
 Download it from this repository's release page and decide whether you trust it before running it.
 Release-signing details are documented in [SIGNING.md](docs/SIGNING.md).
 
@@ -148,12 +154,11 @@ Release-signing details are documented in [SIGNING.md](docs/SIGNING.md).
 <details>
 <summary><strong>Moving from an earlier build?</strong></summary>
 
-This release starts a single-download Rig lineup at **2.0.0**. Quit your running copy from the tray first,
-then replace its EXE with the new download. For an installed copy, the default location is
-`%LocalAppData%\Programs\Rig\Rig.exe`. Your settings are stored separately.
+Rig 2.0.0 can update to 2.1.0 from **Settings → Check for updates**. You can also quit Rig from the tray
+and replace its EXE with the new download. Your settings are stored separately.
 
-A previous 2.0.0 or 2.1.0 build will not automatically offer this reset as a newer update.
-Download it once manually. Migration support for older settings is retained.
+If you used an earlier experimental build already numbered 2.1.0, download this release manually once.
+Existing settings and custom Home layouts are retained. The old default layout receives the new Home arrangement.
 
 </details>
 
@@ -161,7 +166,7 @@ Download it once manually. Migration support for older settings is retained.
 
 - [All tools and features](docs/FEATURES.md)
 - [Build, test, and preview setup](docs/DEVELOPMENT.md)
-- [Rig 2.0.0 release notes](docs/release-notes/v2.0.0.md)
+- [Rig 2.1.0 release notes](docs/release-notes/v2.1.0.md)
 - [Report a bug or request a feature](https://github.com/vlyxxxxxq/rig/issues/new/choose)
 
 Built with **C#**, **WPF**, and **.NET 10**. The application has no third-party runtime packages.

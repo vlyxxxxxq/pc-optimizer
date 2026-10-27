@@ -24,152 +24,118 @@
                 </StackPanel>
             </Border>
         </DataTemplate>
+        <Style TargetType="Expander">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        </Style>
     </UserControl.Resources>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="32,28,32,32">
             <TextBlock Text="Game Mode" Style="{StaticResource PageTitle}"/>
-            <TextBlock Style="{StaticResource PageSubtitle}"
-                       Text="Squeeze more out of your PC while you play. Turns on by itself when a game starts and undoes everything when you quit."/>
-
-            <!-- Status hero -->
-            <Border x:Name="Hero" Style="{StaticResource Card}" Margin="0,20,0,0" Padding="24">
-                <DockPanel>
-                    <Button x:Name="ToggleButton" DockPanel.Dock="Right" Style="{StaticResource PrimaryButton}"
-                            Content="Turn on" Click="Toggle_Click" VerticalAlignment="Center" Padding="22,10" FontSize="14"/>
-                    <Button x:Name="NotGameButton" DockPanel.Dock="Right" Content="Not a game" Click="NotGame_Click"
-                            VerticalAlignment="Center" Padding="16,10" Margin="0,0,10,0" Visibility="Collapsed"
-                            ToolTip="Never treat this app as a game again"/>
-                    <Border x:Name="HeroIcon" Width="64" Height="64" CornerRadius="32" Background="{DynamicResource ControlBrush}">
-                        <TextBlock Text="&#xE7FC;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="28"
-                                   x:Name="HeroGlyph" Foreground="{DynamicResource MutedBrush}"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
-                    <StackPanel Margin="18,0,16,0" VerticalAlignment="Center">
-                        <TextBlock x:Name="StatusTitle" Text="Game Mode is off" FontSize="20" FontWeight="SemiBold"/>
-                        <TextBlock x:Name="StatusDetail" Style="{StaticResource Muted}" FontSize="13" Margin="0,3,0,0"/>
-                        <TextBlock x:Name="BoostDetail" Style="{StaticResource Muted}" Margin="0,3,0,0" TextWrapping="Wrap"/>
-                        <!-- Skipped or failed boosts, and anything not yet put back -->
-                        <TextBlock x:Name="ProblemDetail" Foreground="{DynamicResource WarnBrush}" Margin="0,3,0,0" TextWrapping="Wrap"
-                                   Visibility="Collapsed" AutomationProperties.LiveSetting="Polite"/>
-                        <Button x:Name="RetryRestoreButton" Content="Try restoring again" Click="RetryRestore_Click" HorizontalAlignment="Left"
-                                Margin="0,10,0,0" Visibility="Collapsed"/>
-                        <!-- Live numbers while a game is running -->
-                        <StackPanel x:Name="LiveStats" Orientation="Horizontal" Margin="0,12,0,0" Visibility="Collapsed">
-                            <Border Style="{StaticResource Badge}" Margin="0,0,8,0" Padding="10,4">
-                                <TextBlock><Run Text="CPU " Foreground="{DynamicResource MutedBrush}"/><Run x:Name="LiveCpu" Text="–" FontWeight="SemiBold"/></TextBlock>
-                            </Border>
-                            <Border Style="{StaticResource Badge}" Margin="0,0,8,0" Padding="10,4">
-                                <TextBlock><Run Text="GPU " Foreground="{DynamicResource MutedBrush}"/><Run x:Name="LiveGpu" Text="–" FontWeight="SemiBold"/></TextBlock>
-                            </Border>
-                            <Border Style="{StaticResource Badge}" Margin="0" Padding="10,4">
-                                <TextBlock><Run Text="Game RAM " Foreground="{DynamicResource MutedBrush}"/><Run x:Name="LiveRam" Text="–" FontWeight="SemiBold"/></TextBlock>
-                            </Border>
-                        </StackPanel>
-                    </StackPanel>
-                </DockPanel>
-            </Border>
-
-            <!-- Per-game profiles -->
-            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+            <TextBlock Text="Choose what changes while you play. See what gets restored afterward." Style="{StaticResource PageSubtitle}"/>
+            <Border x:Name="Hero" Style="{StaticResource Card}" Margin="0,20,0,0" Padding="22,18">
                 <StackPanel>
-                    <TextBlock Text="PER-GAME PROFILES" Style="{StaticResource CardLabel}"/>
-                    <TextBlock Style="{StaticResource Muted}" Margin="0,4,0,0"
-                               Text="Give a game its own boosts, e.g. close background apps only for ranked shooters. Games without a profile use the defaults below."/>
-                    <ItemsControl x:Name="ProfileList" Margin="0,4,0,0">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border Background="{DynamicResource InputBrush}" CornerRadius="8" Padding="14,10" Margin="0,8,0,0">
-                                    <DockPanel>
-                                        <Button DockPanel.Dock="Right" Tag="{Binding}" Click="RemoveProfile_Click" Background="Transparent"
-                                                Padding="8,4" ToolTip="Remove profile" Margin="12,0,0,0">
-                                            <TextBlock Text="&#xE74D;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                                                       Foreground="{DynamicResource MutedBrush}"/>
-                                        </Button>
-                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                                            <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding PowerPlan}" Click="Profile_Click"/>
-                                            <TextBlock Text="Power" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="6,0,14,0"/>
-                                            <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding Priority}" Click="Profile_Click"/>
-                                            <TextBlock Text="Priority" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="6,0,14,0"/>
-                                            <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding KeepAwake}" Click="Profile_Click"/>
-                                            <TextBlock Text="No sleep" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="6,0,14,0"/>
-                                            <CheckBox Style="{StaticResource Switch}" IsChecked="{Binding CloseApps}" Click="Profile_Click"/>
-                                            <TextBlock Text="Close apps" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="6,0,0,0"/>
-                                        </StackPanel>
-                                        <StackPanel>
-                                            <TextBlock Text="{Binding Game}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                                                <TextBlock Text="Display" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                                <ComboBox Width="190" ItemsSource="{x:Static services:DisplayModes.Choices}" SelectedItem="{Binding DisplayMode}"
-                                                          SelectionChanged="ProfileDisplay_Changed"
-                                                          ToolTip="Switch the main display to this resolution and refresh rate while playing; it goes back afterwards"/>
-                                            </StackPanel>
-                                        </StackPanel>
-                                    </DockPanel>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                    <WrapPanel Margin="0,10,0,0">
-                        <TextBlock x:Name="ProfileHint" Text="Add a profile for:" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="0,8,8,0"/>
-                        <ItemsControl x:Name="ProfileSuggestions">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Button Content="{Binding}" ContentStringFormat="+ {0}" Tag="{Binding}" Click="AddProfile_Click"
-                                            Padding="10,3" Margin="0,8,8,0" FontSize="12"/>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
+                    <DockPanel Margin="0,0,0,14">
+                        <Border x:Name="StateBadge" DockPanel.Dock="Right" CornerRadius="6" Padding="10,4" Background="{DynamicResource InfoTintBrush}">
+                            <TextBlock x:Name="StateBadgeText" Text="Game Mode" FontSize="11" Foreground="{DynamicResource AccentLightBrush}"/>
+                        </Border>
+                        <TextBlock Text="YOUR SESSION" Style="{StaticResource CardLabel}" VerticalAlignment="Center"/>
+                    </DockPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <Border x:Name="HeroIcon" Width="48" Height="48" CornerRadius="14" Background="{DynamicResource InfoTintBrush}" VerticalAlignment="Top">
+                            <TextBlock x:Name="HeroGlyph" Text="&#xE7FC;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="23" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel Grid.Column="1" Margin="16,0,20,0">
+                            <TextBlock x:Name="StatusTitle" Text="Ready for your next game" FontSize="24" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                            <TextBlock x:Name="StatusDetail" Style="{StaticResource Muted}" FontSize="13" Margin="0,5,0,0"/>
+                            <TextBlock x:Name="BoostDetail" Style="{StaticResource Muted}" Margin="0,6,0,0"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                            <Button x:Name="ToggleButton" Content="Turn on" Click="Toggle_Click" Style="{StaticResource PrimaryButton}" Padding="20,10" MinWidth="126"/>
+                            <Button x:Name="NotGameButton" Content="Not a game" Click="NotGame_Click" Background="Transparent" Margin="0,6,0,0" Visibility="Collapsed" ToolTip="Never detect this app as a game again"/>
+                        </StackPanel>
+                    </Grid>
+                    <StackPanel x:Name="AppliedPanel" Visibility="Collapsed" Margin="0,16,0,0">
+                        <TextBlock x:Name="AppliedHeading" Text="APPLIED THIS SESSION" Style="{StaticResource CardLabel}" FontSize="10"/>
+                        <ItemsControl x:Name="AppliedChanges" Margin="0,5,0,0"><ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate><DataTemplate><Border Background="{DynamicResource GoodTintBrush}" CornerRadius="6" Padding="9,5" Margin="0,4,7,0">
+                                <TextBlock Text="{Binding}" FontSize="12" Foreground="{DynamicResource GoodBrush}"/>
+                            </Border></DataTemplate></ItemsControl.ItemTemplate>
                         </ItemsControl>
-                        <TextBox x:Name="ProfileBox" Width="180" Margin="0,8,8,0" KeyDown="ProfileBox_KeyDown"
-                                 ToolTip="Game name as Game Mode shows it, e.g. VALORANT"/>
-                        <Button Content="Add" Click="AddTypedProfile_Click" Padding="12,4" Margin="0,8,0,0"/>
-                    </WrapPanel>
+                    </StackPanel>
+                    <StackPanel x:Name="LiveStats" Orientation="Horizontal" Margin="0,12,0,0" Visibility="Collapsed">
+                        <Border Style="{StaticResource Badge}" Margin="0,0,8,0" Padding="10,4"><TextBlock><Run Text="CPU " Foreground="{DynamicResource MutedBrush}"/><Run x:Name="LiveCpu" Text="–" FontWeight="SemiBold"/></TextBlock></Border>
+                        <Border Style="{StaticResource Badge}" Margin="0,0,8,0" Padding="10,4"><TextBlock><Run Text="GPU " Foreground="{DynamicResource MutedBrush}"/><Run x:Name="LiveGpu" Text="–" FontWeight="SemiBold"/></TextBlock></Border>
+                        <Border Style="{StaticResource Badge}" Margin="0" Padding="10,4"><TextBlock><Run Text="Game RAM " Foreground="{DynamicResource MutedBrush}"/><Run x:Name="LiveRam" Text="–" FontWeight="SemiBold"/></TextBlock></Border>
+                    </StackPanel>
                 </StackPanel>
             </Border>
-
-            <!-- Play history -->
-            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+            <Border x:Name="RecoveryNotice" Background="{DynamicResource WarnTintBrush}" CornerRadius="10" Padding="16" Margin="0,12,0,0" Visibility="Collapsed">
+                <StackPanel><TextBlock x:Name="ProblemDetail" Foreground="{DynamicResource WarnBrush}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"/>
+                    <Button x:Name="RetryRestoreButton" Content="Try restoring again" Click="RetryRestore_Click" HorizontalAlignment="Left" Margin="0,10,0,0" Visibility="Collapsed"/>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}" Margin="0,14,0,0" Padding="18,14"><Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <StackPanel Margin="0,0,24,0"><TextBlock Text="Turn on when I start playing" Style="{StaticResource RowTitle}" FontWeight="SemiBold"/>
+                    <TextBlock Text="Watch for supported games in focus. Stay in control of the changes in each session." Style="{StaticResource Muted}" Margin="0,4,0,0"/></StackPanel>
+                <CheckBox Grid.Column="1" Style="{StaticResource Switch}" IsChecked="{Binding AutoGameMode}" Click="Setting_Click" AutomationProperties.Name="Turn on when I start playing"/>
+            </Grid></Border>
+            <Border Style="{StaticResource Card}" Margin="0,14,0,0" Padding="18,16">
                 <StackPanel>
-                    <TextBlock Text="PLAY HISTORY" Style="{StaticResource CardLabel}"/>
-                    <TextBlock x:Name="NoHistory" Style="{StaticResource Muted}" Margin="0,8,0,0"
-                               Text="Sessions show up here after you play a game for at least a minute with Game Mode on."/>
-                    <Grid x:Name="HistoryGrid" Margin="0,4,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="2*"/>
-                            <ColumnDefinition Width="24"/>
-                            <ColumnDefinition Width="3*"/>
-                        </Grid.ColumnDefinitions>
-                        <ItemsControl x:Name="TotalsList">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <DockPanel Margin="0,8,0,0">
-                                        <TextBlock DockPanel.Dock="Right" Text="{Binding Text}" Style="{StaticResource Muted}"/>
-                                        <TextBlock Text="{Binding Game}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                                    </DockPanel>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
+                    <DockPanel><Button x:Name="RefreshGamesButton" DockPanel.Dock="Right" Content="Refresh games" Click="RefreshGames_Click" Padding="10,4" FontSize="12"/>
+                        <TextBlock Text="Game profiles" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center"/></DockPanel>
+                    <TextBlock Text="Give a game its own preferences. Games without a profile use your session defaults." Style="{StaticResource Muted}" Margin="0,5,0,0"/>
+                    <Label Content="Choose an installed game, or type a game name" Target="{Binding ElementName=ProfileBox}" Padding="0" Margin="0,14,0,6" Foreground="{DynamicResource MutedBrush}" FontSize="12"/>
+                    <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <ComboBox x:Name="ProfileBox" IsEditable="True" IsTextSearchEnabled="True" DisplayMemberPath="Label" TextSearch.TextPath="Label" KeyDown="ProfileBox_KeyDown" MinWidth="160" Margin="0,0,10,0" AutomationProperties.Name="Game for a new profile"/>
+                        <Button Grid.Column="1" Content="Create profile" Click="AddTypedProfile_Click" Style="{StaticResource PrimaryButton}"/>
+                    </Grid>
+                    <TextBlock x:Name="ProfileStatus" Style="{StaticResource Muted}" Margin="0,7,0,0" AutomationProperties.LiveSetting="Polite"/>
+                    <WrapPanel Margin="0,3,0,0"><TextBlock x:Name="ProfileHint" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="0,6,8,0"/>
+                        <ItemsControl x:Name="ProfileSuggestions"><ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate><DataTemplate><Button Content="{Binding}" ContentStringFormat="+ {0}" Tag="{Binding}" Click="AddProfile_Click" Padding="10,3" Margin="0,6,8,0" FontSize="12"/></DataTemplate></ItemsControl.ItemTemplate>
                         </ItemsControl>
-                        <ItemsControl x:Name="SessionList" Grid.Column="2">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <StackPanel Margin="0,8,0,0">
-                                        <TextBlock>
-                                            <Run Text="{Binding Game, Mode=OneWay}" FontWeight="SemiBold"/>
-                                            <Run Text="{Binding DurationText, Mode=OneWay}" Foreground="{DynamicResource AccentBrush}"/>
-                                            <Run Text="{Binding When, Mode=OneWay}" Foreground="{DynamicResource MutedBrush}"/>
-                                        </TextBlock>
-                                        <TextBlock Text="{Binding Summary}" Style="{StaticResource Muted}"/>
-                                    </StackPanel>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                    </WrapPanel>
+                    <ItemsControl x:Name="ProfileList" Margin="0,4,0,0"><ItemsControl.ItemTemplate><DataTemplate>
+                        <Expander Background="{DynamicResource InputBrush}" Padding="12" Margin="0,10,0,0" Loaded="ProfileExpander_Loaded">
+                            <Expander.Header><StackPanel><TextBlock Text="{Binding Game}" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding MatchPath}" Style="{StaticResource Muted}" FontSize="11" MaxWidth="450" TextTrimming="CharacterEllipsis"/></StackPanel></Expander.Header>
+                            <StackPanel Margin="0,12,0,0">
+                                <UniformGrid Columns="2">
+                                    <DockPanel Margin="0,0,20,12"><CheckBox DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding PowerPlan}" Click="Profile_Click" AutomationProperties.Name="Use performance power plan for this game"/><TextBlock Text="Power plan" VerticalAlignment="Center"/></DockPanel>
+                                    <DockPanel Margin="0,0,0,12"><CheckBox DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding Priority}" Click="Profile_Click" AutomationProperties.Name="Raise CPU priority for this game"/><TextBlock Text="CPU priority" VerticalAlignment="Center"/></DockPanel>
+                                    <DockPanel Margin="0,0,20,12"><CheckBox DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding KeepAwake}" Click="Profile_Click" AutomationProperties.Name="Block sleep for this game"/><TextBlock Text="Keep awake" VerticalAlignment="Center"/></DockPanel>
+                                    <DockPanel Margin="0,0,0,12"><CheckBox DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding CloseApps}" Click="Profile_Click" AutomationProperties.Name="Close chosen apps for this game"/><TextBlock Text="Close chosen apps" VerticalAlignment="Center"/></DockPanel>
+                                </UniformGrid>
+                                <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <StackPanel><Label Content="Display while playing" Padding="0,0,0,5" FontSize="12" Foreground="{DynamicResource MutedBrush}"/>
+                                        <ComboBox ItemsSource="{x:Static services:DisplayModes.Choices}" SelectedItem="{Binding DisplayMode}" SelectionChanged="ProfileDisplay_Changed" MaxWidth="300" HorizontalAlignment="Left" MinWidth="210" AutomationProperties.Name="Display mode for this game"/></StackPanel>
+                                    <Button Grid.Column="1" Tag="{Binding}" Content="Remove profile" Click="RemoveProfile_Click" Background="Transparent" VerticalAlignment="Bottom" Margin="12,0,0,0"/>
+                                </Grid>
+                                <TextBlock Text="Changes take effect the next time Game Mode starts." Style="{StaticResource Muted}" Margin="0,12,0,0" FontSize="11"/>
+                            </StackPanel>
+                        </Expander>
+                    </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource Card}" Margin="0,14,0,0" Padding="18,16">
+                <StackPanel><TextBlock Text="Session defaults" FontSize="16" FontWeight="SemiBold"/>
+                    <TextBlock Text="Used when a game has no profile. Applied on the next activation." Style="{StaticResource Muted}" Margin="0,5,0,12"/>
+                    <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="16"/><ColumnDefinition/><ColumnDefinition Width="16"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                        <StackPanel><CheckBox Style="{StaticResource Switch}" HorizontalAlignment="Left" IsChecked="{Binding BoostPowerPlan}" Click="Setting_Click" AutomationProperties.Name="Maximum performance power plan"/>
+                            <TextBlock Text="Maximum performance power plan" Style="{StaticResource RowTitle}" TextWrapping="Wrap" Margin="0,10,0,4"/><TextBlock Text="Use a performance plan when one is available." Style="{StaticResource Muted}"/></StackPanel>
+                        <StackPanel Grid.Column="2"><CheckBox Style="{StaticResource Switch}" HorizontalAlignment="Left" IsChecked="{Binding BoostPriority}" Click="Setting_Click" AutomationProperties.Name="High CPU priority for the game"/>
+                            <TextBlock Text="High CPU priority for the game" Style="{StaticResource RowTitle}" TextWrapping="Wrap" Margin="0,10,0,4"/><TextBlock Text="Give the detected game higher scheduling priority." Style="{StaticResource Muted}"/></StackPanel>
+                        <StackPanel Grid.Column="4"><CheckBox Style="{StaticResource Switch}" HorizontalAlignment="Left" IsChecked="{Binding KeepAwake}" Click="Setting_Click" AutomationProperties.Name="Block sleep and screensaver"/>
+                            <TextBlock Text="Block sleep and screensaver" Style="{StaticResource RowTitle}" TextWrapping="Wrap" Margin="0,10,0,4"/><TextBlock Text="Keep the PC and display awake for your session." Style="{StaticResource Muted}"/></StackPanel>
                     </Grid>
                 </StackPanel>
             </Border>
-
+            <Expander Margin="0,20,0,0"><Expander.Header><TextBlock Text="Advanced settings" FontSize="16" FontWeight="SemiBold"/></Expander.Header>
+                <StackPanel><TextBlock Text="Detection, custom games, background apps, overlay, and session recap." Style="{StaticResource Muted}" Margin="6,8,0,0"/>
             <Grid Margin="0,16,0,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition/>
@@ -181,16 +147,8 @@
                     <!-- Automatic -->
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
-                            <TextBlock Text="AUTOMATIC" Style="{StaticResource CardLabel}"/>
-                            <DockPanel Style="{StaticResource Row}">
-                                <CheckBox DockPanel.Dock="Right" Style="{StaticResource Switch}"
-                                          IsChecked="{Binding AutoGameMode}" Click="Setting_Click"/>
-                                <StackPanel>
-                                    <TextBlock Text="Turn on when I start playing" Style="{StaticResource RowTitle}"/>
-                                    <TextBlock Style="{StaticResource Muted}"
-                                               Text="Kicks in when a game from your libraries is the window you're using, and switches off when it closes. Background apps like Wallpaper Engine are ignored."/>
-                                </StackPanel>
-                            </DockPanel>
+                            <TextBlock Text="DETECTION &amp; LIBRARIES" Style="{StaticResource CardLabel}"/>
+
                             <DockPanel Style="{StaticResource Row}">
                                 <CheckBox DockPanel.Dock="Right" Style="{StaticResource Switch}"
                                           IsChecked="{Binding DetectFullscreen}" Click="Setting_Click"/>
@@ -262,32 +220,10 @@
                     <!-- Boosts -->
                     <Border Style="{StaticResource Card}">
                         <StackPanel>
-                            <TextBlock Text="WHILE GAME MODE IS ON" Style="{StaticResource CardLabel}"/>
-                            <DockPanel Style="{StaticResource Row}">
-                                <CheckBox DockPanel.Dock="Right" Style="{StaticResource Switch}"
-                                          IsChecked="{Binding BoostPowerPlan}" Click="Setting_Click"/>
-                                <StackPanel>
-                                    <TextBlock Text="Maximum performance power plan" Style="{StaticResource RowTitle}"/>
-                                    <TextBlock Style="{StaticResource Muted}"
-                                               Text="Ultimate or High performance. Your plan comes back afterwards."/>
-                                </StackPanel>
-                            </DockPanel>
-                            <DockPanel Style="{StaticResource Row}">
-                                <CheckBox DockPanel.Dock="Right" Style="{StaticResource Switch}"
-                                          IsChecked="{Binding BoostPriority}" Click="Setting_Click"/>
-                                <StackPanel>
-                                    <TextBlock Text="High CPU priority for the game" Style="{StaticResource RowTitle}"/>
-                                    <TextBlock Style="{StaticResource Muted}" Text="Background work yields to your game first."/>
-                                </StackPanel>
-                            </DockPanel>
-                            <DockPanel Style="{StaticResource Row}">
-                                <CheckBox DockPanel.Dock="Right" Style="{StaticResource Switch}"
-                                          IsChecked="{Binding KeepAwake}" Click="Setting_Click"/>
-                                <StackPanel>
-                                    <TextBlock Text="Block sleep and screensaver" Style="{StaticResource RowTitle}"/>
-                                    <TextBlock Style="{StaticResource Muted}" Text="Great for controller play and cutscenes."/>
-                                </StackPanel>
-                            </DockPanel>
+                            <TextBlock Text="MORE SESSION OPTIONS" Style="{StaticResource CardLabel}"/>
+
+
+
                             <DockPanel Style="{StaticResource Row}">
                                 <CheckBox x:Name="CloseAppsSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}"
                                           IsChecked="{Binding CloseApps}" Click="Setting_Click"/>
@@ -425,6 +361,50 @@
                     </Border>
                 </StackPanel>
             </Grid>
+                </StackPanel>
+            </Expander>
+            <Expander Margin="0,20,0,0"><Expander.Header><TextBlock Text="Session history" FontSize="16" FontWeight="SemiBold"/></Expander.Header>
+            <!-- Play history -->
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
+                    <TextBlock Text="PLAY HISTORY" Style="{StaticResource CardLabel}"/>
+                    <TextBlock x:Name="NoHistory" Style="{StaticResource Muted}" Margin="0,8,0,0"
+                               Text="Sessions show up here after you play a game for at least a minute with Game Mode on."/>
+                    <Grid x:Name="HistoryGrid" Margin="0,4,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="24"/>
+                            <ColumnDefinition Width="3*"/>
+                        </Grid.ColumnDefinitions>
+                        <ItemsControl x:Name="TotalsList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <DockPanel Margin="0,8,0,0">
+                                        <TextBlock DockPanel.Dock="Right" Text="{Binding Text}" Style="{StaticResource Muted}"/>
+                                        <TextBlock Text="{Binding Game}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                    </DockPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <ItemsControl x:Name="SessionList" Grid.Column="2">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="0,8,0,0">
+                                        <TextBlock>
+                                            <Run Text="{Binding Game, Mode=OneWay}" FontWeight="SemiBold"/>
+                                            <Run Text="{Binding DurationText, Mode=OneWay}" Foreground="{DynamicResource AccentBrush}"/>
+                                            <Run Text="{Binding When, Mode=OneWay}" Foreground="{DynamicResource MutedBrush}"/>
+                                        </TextBlock>
+                                        <TextBlock Text="{Binding Summary}" Style="{StaticResource Muted}"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            </Expander>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

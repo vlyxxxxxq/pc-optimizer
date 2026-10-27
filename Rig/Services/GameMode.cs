@@ -121,7 +121,7 @@ public sealed class GameModeService
                     {
                         Game = later;
                         BeginSession(later);
-                        if (_settings.ProfileFor(later.Name)?.Priority ?? _settings.BoostPriority)
+                        if (_settings.ProfileFor(later.Name, later.Path)?.Priority ?? _settings.BoostPriority)
                         {
                             var boosts = Boosts.ToList(); var problems = Problems.ToList();
                             await _gate.WaitAsync();
@@ -205,7 +205,7 @@ public sealed class GameModeService
             var problems = new List<string>();
 
             // A game's own profile replaces the default boosts.
-            var profile = _settings.ProfileFor(game?.Name);
+            var profile = _settings.ProfileFor(game?.Name, game?.Path);
             bool wantPlan = profile?.PowerPlan ?? _settings.BoostPowerPlan;
             bool wantPriority = profile?.Priority ?? _settings.BoostPriority;
             bool wantAwake = profile?.KeepAwake ?? _settings.KeepAwake;

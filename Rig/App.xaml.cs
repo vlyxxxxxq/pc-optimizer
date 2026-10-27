@@ -26,6 +26,26 @@ public partial class App : Application
         base.OnStartup(e);
         Services.CrashReporter.Install(this);
 
+        int export = Array.FindIndex(e.Args, a => a.Equals("--export-previews", StringComparison.OrdinalIgnoreCase));
+        if (export >= 0)
+        {
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            try
+            {
+                if (export + 1 >= e.Args.Length) throw new ArgumentException("Choose an output folder for previews.");
+                Services.PreviewExport.Run(e.Args[export + 1]);
+                Shutdown(0);
+            }
+            catch (Exception error)
+            {
+                System.Diagnostics.Trace.WriteLine(error);
+                if (export + 1 < e.Args.Length && System.IO.Directory.Exists(e.Args[export + 1]))
+                    System.IO.File.WriteAllText(System.IO.Path.Combine(e.Args[export + 1], "export-error.txt"), error.ToString());
+                Shutdown(1);
+            }
+            return;
+        }
+
         // A design preview never loads a personal profile, changes startup, or starts background services.
         if (e.Args.Contains("--setup-preview", StringComparer.OrdinalIgnoreCase))
         {

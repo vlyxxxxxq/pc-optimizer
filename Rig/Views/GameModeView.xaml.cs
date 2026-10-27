@@ -23,15 +23,16 @@ public partial class GameModeView : UserControl
         _clock.Tick += (_, _) => Render();
         IsVisibleChanged += (_, _) =>
         {
-            if (IsVisible) { Render(); _ = RefreshSuggestionsAsync(); _clock.Start(); }
+            if (IsVisible) { Render(); if (!_preview) { _ = RefreshSuggestionsAsync(); _ = LoadProfileGamesAsync(); } _clock.Start(); }
             else _clock.Stop();
         };
     }
 
-    public void Attach(GameModeService service, AppSettings settings)
+    public void Attach(GameModeService service, AppSettings settings, bool preview = false)
     {
         _service = service;
         _settings = settings;
+        _preview = preview;
         DataContext = settings;
         foreach (var g in settings.CustomGames) _games.Add(g);
         foreach (var a in settings.AppsToClose) _apps.Add(a);
@@ -44,14 +45,14 @@ public partial class GameModeView : UserControl
         service.StateChanged += (_, _) => Render();
         service.IgnoredChanged += (_, _) => { RenderIgnored(); _games.Clear(); foreach (var g in settings.CustomGames) _games.Add(g); };
         service.StatsUpdated += (_, _) => RenderStats();
-        service.SessionEnded += _ => { RenderHistory(); RenderProfiles(); };
-        service.StateChanged += (_, _) => RenderProfiles();
+        service.SessionEnded += _ => { RenderHistory(); RenderProfileSuggestions(); };
         RenderLibraries();
         RenderIgnored();
-        RenderHistory();
+        if (!preview) RenderHistory();
         RenderProfiles();
         RenderOverlay();
         Render();
+        if (IsVisible && !preview) _ = LoadProfileGamesAsync();
     }
 
     void RenderStats()
@@ -70,6 +71,13 @@ public partial class GameModeView : UserControl
     public event Action<bool>? OverlayPreview;
     public event EventHandler? OverlaySettingsChanged;
     bool _previewing;
+    bool _preview, _loadingGames, _gamesLoaded;
+    GameProfile? _lastAddedProfile;
+
+    internal sealed record ProfileGame(string Name, string Store, string? Folder)
+    {
+        public string Label => $"{Name} · {Store}";
+    }
 
     void RenderOverlay()
     {
@@ -104,28 +112,40 @@ public partial class GameModeView : UserControl
         if (_settings is null) return;
         ProfileList.ItemsSource = null;
         ProfileList.ItemsSource = _settings.GameProfiles.ToList();
+        RenderProfileSuggestions();
+    }
+
+    void RenderProfileSuggestions()
+    {
+        if (_settings is null || _preview) return;
         // Suggest games you've played (or the one running now) that don't have a profile yet.
         var known = GameStats.Load().Select(s => s.Game)
             .Concat(_service?.Game is { } g ? [g.Name] : [])
             .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Where(n => _settings.ProfileFor(n) is null)
+            .Where(n => !_settings.GameProfiles.Any(p => p.Game.Equals(n, StringComparison.OrdinalIgnoreCase)))
             .Take(8).ToList();
         ProfileSuggestions.ItemsSource = known;
-        ProfileHint.Text = known.Count > 0 ? "Add a profile for:" : "Add a profile for a game:";
+        ProfileHint.Text = known.Count > 0 ? "Recently played:" : "";
     }
 
-    void AddProfile(string name)
+    void AddProfile(string name, string? folder = null)
     {
         name = name.Trim();
-        if (_settings is null || name.Length == 0 || _settings.ProfileFor(name) is not null) return;
+        if (_settings is null || name.Length == 0) { ProfileStatus.Text = "Choose a game or enter its name first."; return; }
+        bool exists = _settings.GameProfiles.Any(p => folder is { Length: > 0 }
+            ? string.Equals(p.MatchPath?.TrimEnd('\\', '/'), folder.TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase)
+            : string.IsNullOrWhiteSpace(p.MatchPath) && p.Game.Equals(name, StringComparison.OrdinalIgnoreCase));
+        if (exists) { ProfileStatus.Text = "That game already has a profile below."; return; }
         // Start from the current defaults so nothing changes until the user flips a switch.
-        _settings.GameProfiles.Add(new GameProfile
+        _lastAddedProfile = new GameProfile
         {
-            Game = name, PowerPlan = _settings.BoostPowerPlan, Priority = _settings.BoostPriority,
+            Game = name, MatchPath = folder, PowerPlan = _settings.BoostPowerPlan, Priority = _settings.BoostPriority,
             KeepAwake = _settings.KeepAwake, CloseApps = _settings.CloseApps,
-        });
+        };
+        _settings.GameProfiles.Add(_lastAddedProfile);
         _settings.Save();
         RenderProfiles();
+        ProfileStatus.Text = $"Created {name}'s profile from your current defaults. Changes apply next session.";
     }
 
     void AddProfile_Click(object sender, RoutedEventArgs e)
@@ -133,13 +153,55 @@ public partial class GameModeView : UserControl
         if (((Button)sender).Tag is string name) AddProfile(name);
     }
 
-    void AddTypedProfile_Click(object sender, RoutedEventArgs e) { AddProfile(ProfileBox.Text); ProfileBox.Clear(); }
+    void AddTypedProfile_Click(object sender, RoutedEventArgs e) => AddSelectedProfile();
+
+    void AddSelectedProfile()
+    {
+        if (ProfileBox.SelectedItem is ProfileGame game && ProfileBox.Text.Equals(game.Label, StringComparison.OrdinalIgnoreCase))
+            AddProfile(game.Name, game.Folder);
+        else AddProfile(ProfileBox.Text);
+        ProfileBox.SelectedItem = null;
+        ProfileBox.Text = "";
+    }
 
     void ProfileBox_KeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key != Key.Enter) return;
-        AddProfile(ProfileBox.Text);
-        ProfileBox.Clear();
+        if (ProfileBox.IsDropDownOpen) return;
+        AddSelectedProfile();
+        e.Handled = true;
+    }
+
+    void ProfileExpander_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is Expander expander && ReferenceEquals(expander.DataContext, _lastAddedProfile))
+        {
+            expander.IsExpanded = true;
+            _lastAddedProfile = null;
+        }
+    }
+
+    async void RefreshGames_Click(object sender, RoutedEventArgs e) => await LoadProfileGamesAsync(force: true);
+
+    async Task LoadProfileGamesAsync(bool force = false)
+    {
+        if (_preview || _settings is null || _loadingGames || (_gamesLoaded && !force)) return;
+        _loadingGames = true;
+        RefreshGamesButton.IsEnabled = false;
+        ProfileStatus.Text = "Finding installed games… You can still type a name.";
+        try
+        {
+            var games = await Task.Run(InstalledGames.FindForProfiles);
+            var choices = games.Select(g => new ProfileGame(g.Name, g.Store, g.Folder))
+                .Concat(_settings.CustomGames.Select(g => new ProfileGame(Path.GetFileNameWithoutExtension(g), "Custom", Path.IsPathRooted(g) ? Path.GetDirectoryName(g) : null)))
+                .DistinctBy(g => (g.Label.ToLowerInvariant(), g.Folder?.ToLowerInvariant())).OrderBy(g => g.Name).ThenBy(g => g.Store).ToList();
+            ProfileBox.ItemsSource = choices;
+            ProfileStatus.Text = choices.Count == 0 ? "No installed games found. Type a name to create a custom profile."
+                : $"{choices.Count} installed {(choices.Count == 1 ? "game" : "games")} available. Folder matching keeps profiles tied to the right installation.";
+            _gamesLoaded = true;
+        }
+        catch { ProfileStatus.Text = "Couldn't read the game libraries. You can still create a profile by name."; }
+        finally { _loadingGames = false; RefreshGamesButton.IsEnabled = true; }
     }
 
     void Profile_Click(object sender, RoutedEventArgs e) => _settings?.Save();
@@ -195,40 +257,39 @@ public partial class GameModeView : UserControl
         if (_service is null) return;
         bool on = _service.IsActive;
         var state = _service.State;
-        ToggleButton.IsEnabled = state is not (GameModeState.Starting or GameModeState.Restoring);
+        var summary = GameModeSummary.Create(state, _settings?.AutoGameMode == true, _service.Game?.Name);
+        ToggleButton.IsEnabled = !summary.Busy;
         var problems = _service.Problems;
-        ProblemDetail.Visibility = problems.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        RecoveryNotice.Visibility = problems.Count > 0 || state == GameModeState.RecoveryNeeded ? Visibility.Visible : Visibility.Collapsed;
         ProblemDetail.Text = state == GameModeState.RecoveryNeeded
             ? $"Not put back yet: {string.Join("; ", problems)}."
             : problems.Count > 0 ? $"Not done: {string.Join("; ", problems)}." : "";
         RetryRestoreButton.Visibility = state == GameModeState.RecoveryNeeded ? Visibility.Visible : Visibility.Collapsed;
-        var accent = (Brush)FindResource(on ? "GoodBrush" : "MutedBrush");
+        var accent = (Brush)FindResource(summary.Tone == StatusTone.Attention ? "WarnBrush" : summary.Tone == StatusTone.Active ? "GoodBrush" : "AccentLightBrush");
+        StateBadgeText.Text = summary.Badge;
+        StateBadgeText.Foreground = accent;
+        StateBadge.Background = (Brush)FindResource(summary.Tone == StatusTone.Attention ? "WarnTintBrush" : summary.Tone == StatusTone.Active ? "GoodTintBrush" : "InfoTintBrush");
         HeroGlyph.Foreground = accent;
         HeroIcon.Background = (Brush)FindResource(on ? "GoodTintBrush" : "ControlBrush");
         Hero.BorderBrush = on ? accent : (Brush)FindResource("CardBorderBrush");
-        ToggleButton.Content = on ? "Turn off" : "Turn on";
+        ToggleButton.Content = state == GameModeState.RecoveryNeeded ? "Try restoring again" : summary.Action;
         ToggleButton.Style = (Style)FindResource(on ? "DangerButton" : "PrimaryButton");
-        NotGameButton.Visibility = on && _service.Game is not null ? Visibility.Visible : Visibility.Collapsed;
+        NotGameButton.Visibility = state == GameModeState.On && _service.Game is not null ? Visibility.Visible : Visibility.Collapsed;
         RenderStats();
+        AppliedPanel.Visibility = state == GameModeState.On && _service.Boosts.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        AppliedChanges.ItemsSource = _service.Boosts;
+        StatusTitle.Text = summary.Title;
+        StatusDetail.Text = summary.Detail;
+        BoostDetail.Text = "";
 
-        if (state == GameModeState.Starting) { StatusTitle.Text = "Turning Game Mode on…"; StatusDetail.Text = ""; BoostDetail.Text = ""; }
-        else if (state == GameModeState.Restoring) { StatusTitle.Text = "Putting things back…"; StatusDetail.Text = ""; BoostDetail.Text = ""; }
-        else if (on)
+        if (state == GameModeState.On)
         {
             StatusTitle.Text = _service.Game is { } g ? $"Game Mode on · {g.Name}" : "Game Mode is on";
             var since = _service.Since is { } s ? Fmt.Duration(DateTime.Now - s) : "";
             StatusDetail.Text = (_service.IsAuto ? "Turned on automatically" : "Turned on manually") +
                                 (since.Length > 0 ? $" · {since}" : "") +
                                 (_service.Game is { } game ? $" · {game.Source}" : "");
-            BoostDetail.Text = _service.Boosts.Count > 0 ? "Active: " + string.Join(" · ", _service.Boosts) : "No boosts enabled.";
-        }
-        else
-        {
-            StatusTitle.Text = state == GameModeState.RecoveryNeeded ? "Game Mode is off, but not everything is back" : "Game Mode is off";
-            StatusDetail.Text = _settings?.AutoGameMode == true
-                ? "Watching for games. It'll switch on by itself when you start one."
-                : "Automatic mode is off. Turn it on here or from the tray icon.";
-            BoostDetail.Text = "";
+            BoostDetail.Text = _service.Boosts.Count > 0 ? "Changes made this session are listed below. They are restored when you turn Game Mode off." : "No changes were applied this session.";
         }
     }
 
@@ -252,7 +313,11 @@ public partial class GameModeView : UserControl
     {
         if (_service is null) return;
         ToggleButton.IsEnabled = false;
-        try { await _service.ToggleAsync(); }
+        try
+        {
+            if (_service.State == GameModeState.RecoveryNeeded) await _service.RetryRecoveryAsync();
+            else await _service.ToggleAsync();
+        }
         finally { Render(); }
     }
 

@@ -54,7 +54,7 @@ public static class Health
             score -= (int)Math.Min(30, 5 + 5.0 * junkBytes / GB);
             findings.Add(new(junkBytes >= GB ? Severity.Bad : Severity.Warn,
                 $"{Fmt.Bytes(junkBytes)} of junk files",
-                "Temporary files and caches that can be safely removed.", "Clean now", "clean"));
+                "Review temporary files and caches before choosing what to remove.", "Review cleanup", "clean"));
         }
         else
         {
@@ -68,7 +68,7 @@ public static class Health
             score -= Math.Min(20, 4 + (startupEnabled - 6) * 3);
             findings.Add(new(startupEnabled > 12 ? Severity.Bad : Severity.Warn,
                 $"{startupEnabled} apps launch at sign-in",
-                "Each one slows down startup. Disable the ones you don't need right away.", "Review", "startup"));
+                "Review what starts at sign-in and keep the apps you need.", "Review startup", "startup"));
         }
         else
         {

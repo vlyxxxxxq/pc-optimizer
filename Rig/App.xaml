@@ -400,9 +400,17 @@
                                     </ControlTemplate>
                                 </ToggleButton.Template>
                             </ToggleButton>
-                            <ContentPresenter Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                            <ContentPresenter x:Name="selection" Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
                                               Margin="{TemplateBinding Padding}" IsHitTestVisible="False" VerticalAlignment="Center"
                                               HorizontalAlignment="Left"/>
+                            <TextBox x:Name="PART_EditableTextBox" Visibility="Collapsed" Margin="4,2,30,2"
+                                     Background="Transparent" BorderThickness="0" Padding="4,3"
+                                     Foreground="{TemplateBinding Foreground}" VerticalContentAlignment="Center"
+                                     IsReadOnly="{TemplateBinding IsReadOnly}">
+                                <TextBox.Style><Style TargetType="TextBox"><Setter Property="Template"><Setter.Value>
+                                    <ControlTemplate TargetType="TextBox"><ScrollViewer x:Name="PART_ContentHost"/></ControlTemplate>
+                                </Setter.Value></Setter></Style></TextBox.Style>
+                            </TextBox>
                             <Popup IsOpen="{TemplateBinding IsDropDownOpen}" Placement="Bottom" AllowsTransparency="True" Focusable="False"
                                    PopupAnimation="Fade">
                                 <Border MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}" MaxHeight="320"
@@ -414,6 +422,12 @@
                                 </Border>
                             </Popup>
                         </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsEditable" Value="True">
+                                <Setter TargetName="selection" Property="Visibility" Value="Collapsed"/>
+                                <Setter TargetName="PART_EditableTextBox" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>

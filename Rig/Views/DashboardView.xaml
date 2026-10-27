@@ -22,142 +22,114 @@
             <Setter Property="Margin" Value="0,12,0,0"/>
         </Style>
     </UserControl.Resources>
-
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="32,28,32,32">
-            <DockPanel>
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
-                    <Button x:Name="CompactButton" Content="Use compact layout" Margin="0,0,8,0" Visibility="Collapsed" Click="Compact_Click"
-                            ToolTip="Just pinned tools, Game Mode and the maintenance check"/>
-                    <Button x:Name="AddCardButton" Content="+ Add a card" Margin="0,0,8,0" Visibility="Collapsed" Click="AddCard_Click"/>
+            <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <StackPanel><TextBlock Text="Home" Style="{StaticResource PageTitle}"/>
+                    <TextBlock x:Name="Subtitle" Text="A clear view. A few useful next steps." Style="{StaticResource PageSubtitle}"/></StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="Search tools" Click="Search_Click" Margin="0,0,8,0"/>
                     <Button x:Name="CustomizeButton" Content="Customize" Click="Customize_Click"/>
                 </StackPanel>
-                <TextBlock Text="Home" Style="{StaticResource PageTitle}"/>
-            </DockPanel>
-            <TextBlock x:Name="Subtitle" Text="Your tools and your PC at a glance." Style="{StaticResource PageSubtitle}"/>
-
-            <!-- Cards: shown, ordered and sized from settings (HomeCards); each has a Tag with its id -->
-            <WrapPanel x:Name="CardHost" Margin="-8,12,-8,0">
-
-                <!-- Pinned tools: right-click any sidebar page to pin or unpin it -->
-                <Border x:Name="PinsCard" Tag="pins" Margin="8">
+            </Grid>
+            <WrapPanel x:Name="EditTools" Visibility="Collapsed" Margin="0,14,0,0">
+                <Button x:Name="CompactButton" Content="Use compact layout" Margin="0,0,8,6" Click="Compact_Click"/>
+                <Button x:Name="AddCardButton" Content="+ Add a card" Margin="0,0,0,6" Click="AddCard_Click"/>
+            </WrapPanel>
+            <WrapPanel x:Name="CardHost" Margin="-8,14,-8,0">
+                <Border x:Name="GameCard" Tag="gamemode" Style="{StaticResource Card}" Margin="8" Padding="20,16">
                     <StackPanel>
-                        <TextBlock Text="PINNED" Style="{StaticResource CardLabel}" Margin="0,0,0,10"/>
-                        <WrapPanel x:Name="PinnedPanel" x:FieldModifier="public"/>
-                        <TextBlock x:Name="PinnedHint" x:FieldModifier="public" Style="{StaticResource Muted}" Visibility="Collapsed"
-                                   Text="Right-click any page in the sidebar and choose Pin to Home to keep it here."/>
-                    </StackPanel>
-                </Border>
-
-                <!-- Health -->
-                <Border x:Name="HealthCard" Tag="health" Style="{StaticResource Card}" Margin="8">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition/>
-                        </Grid.ColumnDefinitions>
-                        <Grid Width="96" Height="96" VerticalAlignment="Top" ToolTip="{x:Static services:HealthReport.Basis}">
-                            <Ellipse Stroke="{DynamicResource ControlBrush}" StrokeThickness="9"/>
-                            <Path x:Name="ScoreArc" StrokeThickness="9" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock x:Name="ScoreText" Text="…" FontSize="28" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                                <TextBlock x:Name="ScoreLabel" Text="Checking" Style="{StaticResource Muted}" FontSize="11" HorizontalAlignment="Center"/>
+                        <DockPanel Margin="0,0,0,10">
+                            <Border x:Name="GameBadge" DockPanel.Dock="Right" Background="{DynamicResource InfoTintBrush}" CornerRadius="6" Padding="9,4">
+                                <TextBlock x:Name="GameBadgeText" Text="Game Mode" FontSize="11" Foreground="{DynamicResource AccentLightBrush}"/>
+                            </Border>
+                            <TextBlock Text="GAME MODE" Style="{StaticResource CardLabel}" VerticalAlignment="Center"/>
+                        </DockPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,20,0">
+                                <TextBlock x:Name="GameStateText" Text="Ready for your next game" FontSize="24" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                <TextBlock x:Name="GameStateDetail" Style="{StaticResource Muted}" FontSize="13" Margin="0,5,0,0"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <Button x:Name="GameToggleButton" Content="Turn on" Style="{StaticResource PrimaryButton}" Click="GameToggle_Click" MinWidth="128"/>
+                                <Button Content="Open Game Mode" Background="Transparent" Tag="Game" Click="Open_Click" Margin="0,5,0,0" Padding="8,4" FontSize="12"/>
                             </StackPanel>
                         </Grid>
-                        <StackPanel Grid.Column="1" Margin="22,0,0,0">
-                            <DockPanel>
-                                <Button x:Name="RecheckButton" DockPanel.Dock="Right" Content="Re-check" Click="Recheck_Click" VerticalAlignment="Top"/>
-                                <StackPanel>
-                                    <TextBlock Text="Maintenance check" FontSize="16" FontWeight="SemiBold"/>
-                                    <TextBlock x:Name="HealthSummary" Style="{StaticResource Muted}" Margin="0,2,0,0"
-                                               Text="Checking for junk files, startup load and disk space…"/>
-                                </StackPanel>
-                            </DockPanel>
-                            <ItemsControl x:Name="FindingsList" Margin="0,6,0,0">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Background="{DynamicResource InputBrush}" CornerRadius="8" Padding="12,8" Margin="0,6,0,0">
-                                            <DockPanel>
-                                                <Button DockPanel.Dock="Right" Content="{Binding ActionLabel}" Tag="{Binding Action}"
-                                                        Click="Finding_Click" Padding="12,4" VerticalAlignment="Center"
-                                                        Visibility="{Binding HasAction, Converter={StaticResource BoolToVis}}"/>
-                                                <TextBlock Text="{Binding Glyph}" Foreground="{Binding Brush}" FontSize="14"
-                                                           FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" VerticalAlignment="Center" Margin="2,0,12,0"/>
-                                                <StackPanel VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold"/>
-                                                    <TextBlock Text="{Binding Detail}" Style="{StaticResource Muted}" TextTrimming="CharacterEllipsis"/>
-                                                </StackPanel>
-                                            </DockPanel>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                        <StackPanel x:Name="LastSessionPanel" Visibility="Collapsed" Margin="0,14,0,0">
+                            <TextBlock x:Name="LastSessionText" FontSize="12" TextTrimming="CharacterEllipsis"/>
+                            <TextBlock x:Name="LastSessionDetail" Style="{StaticResource Muted}" Margin="0,2,0,0"/>
                         </StackPanel>
-                    </Grid>
+                    </StackPanel>
                 </Border>
-
-                <!-- CPU -->
-                <Border x:Name="CpuCard" Tag="cpu" Style="{StaticResource Card}" Margin="8">
+                <Border x:Name="CpuCard" Tag="cpu" Style="{StaticResource Card}" Margin="8" Padding="16,14">
                     <StackPanel>
-                        <DockPanel>
-                            <TextBlock DockPanel.Dock="Right" Text="last 60s" Style="{StaticResource Muted}"/>
-                            <TextBlock Text="CPU" Style="{StaticResource CardLabel}"/>
-                        </DockPanel>
-                        <TextBlock x:Name="CpuText" Text="–" Style="{StaticResource BigNumber}"/>
-                        <TextBlock Text="total processor load" Style="{StaticResource Muted}"/>
-                        <Grid Height="70" Margin="0,14,0,0">
-                            <Control Template="{StaticResource ChartGrid}"/>
-                            <Canvas x:Name="CpuChart" ClipToBounds="True">
-                                <Polygon x:Name="CpuFill" Fill="{DynamicResource AccentBrush}" Opacity="0.18"/>
-                                <Polyline x:Name="CpuLine" Stroke="{DynamicResource AccentBrush}" StrokeThickness="1.8" StrokeLineJoin="Round"/>
-                            </Canvas>
+                        <TextBlock Text="CPU" Style="{StaticResource CardLabel}"/>
+                        <TextBlock x:Name="CpuText" Text="–" FontSize="28" FontWeight="SemiBold" Margin="0,3,0,0"/>
+                        <TextBlock Text="Processor load · last 60 seconds" Style="{StaticResource Muted}" FontSize="11"/>
+                        <Grid Height="25" Margin="0,9,0,0"><Control Template="{StaticResource ChartGrid}"/>
+                            <Canvas x:Name="CpuChart" ClipToBounds="True"><Polygon x:Name="CpuFill" Fill="{DynamicResource AccentBrush}" Opacity="0.13"/>
+                                <Polyline x:Name="CpuLine" Stroke="{DynamicResource AccentBrush}" StrokeThickness="1.6" StrokeLineJoin="Round"/></Canvas>
                         </Grid>
                     </StackPanel>
                 </Border>
-
-                <!-- Memory -->
-                <Border x:Name="MemoryCard" Tag="memory" Style="{StaticResource Card}" Margin="8">
+                <Border x:Name="MemoryCard" Tag="memory" Style="{StaticResource Card}" Margin="8" Padding="16,14">
                     <StackPanel>
-                        <DockPanel>
-                            <TextBlock DockPanel.Dock="Right" Text="last 60s" Style="{StaticResource Muted}"/>
-                            <TextBlock Text="MEMORY" Style="{StaticResource CardLabel}"/>
-                        </DockPanel>
-                        <TextBlock x:Name="MemText" Text="–" Style="{StaticResource BigNumber}"/>
-                        <TextBlock x:Name="MemDetail" Style="{StaticResource Muted}"/>
-                        <Grid Height="70" Margin="0,14,0,0">
-                            <Control Template="{StaticResource ChartGrid}"/>
-                            <Canvas x:Name="MemChart" ClipToBounds="True">
-                                <Polygon x:Name="MemFill" Fill="{DynamicResource GoodBrush}" Opacity="0.18"/>
-                                <Polyline x:Name="MemLine" Stroke="{DynamicResource GoodBrush}" StrokeThickness="1.8" StrokeLineJoin="Round"/>
-                            </Canvas>
+                        <TextBlock Text="MEMORY" Style="{StaticResource CardLabel}"/>
+                        <TextBlock x:Name="MemText" Text="–" FontSize="28" FontWeight="SemiBold" Margin="0,3,0,0"/>
+                        <TextBlock x:Name="MemDetail" Style="{StaticResource Muted}" FontSize="11"/>
+                        <Grid Height="25" Margin="0,9,0,0"><Control Template="{StaticResource ChartGrid}"/>
+                            <Canvas x:Name="MemChart" ClipToBounds="True"><Polygon x:Name="MemFill" Fill="{DynamicResource GoodBrush}" Opacity="0.13"/>
+                                <Polyline x:Name="MemLine" Stroke="{DynamicResource GoodBrush}" StrokeThickness="1.6" StrokeLineJoin="Round"/></Canvas>
                         </Grid>
                     </StackPanel>
                 </Border>
-
-                <!-- System -->
-                <Border x:Name="SystemCard" Tag="system" Style="{StaticResource Card}" Margin="8">
+                <Border x:Name="SystemCard" Tag="system" Style="{StaticResource Card}" Margin="8" Padding="16,14">
                     <StackPanel>
-                        <TextBlock Text="SYSTEM" Style="{StaticResource CardLabel}"/>
-                        <TextBlock x:Name="UptimeText" Text="–" Style="{StaticResource BigNumber}"/>
-                        <TextBlock Text="since last restart" Style="{StaticResource Muted}"/>
-                        <TextBlock x:Name="OsText" Margin="0,16,0,0" TextWrapping="Wrap"/>
-                        <TextBlock x:Name="CpuNameText" Style="{StaticResource Muted}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/>
-                        <TextBlock x:Name="CoresText" Style="{StaticResource Muted}" Margin="0,2,0,0"/>
+                        <TextBlock Text="UPTIME" Style="{StaticResource CardLabel}"/>
+                        <TextBlock x:Name="UptimeText" Text="–" FontSize="28" FontWeight="SemiBold" Margin="0,3,0,0"/>
+                        <TextBlock Text="Since the last restart" Style="{StaticResource Muted}" FontSize="11"/>
+                        <TextBlock x:Name="OsText" Style="{StaticResource Muted}" FontSize="11" Margin="0,13,0,0" TextTrimming="CharacterEllipsis"/>
                     </StackPanel>
                 </Border>
-
-                <!-- Game Mode -->
-                <Border x:Name="GameCard" Tag="gamemode" Style="{StaticResource Card}" Margin="8">
+                <Border x:Name="PinsCard" Tag="pins" Style="{StaticResource Card}" Margin="8" Padding="16,14">
                     <StackPanel>
-                        <TextBlock Text="GAME MODE" Style="{StaticResource CardLabel}"/>
-                        <TextBlock x:Name="GameStateText" Text="Off" Style="{StaticResource BigNumber}"/>
-                        <TextBlock x:Name="GameStateDetail" Style="{StaticResource Muted}" TextTrimming="CharacterEllipsis"/>
-                        <TextBlock x:Name="LastSessionText" Margin="0,16,0,0" TextTrimming="CharacterEllipsis"/>
-                        <TextBlock x:Name="LastSessionDetail" Style="{StaticResource Muted}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
-                        <Button Content="Open Game Mode" Style="{StaticResource CardLink}" Tag="Game" Click="Open_Click"/>
+                        <DockPanel Margin="0,0,0,8"><Button DockPanel.Dock="Right" Content="Edit shortcuts" Click="EditPins_Click" Padding="8,3" Background="Transparent" FontSize="12"/>
+                            <TextBlock Text="YOUR SHORTCUTS" Style="{StaticResource CardLabel}" VerticalAlignment="Center"/></DockPanel>
+                        <UniformGrid x:Name="PinnedPanel" x:FieldModifier="public" Columns="4" Margin="-4,0,-4,0"/>
+                        <TextBlock x:Name="PinnedHint" x:FieldModifier="public" Style="{StaticResource Muted}" Visibility="Collapsed"
+                                   Text="Choose Edit shortcuts to pin the tools you reach for most."/>
                     </StackPanel>
                 </Border>
-
+                <Border x:Name="HealthCard" Tag="health" Style="{StaticResource Card}" Margin="8" Padding="18,16">
+                    <StackPanel>
+                        <Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,18,0"><TextBlock Text="MAINTENANCE" Style="{StaticResource CardLabel}"/>
+                                <TextBlock x:Name="MaintenanceTitle" Text="Checking your PC…" FontSize="19" FontWeight="SemiBold" Margin="0,5,0,0"/>
+                                <TextBlock x:Name="HealthSummary" Text="Checking storage, startup apps, and current load." Style="{StaticResource Muted}" Margin="0,4,0,0"/>
+                            </StackPanel>
+                            <Button x:Name="RecheckButton" Grid.Column="1" Content="Check again" Click="Recheck_Click" VerticalAlignment="Top"/>
+                        </Grid>
+                        <ItemsControl x:Name="FindingsList" Margin="0,6,0,0"><ItemsControl.ItemTemplate><DataTemplate>
+                            <Border Background="{DynamicResource InputBrush}" CornerRadius="8" Padding="12,9" Margin="0,6,0,0"><Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding Glyph}" Foreground="{Binding Brush}" FontSize="14" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                                <StackPanel Grid.Column="1" Margin="0,0,12,0"><TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                    <TextBlock Text="{Binding Detail}" Style="{StaticResource Muted}" Margin="0,2,0,0"/></StackPanel>
+                                <Button Grid.Column="2" Content="{Binding ActionLabel}" Tag="{Binding Action}" Click="Finding_Click" Padding="10,5" VerticalAlignment="Center"
+                                        Visibility="{Binding HasAction, Converter={StaticResource BoolToVis}}"/>
+                            </Grid></Border>
+                        </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+                        <Button x:Name="MoreFindingsButton" Content="Show all checks" Click="MoreFindings_Click" Background="Transparent" HorizontalAlignment="Left" Padding="0,7" Margin="0,5,0,0" Visibility="Collapsed" FontSize="12"/>
+                    </StackPanel>
+                </Border>
+                <Border x:Name="RecentCard" Tag="recent" Style="{StaticResource Card}" Margin="8" Padding="16,14">
+                    <StackPanel><TextBlock Text="RECENT TOOLS" Style="{StaticResource CardLabel}" Margin="0,0,0,8"/>
+                        <TextBlock x:Name="RecentEmpty" Text="Tools you open will appear here for this session." Style="{StaticResource Muted}"/>
+                        <UniformGrid x:Name="RecentPanel" Columns="4" Margin="-4,0,-4,0"/>
+                    </StackPanel>
+                </Border>
                 <!-- Now playing -->
                 <Border x:Name="MusicCard" Tag="music" Style="{StaticResource Card}" Margin="8">
                     <StackPanel>

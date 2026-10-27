@@ -17,6 +17,7 @@ public partial class MainWindow
     readonly Dictionary<string, FrameworkElement> _created = [];
     Dictionary<string, (Func<FrameworkElement> Create, Action<FrameworkElement>? OnShow)> _factories = [];
     string _current = Modules.Home;
+    readonly Services.RecentTools _recentTools = new();
 
     public bool IsOn(string id) => Modules.Get(id).Core || !_settings.DisabledModules.Contains(id);
 
@@ -94,6 +95,8 @@ public partial class MainWindow
         var page = Page(id);
         foreach (var (key, p) in _created) p.Visibility = key == id ? Visibility.Visible : Visibility.Collapsed;
         _current = id;
+        _recentTools.Visit(id);
+        Created<DashboardView>(Modules.Home)?.SetRecentTools(_recentTools.Available(IsOn));
         AnimateIn(page);
         _factories[id].OnShow?.Invoke(page);
     }
@@ -224,7 +227,11 @@ public partial class MainWindow
             case "Cleaner": if (on) _autoCleaner.Start(); else _autoCleaner.Stop(); break;
         }
         if (!on && _current == id) Go(Modules.Home);
-        if (Created<DashboardView>(Modules.Home) is { } home) home.Attach(_settings, IsOn);
+        if (Created<DashboardView>(Modules.Home) is { } home)
+        {
+            home.Attach(_settings, IsOn);
+            home.SetRecentTools(_recentTools.Available(IsOn));
+        }
         _fixedCommands = []; // palette lists are rebuilt without it
         BuildNav();
         RenderPins();

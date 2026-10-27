@@ -42,7 +42,8 @@ public partial class DashboardView : UserControl
     [
         new("pins", "Pinned tools", true), new("health", "Maintenance check", true),
         new("cpu", "CPU", false), new("memory", "Memory", false), new("system", "System", false),
-        new("gamemode", "Game Mode", false), new("music", "Now playing", false),
+        new("gamemode", "Game Mode", true), new("music", "Now playing", false),
+        new("recent", "Recent tools", true),
         new("screentime", "Screen time today", false, "ScreenTime"), new("input", "Input today", false, "Input"),
         new("timers", "Timers & reminders", false, "Timers"), new("power", "Power timer", false, "Tools"), new("freegames", "Free games", false, "Library"),
         new("storage", "Storage", true),
@@ -52,6 +53,11 @@ public partial class DashboardView : UserControl
     Func<string, bool> _moduleOn = _ => true;
     readonly Dictionary<string, Grid> _slots = [];
     bool _editing;
+    HealthReport? _health;
+    bool _allFindings;
+    GameModeState _gameState;
+    public event EventHandler? SearchRequested;
+    public event Action<string>? PinRequested;
 
     /// <summary>A card's button wants a module's page (its id).</summary>
     public event Action<string>? OpenRequested;
@@ -60,57 +66,80 @@ public partial class DashboardView : UserControl
     /// <summary>The cards on show changed (e.g. free games was added and needs loading).</summary>
     public event EventHandler? CardsChanged;
 
-    public DashboardView()
+    public DashboardView() : this(false) { }
+
+    internal DashboardView(bool preview)
     {
         InitializeComponent();
         WrapCards();
         CardHost.SizeChanged += (_, _) => SizeCards();
+        Loaded += (_, _) => SizeCards();
+        if (preview) return;
         OsText.Text = SystemInfo.OsName();
-        CpuNameText.Text = SystemInfo.CpuName();
-        CoresText.Text = $"{Environment.ProcessorCount} logical processors";
+        OsText.ToolTip = $"{SystemInfo.CpuName()} · {Environment.ProcessorCount} logical processors";
 
         _cpu.Sample(); // prime the delta
         _timer.Tick += (_, _) => Update();
-        Loaded += (_, _) => SizeCards();
         // Pages stay loaded when you switch away (they're only hidden), so follow visibility, not Loaded/Unloaded.
         IsVisibleChanged += (_, _) => { if (IsVisible) { Update(); _timer.Start(); } else _timer.Stop(); };
+    }
+
+    internal void SetPreviewMetrics()
+    {
+        CpuText.Text = "12%";
+        MemText.Text = "38%";
+        MemDetail.Text = "12.2 GB of 32 GB in use";
+        UptimeText.Text = "2h 14m";
+        OsText.Text = "Windows 11";
+        DrivesList.ItemsSource = new[] { new DriveRow("C:", "Local Disk", "312 GB free of 1 TB", 69, (Brush)FindResource("AccentBrush")) };
+        for (int i = 0; i < 60; i++) { Push(_cpuHistory, 12 + 5 * Math.Sin(i * .45)); Push(_memHistory, 38 + Math.Sin(i * .12)); }
+        CpuChart.SizeChanged += (_, _) => Draw(CpuLine, CpuFill, CpuChart, _cpuHistory);
+        MemChart.SizeChanged += (_, _) => Draw(MemLine, MemFill, MemChart, _memHistory);
     }
 
     public void ShowChecking()
     {
         RecheckButton.IsEnabled = false;
-        ScoreText.Text = "…";
-        ScoreLabel.Text = "Checking";
-        HealthSummary.Text = "Checking for junk files, startup load and disk space…";
-        ScoreArc.Data = null;
+        MaintenanceTitle.Text = "Checking your PC…";
+        HealthSummary.Text = "Checking storage, startup apps, and current load.";
     }
 
     public void ShowHealth(HealthReport report)
     {
         RecheckButton.IsEnabled = true;
-        ScoreText.Text = report.Score.ToString();
-        ScoreLabel.Text = report.Label;
-        ScoreArc.Stroke = report.Brush;
-        ScoreArc.Data = Arc(report.Score / 100.0, 96, 9);
-        int issues = report.Findings.Count(f => f.Severity is Severity.Warn or Severity.Bad);
-        int unknown = report.Findings.Count(f => f.Severity == Severity.Unknown);
-        HealthSummary.Text = (issues == 0 ? "Nothing on the checklist needs attention." : $"{issues} maintenance {(issues == 1 ? "item" : "items")} to look at.")
-            + (unknown > 0 ? $" {unknown} couldn't be checked." : "") + $" Checked {report.Checked:t}.";
+        _health = report;
+        var summary = MaintenanceOverview.From(report);
+        MaintenanceTitle.Text = summary.Title;
+        MaintenanceTitle.Foreground = (Brush)FindResource(summary.Attention ? "TextBrush" : "GoodBrush");
+        HealthSummary.Text = summary.Detail;
         HealthSummary.ToolTip = HealthReport.Basis;
-        FindingsList.ItemsSource = report.Findings;
+        RenderFindings();
     }
 
-    /// <summary>A clockwise ring segment starting at 12 o'clock, sized to sit on the track ellipse.</summary>
-    internal static Geometry Arc(double fraction, double size, double thickness)
+    sealed record HomeFinding(Finding Finding, bool Enabled)
     {
-        if (fraction <= 0) return Geometry.Empty;
-        double r = (size - thickness) / 2, c = size / 2;
-        double angle = Math.Min(fraction, 0.9999) * 2 * Math.PI;
-        var end = new Point(c + r * Math.Sin(angle), c - r * Math.Cos(angle));
-        var figure = new PathFigure { StartPoint = new Point(c, c - r) };
-        figure.Segments.Add(new ArcSegment(end, new Size(r, r), 0, angle > Math.PI, SweepDirection.Clockwise, true));
-        return new PathGeometry([figure]);
+        public string Title => Finding.Title;
+        public string Detail => Finding.Detail;
+        public string Glyph => Finding.Glyph;
+        public Brush Brush => Finding.Brush;
+        public string? ActionLabel => Finding.ActionLabel;
+        public string? Action => Finding.Action;
+        public bool HasAction => Enabled && Finding.HasAction;
     }
+
+    void RenderFindings()
+    {
+        if (_health is null) return;
+        var important = _health.Findings.Where(f => f.Severity != Severity.Good).ToList();
+        var shown = _allFindings ? _health.Findings : important.Take(3);
+        FindingsList.ItemsSource = shown.Select(f => new HomeFinding(f,
+            f.Action is not { } a || HomeLayout.ModuleForAction(a) is not { } module || _moduleOn(module))).ToList();
+        MoreFindingsButton.Visibility = _health.Findings.Count > 0 && (_allFindings || important.Count > 3 || _health.Findings.Count > important.Count)
+            ? Visibility.Visible : Visibility.Collapsed;
+        MoreFindingsButton.Content = _allFindings ? "Show fewer checks" : $"Show all {_health.Findings.Count} checks";
+    }
+
+    void MoreFindings_Click(object sender, RoutedEventArgs e) { _allFindings = !_allFindings; RenderFindings(); }
 
     void Update()
     {
@@ -179,7 +208,10 @@ public partial class DashboardView : UserControl
     {
         _settings = settings;
         _moduleOn = moduleOn;
+        var upgraded = HomeLayout.Upgrade(settings.HomeCards);
+        if (!upgraded.SequenceEqual(settings.HomeCards)) { settings.HomeCards = upgraded; settings.Save(); }
         RenderCards();
+        RenderFindings();
     }
 
     public bool Shows(string id) => _settings?.HomeCards.Contains(id) == true && Available(id);
@@ -240,11 +272,11 @@ public partial class DashboardView : UserControl
             slot.Children.OfType<Border>().Last().Visibility = _editing ? Visibility.Visible : Visibility.Collapsed;
             CardHost.Children.Add(slot);
         }
-        AddCardButton.Visibility = CompactButton.Visibility = _editing ? Visibility.Visible : Visibility.Collapsed;
+        EditTools.Visibility = _editing ? Visibility.Visible : Visibility.Collapsed;
         AddCardButton.IsEnabled = Catalog.Any(c => !_settings.HomeCards.Contains(c.Id) && Available(c.Id));
         CustomizeButton.Content = _editing ? "Done" : "Customize";
         CustomizeButton.Style = (Style)FindResource(_editing ? "PrimaryButton" : typeof(Button));
-        Subtitle.Text = _editing ? "Arrange your cards: move them with the arrows, remove what you don't need, and add more." : "Your tools and your PC at a glance.";
+        Subtitle.Text = _editing ? "Move cards with the arrows, remove what you don't need, or add another." : "A clear view. A few useful next steps.";
         SizeCards();
         CardsChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -257,6 +289,7 @@ public partial class DashboardView : UserControl
         int perRow = w >= 840 ? 3 : w >= 520 ? 2 : 1;
         foreach (var (id, slot) in _slots)
             slot.Width = Math.Max(120, Math.Floor(Catalog.First(c => c.Id == id).Wide ? w - 16 : w / perRow - 16));
+        PinnedPanel.Columns = RecentPanel.Columns = Math.Clamp((int)(w / 180), 1, 4);
     }
 
     void Move(string id, int by)
@@ -281,7 +314,7 @@ public partial class DashboardView : UserControl
     }
 
     /// <summary>The essentials only: pinned tools, Game Mode and the maintenance check (customizable as usual).</summary>
-    public static readonly List<string> CompactPreset = ["pins", "gamemode", "health"];
+    public static readonly List<string> CompactPreset = ["gamemode", "pins", "health"];
 
     void Compact_Click(object sender, RoutedEventArgs e)
     {
@@ -312,22 +345,72 @@ public partial class DashboardView : UserControl
 
     // --- Card contents, pushed in by the main window ---
 
-    public void SetGameMode(bool on, string? game, GameSession? last, GameModeState state = GameModeState.Off)
+    public void SetGameMode(bool on, string? game, GameSession? last, GameModeState state = GameModeState.Off, bool automatic = true)
     {
-        GameStateText.Text = state switch
-        {
-            GameModeState.Starting => "Starting…", GameModeState.Restoring => "Restoring…",
-            GameModeState.RecoveryNeeded => "Needs a look", _ => on ? "On" : "Off",
-        };
-        if (state == GameModeState.RecoveryNeeded) { GameStateText.Foreground = (Brush)FindResource("WarnBrush"); GameStateDetail.Text = "Something wasn't put back. Open Game Mode."; }
-        else
-        {
-        GameStateText.Foreground = (Brush)FindResource(on ? "GoodBrush" : "TextBrush");
-        GameStateDetail.Text = on ? game ?? "Turned on by hand" : "Turns on when you start a game";
-        }
-        LastSessionText.Text = last is null ? "No games played yet" : $"Last: {last.Game}";
+        _gameState = state;
+        var summary = GameModeSummary.Create(state, automatic, game);
+        GameStateText.Text = summary.Title;
+        GameStateText.Foreground = (Brush)FindResource("TextBrush");
+        GameStateDetail.Text = summary.Detail;
+        GameBadgeText.Text = summary.Badge;
+        GameBadge.Background = (Brush)FindResource(summary.Tone == StatusTone.Attention ? "WarnTintBrush" : summary.Tone == StatusTone.Active ? "GoodTintBrush" : "InfoTintBrush");
+        GameBadgeText.Foreground = (Brush)FindResource(summary.Tone == StatusTone.Attention ? "WarnBrush" : summary.Tone == StatusTone.Active ? "GoodBrush" : "AccentLightBrush");
+        GameToggleButton.Content = summary.Action;
+        GameToggleButton.IsEnabled = !summary.Busy;
+        LastSessionPanel.Visibility = last is null ? Visibility.Collapsed : Visibility.Visible;
+        LastSessionText.Text = last is null ? "" : $"Last session · {last.Game}";
         LastSessionDetail.Text = last is null ? "" : $"{Fmt.Duration(last.Duration).Replace("0h ", "")} · {last.Start:ddd d MMM}" +
             (last.AvgFps is { } fps ? $" · {fps:0} FPS" : "");
+    }
+
+    void GameToggle_Click(object sender, RoutedEventArgs e)
+    {
+        if (_gameState == GameModeState.RecoveryNeeded) OpenRequested?.Invoke("Game");
+        else ActionRequested?.Invoke(this, "game-toggle");
+    }
+
+    void Search_Click(object sender, RoutedEventArgs e) => SearchRequested?.Invoke(this, EventArgs.Empty);
+
+    void EditPins_Click(object sender, RoutedEventArgs e)
+    {
+        if (_settings is null) return;
+        var menu = new ContextMenu { PlacementTarget = (Button)sender };
+        foreach (var category in Modules.Categories)
+        {
+            var group = new MenuItem { Header = category };
+            foreach (var module in Modules.All.Where(m => m.Category == category && _moduleOn(m.Id)))
+            {
+                var item = new MenuItem { Header = module.Title, IsCheckable = true, IsChecked = _settings.PinnedPages.Contains(module.NavName) };
+                item.Click += (_, _) => PinRequested?.Invoke(module.Id);
+                group.Items.Add(item);
+            }
+            if (group.Items.Count > 0) menu.Items.Add(group);
+        }
+        menu.IsOpen = true;
+    }
+
+    internal static Button ToolButton(ModuleInfo module, Action action)
+    {
+        var label = new TextBlock { Text = module.Title, MaxWidth = 134, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
+        var button = new Button
+        {
+            Height = 48, Margin = new Thickness(4), Padding = new Thickness(10, 8, 10, 8), ToolTip = module.Title,
+            Content = new StackPanel { Orientation = Orientation.Horizontal, Children =
+            {
+                new TextBlock { Text = module.Glyph, FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontSize = 16,
+                    Foreground = (Brush)Application.Current.FindResource("AccentBrush"), Margin = new Thickness(0, 0, 9, 0), VerticalAlignment = VerticalAlignment.Center }, label,
+            } },
+        };
+        System.Windows.Automation.AutomationProperties.SetName(button, module.Title);
+        button.Click += (_, _) => action();
+        return button;
+    }
+
+    public void SetRecentTools(IReadOnlyList<ModuleInfo> tools)
+    {
+        RecentPanel.Children.Clear();
+        foreach (var tool in tools) RecentPanel.Children.Add(ToolButton(tool, () => OpenRequested?.Invoke(tool.Id)));
+        RecentEmpty.Visibility = tools.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
     public void SetMusic(Track? track)

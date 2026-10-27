@@ -12,6 +12,10 @@ public static class SettingsIndex
 {
     public static readonly SettingEntry[] All =
     [
+        new("game.profiles", "Game", "Game profiles", "per-game settings installed games"),
+        new("game.defaults", "Game", "Session defaults", "power priority sleep"),
+        new("game.advanced", "Game", "Advanced settings", "detection overlay background apps"),
+        new("game.history", "Game", "Session history", "playtime recent sessions"),
         new("game.turn-on-when-i-start-playing", "Game", "Turn on when I start playing"),
         new("game.treat-any-fullscreen-app-as-a-game", "Game", "Treat any fullscreen app as a game"),
         new("game.maximum-performance-power-plan", "Game", "Maximum performance power plan"),

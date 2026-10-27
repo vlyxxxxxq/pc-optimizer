@@ -1,6 +1,6 @@
 # Inside Rig
 
-[Download Rig 2.0.0](https://github.com/vlyxxxxxq/rig/releases/download/v2.0.0/Rig.exe) · [Back to the overview](../README.md)
+[Download Rig 2.1.0](https://github.com/vlyxxxxxq/rig/releases/download/v2.1.0/Rig.exe) Â· [Back to the overview](../README.md)
 
 Rig groups its tools into Gaming, Media, Productivity, Files, and System. Turn off unused modules in Settings.
 Pin tools to Home, arrange the cards, or choose a compact preset.
@@ -9,7 +9,9 @@ Pin tools to Home, arrange the cards, or choose a compact preset.
 
 Home brings together pinned tools, maintenance findings, live CPU and memory, storage, Game Mode,
 and optional cards for timers, screen time, input counts, media playback, and free games.
-Maintenance findings show what was checked, when it ran, and what couldn't be read.
+Maintenance findings show what was checked, when it ran, and what couldn't be read. Actions open the relevant tool
+for review; they don't immediately remove files. Recent tools lists up to four tools opened in this Rig session,
+in memory only. Turning a module off also removes its shortcuts and recent entries.
 
 The command palette, **Ctrl+Alt+P**, finds tools and settings, launches installed apps and games,
 restores window layouts, controls playback, and handles quick calculations. It also supports units,
@@ -20,7 +22,7 @@ currency conversion, emoji, time zones, timers, and reminders. Features that nee
 | Tool | What it does |
 |---|---|
 | **Game Mode** | Detect supported games from Steam, Epic, GOG, Ubisoft, EA, Riot, Xbox, or a custom list. Apply chosen power-plan, priority, sleep, and background-app preferences. |
-| **Per-game profiles** | Choose individual preferences, including resolution and refresh rate. Restoration work is recorded and can be retried if it fails. |
+| **Per-game profiles** | Pick an installed game or type a name, then choose preferences including resolution and refresh rate. Installed games match their installation folder; older name-only profiles still work. Changes apply on the next activation. |
 | **Game Library** | Browse installed Steam, Epic, and GOG games, launch them, check playtime and news, and find free-to-keep games. |
 | **Crosshair** | Customize a click-through crosshair and choose the games in which it appears. |
 | **Controller Tester** | Inspect XInput buttons, sticks, triggers, drift, and rumble. |

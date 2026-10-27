@@ -174,6 +174,24 @@ public class GameModeTests
     }
 
     [Fact]
+    public async Task Activation_uses_the_installation_profile_even_when_the_detected_name_differs()
+    {
+        using var box = new Sandbox();
+        var (service, _, pc) = Make(box, settings => settings.GameProfiles =
+        [new GameProfile { Game = "Library display name", MatchPath = @"C:\Games", PowerPlan = false, Priority = false, KeepAwake = false }]);
+        pc.Procs[7] = (DateTime.Now, ProcessPriorityClass.Normal);
+        try
+        {
+            await Activate(service, Game(7));
+            Assert.Equal(GameModeState.On, service.State);
+            Assert.Equal(0, pc.SetPlanCalls);
+            Assert.Equal(ProcessPriorityClass.Normal, pc.Procs[7].Priority);
+            Assert.Contains("Test Game profile", service.Boosts);
+        }
+        finally { await Deactivate(service); }
+    }
+
+    [Fact]
     public async Task Shutdown_restores_and_keeps_what_it_could_not()
     {
         using var box = new Sandbox();

@@ -8,6 +8,8 @@ namespace Rig.Services;
 public sealed class GameProfile
 {
     public string Game { get; set; } = "";
+    /// <summary>Install folder of a selected library game. Older/name-only profiles remain supported.</summary>
+    public string? MatchPath { get; set; }
     public bool PowerPlan { get; set; } = true;
     public bool Priority { get; set; } = true;
     public bool KeepAwake { get; set; } = true;
@@ -59,11 +61,22 @@ public sealed class AppSettings
     public List<string> AppsToClose { get; set; } = [];
     /// <summary>Game folders or exe names the user marked "Not a game".</summary>
     public List<string> IgnoredGames { get; set; } = [];
-    /// <summary>Per-game boosts, keyed by the game's display name. Games without one use the defaults above.</summary>
+    /// <summary>Per-game preferences matched by installation path, with legacy name-only profiles retained.</summary>
     public List<GameProfile> GameProfiles { get; set; } = [];
 
-    public GameProfile? ProfileFor(string? game) =>
-        game is null ? null : GameProfiles.FirstOrDefault(p => p.Game.Equals(game, StringComparison.OrdinalIgnoreCase));
+    public GameProfile? ProfileFor(string? game, string? executable = null)
+    {
+        if (executable is { Length: > 0 })
+        {
+            executable = executable.Replace('/', '\\');
+            var exact = GameProfiles.Where(p => !string.IsNullOrWhiteSpace(p.MatchPath))
+                .Where(p => executable.StartsWith(p.MatchPath!.Replace('/', '\\').TrimEnd('\\') + "\\", StringComparison.OrdinalIgnoreCase)
+                    || executable.Equals(p.MatchPath.Replace('/', '\\'), StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(p => p.MatchPath!.Length).FirstOrDefault();
+            if (exact is not null) return exact;
+        }
+        return game is null ? null : GameProfiles.FirstOrDefault(p => string.IsNullOrWhiteSpace(p.MatchPath) && p.Game.Equals(game, StringComparison.OrdinalIgnoreCase));
+    }
 
     public bool AutoCheckUpdates { get; set; } = true;
 
@@ -247,7 +260,7 @@ public sealed class AppSettings
     public bool ShowNowPlaying { get; set; } = true;
     /// <summary>Sidebar pages pinned to the Dashboard, by their nav button name.</summary>
     /// <summary>Cards on Home, in order (see DashboardView.Catalog).</summary>
-    public List<string> HomeCards { get; set; } = ["pins", "health", "cpu", "memory", "system", "gamemode", "music", "screentime", "storage"];
+    public List<string> HomeCards { get; set; } = [.. HomeLayout.Default];
     public List<string> PinnedPages { get; set; } = ["NavGame", "NavClips", "NavCleaner", "NavDisk"];
     public bool ClipboardHistoryEnabled { get; set; } = true;
     public bool ScreenTimeEnabled { get; set; } = true;

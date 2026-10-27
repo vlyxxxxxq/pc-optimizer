@@ -150,12 +150,12 @@ public partial class MainWindow : Window
     {
         if (home.Shows("gamemode"))
         {
-            if (_lastSession is null || !_lastSessionLoaded)
+            if (!_lastSessionLoaded)
             {
                 _lastSession = await Task.Run(() => GameStats.Load().OrderByDescending(s => s.Start).FirstOrDefault());
-                _lastSessionLoaded = _lastSession is not null;
+                _lastSessionLoaded = true;
             }
-            home.SetGameMode(_gameMode.IsActive, _gameMode.Game?.Name, _lastSession, _gameMode.State);
+            home.SetGameMode(_gameMode.IsActive, _gameMode.Game?.Name, _lastSession, _gameMode.State, _settings.AutoGameMode);
         }
         if (home.Shows("music")) home.SetMusic(await Task.Run(NowPlaying.Current));
         if (home.Shows("screentime"))
@@ -234,7 +234,10 @@ public partial class MainWindow : Window
         {
             var p = new Views.DashboardView();
             p.Attach(_settings, IsOn);
+            p.SetGameMode(_gameMode.IsActive, _gameMode.Game?.Name, _lastSession, _gameMode.State, _settings.AutoGameMode);
             p.OpenRequested += Go;
+            p.SearchRequested += (_, _) => OpenPalette();
+            p.PinRequested += id => TogglePin(Modules.Get(id));
             p.MusicCommand += async cmd =>
             {
                 if (cmd == "play") NowPlaying.PlayPause(); else if (cmd == "next") NowPlaying.Next(); else NowPlaying.Previous();
@@ -246,7 +249,8 @@ public partial class MainWindow : Window
             {
                 switch (action)
                 {
-                    case "clean": Go("Cleaner"); await CleanerPage.CleanAsync(); break;
+                    case "clean": Go("Cleaner"); break;
+                    case "game-toggle": await _gameMode.ToggleAsync(); await RefreshHomeAsync(); break;
                     case "startup": Go("Startup"); break;
                     case "disk": Go("Disk"); break;
                     case "processes": Go("Processes"); break;
@@ -265,7 +269,7 @@ public partial class MainWindow : Window
         };
         _homeTimer.Start();
         _gameMode.StateChanged += async (_, _) => await RefreshHomeAsync();
-        _gameMode.SessionEnded += _ => _lastSession = null; // reloaded on the next refresh
+        _gameMode.SessionEnded += _ => { _lastSession = null; _lastSessionLoaded = false; }; // reloaded on the next refresh
 
         Register("Game", () =>
         {

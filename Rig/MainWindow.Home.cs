@@ -36,23 +36,7 @@ public partial class MainWindow
         home.PinnedPanel.Children.Clear();
         foreach (var m in pinned)
         {
-            var tile = new Button
-            {
-                Width = 150, Height = 86, Margin = new Thickness(0, 0, 12, 12), Padding = new Thickness(14, 12, 14, 12),
-                HorizontalContentAlignment = HorizontalAlignment.Left, VerticalContentAlignment = VerticalAlignment.Top,
-                ToolTip = $"Open {m.Title}",
-                Content = new StackPanel
-                {
-                    Children =
-                    {
-                        new TextBlock { Text = m.Glyph, FontFamily = new FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontSize = 20,
-                                        Foreground = (Brush)FindResource("AccentBrush") },
-                        new TextBlock { Text = m.Title, Margin = new Thickness(0, 10, 0, 0), FontWeight = FontWeights.SemiBold,
-                                        TextTrimming = TextTrimming.CharacterEllipsis },
-                    },
-                },
-            };
-            tile.Click += (_, _) => Go(m.Id);
+            var tile = DashboardView.ToolButton(m, () => Go(m.Id));
             var unpin = new MenuItem { Header = "Unpin" };
             unpin.Click += (_, _) => TogglePin(m);
             tile.ContextMenu = new ContextMenu { Items = { unpin } };
@@ -102,6 +86,12 @@ public partial class MainWindow
         ShowPage(id);
         Dispatcher.InvokeAsync(() =>
         {
+            // Search results can live in a collapsed advanced section. Open it before scrolling to the setting.
+            for (DependencyObject? parent = element; parent is not null;)
+            {
+                if (parent is Expander expander) expander.IsExpanded = true;
+                parent = LogicalTreeHelper.GetParent(parent) ?? (parent is Visual ? VisualTreeHelper.GetParent(parent) : null);
+            }
             element.BringIntoView();
             // Flash the card it's on so the eye finds it.
             DependencyObject? d = element;

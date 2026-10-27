@@ -70,5 +70,16 @@ version, uploads a draft, and then makes the release public. A failed build or t
 The application updater always selects `Rig.exe`. Detached release signatures can be enabled as described in
 [SIGNING.md](SIGNING.md); they are verification files, not another app edition. Authenticode is a separate setup.
 
-The 2.0.0 release is a version reset. Earlier 2.0.0 and 2.1.0 installations need one manual download rather than an
-automatic downgrade. Keep migration support for existing settings even though legacy-named downloads are no longer published.
+The public lineup has one release and one app download. Keep migration support for existing settings even though legacy-named downloads are no longer published. Earlier experimental builds already numbered 2.1.0 need a manual download of the current 2.1.0 release.
+
+## Clean interface previews
+
+Export the actual WPF views without a desktop cursor or personal profile:
+
+```powershell
+dotnet run --project Rig -c Release -- --export-previews App/previews
+```
+
+This exits after writing Home (dark and light), Game Mode, and setup PNGs. Metrics and findings are sample data;
+no app services start, personal settings are not loaded, and setup choices are not saved. Label public previews as
+sample data. This renderer complements hands-on checks; it doesn't prove that live Windows changes work.

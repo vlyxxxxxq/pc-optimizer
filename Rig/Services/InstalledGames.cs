@@ -37,6 +37,13 @@ public sealed class LibraryGame : ObservableObject
 public static class InstalledGames
 {
     public static List<LibraryGame> Find()
+        => FindGames(distinctNames: true);
+
+    /// <summary>Keep separate installations with the same display name available to the profile picker.</summary>
+    public static List<LibraryGame> FindForProfiles()
+        => FindGames(distinctNames: false);
+
+    static List<LibraryGame> FindGames(bool distinctNames)
     {
         var games = new List<LibraryGame>();
         try { games.AddRange(Steam()); } catch { }
@@ -54,7 +61,7 @@ public static class InstalledGames
             var last = mine.Max(s => s.Start);
             if (g.LastPlayed is null || last > g.LastPlayed) g.LastPlayed = last;
         }
-        return games.DistinctBy(g => g.Name.ToLowerInvariant()).ToList();
+        return distinctNames ? games.DistinctBy(g => g.Name.ToLowerInvariant()).ToList() : games;
     }
 
     // Steam tools and runtimes that have an app manifest but aren't games.
