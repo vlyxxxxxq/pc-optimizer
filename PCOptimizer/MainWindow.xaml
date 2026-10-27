@@ -73,8 +73,20 @@
                             </StackPanel>
                         </DockPanel>
                     </Border>
-                    <TextBlock x:Name="AdminStatus" FontSize="11" Margin="4,10,0,0"/>
+                    <TextBlock x:Name="AdminStatus" FontSize="11" Margin="4,10,0,0" TextWrapping="Wrap"/>
                 </StackPanel>
+
+                <!-- Opens the command palette; same as its hotkey from anywhere -->
+                <Border DockPanel.Dock="Top" Margin="16,0,16,10" Padding="12,8" CornerRadius="8" Cursor="Hand"
+                        Background="#1B1F2A" BorderThickness="1" BorderBrush="{StaticResource CardBorderBrush}"
+                        MouseLeftButtonUp="PaletteHint_Click" ToolTip="Search pages, actions, games and apps">
+                    <DockPanel>
+                        <TextBlock x:Name="PaletteKeyText" DockPanel.Dock="Right" Text="Ctrl+Alt+Space" FontSize="10" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"/>
+                        <TextBlock Text="&#xE721;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="12"
+                                   Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="Search or run…" Foreground="{StaticResource MutedBrush}" FontSize="12" VerticalAlignment="Center"/>
+                    </DockPanel>
+                </Border>
 
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="0,0,0,8">
@@ -94,6 +106,8 @@
                                      Tag="&#xE77F;" Checked="Nav_Checked"/>
                         <RadioButton x:Name="NavScreenTime" Style="{StaticResource NavButton}" Content="Screen Time"
                                      Tag="&#xE916;" Checked="Nav_Checked"/>
+                        <RadioButton x:Name="NavAsk" Style="{StaticResource NavButton}" Content="Ask AI"
+                                     Tag="&#xE99A;" Checked="Nav_Checked"/>
 
                         <TextBlock Text="CLEAN UP" Style="{StaticResource NavSection}"/>
                         <RadioButton x:Name="NavCleaner" Style="{StaticResource NavButton}" Content="Junk Cleaner"
@@ -148,6 +162,7 @@
             <views:ClipsView x:Name="ClipsPage" Visibility="Collapsed"/>
             <views:ClipboardView x:Name="ClipboardPage" Visibility="Collapsed"/>
             <views:ScreenTimeView x:Name="ScreenTimePage" Visibility="Collapsed"/>
+            <views:AskView x:Name="AskPage" Visibility="Collapsed"/>
             <views:CleanerView x:Name="CleanerPage" Visibility="Collapsed"/>
             <views:DiskView x:Name="DiskPage" Visibility="Collapsed"/>
             <views:NetworkView x:Name="NetworkPage" Visibility="Collapsed"/>

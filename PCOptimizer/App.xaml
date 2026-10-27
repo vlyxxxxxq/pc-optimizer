@@ -434,6 +434,7 @@
         <!-- Plain list rows (no blue system highlight) -->
         <Style x:Key="PlainListItem" TargetType="ListBoxItem">
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">

@@ -30,6 +30,7 @@ public partial class MainWindow : Window
             [NavApps] = AppsPage, [NavUninstall] = UninstallPage, [NavTools] = ToolsPage, [NavSettings] = SettingsPage,
             [NavNetwork] = NetworkPage, [NavHardware] = HardwarePage, [NavMenu] = MenuPage, [NavSecurity] = SecurityPage,
             [NavLibrary] = LibraryPage, [NavClips] = ClipsPage, [NavClipboard] = ClipboardPage, [NavScreenTime] = ScreenTimePage,
+            [NavAsk] = AskPage,
         };
 
         AdminStatus.Text = Elevation.IsElevated ? "● Administrator mode" : "● Standard mode · some features need admin";
@@ -63,6 +64,7 @@ public partial class MainWindow : Window
         LibraryPage.Attach(_settings, _gameMode);
         ClipsPage.Attach(_settings);
         ClipsPage.HotkeysChanged += (_, _) => RegisterCaptureHotkeys();
+        ClipsPage.HotkeysPaused += (_, _) => { _captureKeys?.Dispose(); _captureKeys = null; };
         ClipsPage.ScreenshotRequested += (_, _) => TakeScreenshot();
         _clipboard.Enabled = _settings.ClipboardHistoryEnabled;
         ClipboardPage.Attach(_settings, _clipboard);
@@ -70,6 +72,8 @@ public partial class MainWindow : Window
         _screenTime.Notify += Notify;
         ScreenTimePage.Attach(_settings, _screenTime);
         _screenTime.Start();
+        AskPage.Attach(() => string.Join("\n", Health.Evaluate(CleanerPage.JunkBytes, StartupPage.EnabledCount).Findings
+            .Select(f => $"  [{f.Severity}] {f.Title}: {f.Detail}")));
         SetUpHotkeys(); // own hidden window, so they work while the app sits in the tray
 
         // Updates: clean up after a previous update, then check shortly after start and once a day.
@@ -132,6 +136,9 @@ public partial class MainWindow : Window
             {
                 _healthChecked = true;
                 await RunHealthCheckAsync();
+                // Warm up the heaviest page in the background so it opens instantly later.
+                await Task.Delay(3000);
+                UninstallPage.EnsureLoaded();
             }
         };
     }
@@ -181,8 +188,13 @@ public partial class MainWindow : Window
         {
             if (_clipboard.Enabled) (_clipboardPopup ??= new Views.ClipboardPopup(_clipboard)).Open();
         });
+        // Ctrl+Alt+Space if free, otherwise Ctrl+Alt+P; the sidebar shows which one worked.
+        PaletteKeyText.Text = _hotkeys.Register(HotkeyHost.MOD_CONTROL | HotkeyHost.MOD_ALT, Key.Space, OpenPalette) ? "Ctrl+Alt+Space"
+            : _hotkeys.Register(HotkeyHost.MOD_CONTROL | HotkeyHost.MOD_ALT, Key.P, OpenPalette) ? "Ctrl+Alt+P" : "";
         RegisterCaptureHotkeys();
     }
+
+    void PaletteHint_Click(object sender, MouseButtonEventArgs e) => OpenPalette();
 
     void RegisterCaptureHotkeys()
     {
@@ -192,8 +204,8 @@ public partial class MainWindow : Window
         if (_settings.CaptureHotkeys)
         {
             _captureKeys = new HotkeyHost();
-            clipOk = _captureKeys.Register(HotkeyHost.MOD_CONTROL | HotkeyHost.MOD_SHIFT, Key.F9, SaveClip);
-            shotOk = _captureKeys.Register(HotkeyHost.MOD_CONTROL | HotkeyHost.MOD_SHIFT, Key.F10, TakeScreenshot);
+            clipOk = Hotkey.Parse(_settings.ClipHotkey) is { } clip && _captureKeys.Register(clip, SaveClip);
+            shotOk = Hotkey.Parse(_settings.ScreenshotHotkey) is { } shot && _captureKeys.Register(shot, TakeScreenshot);
         }
         ClipsPage.ShowHotkeyState(clipOk, shotOk);
     }

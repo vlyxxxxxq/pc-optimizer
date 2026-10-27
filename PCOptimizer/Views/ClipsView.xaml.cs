@@ -33,10 +33,75 @@ public partial class ClipsView : UserControl
     /// <summary>Shows whether the hotkeys could be registered (another app may own them).</summary>
     public void ShowHotkeyState(bool clipOk, bool shotOk)
     {
+        RenderKeys();
+        var taken = new[] { clipOk ? null : _settings?.ClipHotkey, shotOk ? null : _settings?.ScreenshotHotkey }.OfType<string>().ToList();
         HotkeyText.Text = _settings?.CaptureHotkeys != true
             ? "Hotkeys are off."
-            : clipOk && shotOk ? "Hotkeys work everywhere, even while a game has focus. A notification confirms each save."
-            : $"Another app is already using {(clipOk ? "" : "Ctrl+Shift+F9 ")}{(shotOk ? "" : "Ctrl+Shift+F10")}. Close it or use the buttons above.";
+            : taken.Count == 0 ? "Hotkeys work everywhere, even while a game has focus. Click a key to change it."
+            : $"Another app is already using {string.Join(" and ", taken)}. Click it above to pick a different key.";
+        HotkeyText.Foreground = (System.Windows.Media.Brush)FindResource(taken.Count == 0 ? "MutedBrush" : "WarnBrush");
+    }
+
+    // --- Changing a hotkey: click the key button, press the new combination (Esc cancels) ---
+    Button? _capturing;
+
+    /// <summary>Raised when capture starts, so the current hotkeys are released and the keypress reaches this page.</summary>
+    public event EventHandler? HotkeysPaused;
+
+    void RenderKeys()
+    {
+        if (_settings is null) return;
+        ClipKeyButton.Content = _settings.ClipHotkey.Replace("+", " + ");
+        ShotKeyButton.Content = _settings.ScreenshotHotkey.Replace("+", " + ");
+    }
+
+    void ChangeKey_Click(object sender, RoutedEventArgs e)
+    {
+        if (_capturing is not null) return;
+        _capturing = (Button)sender;
+        _capturing.Content = "Press keys…  (Esc cancels)";
+        _capturing.Focus();
+        HotkeysPaused?.Invoke(this, EventArgs.Empty);
+    }
+
+    void KeyCapture_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (_capturing is null || _settings is null) return;
+        e.Handled = true;
+        var key = e.Key == System.Windows.Input.Key.System ? e.SystemKey : e.Key;
+        if (key is System.Windows.Input.Key.LeftCtrl or System.Windows.Input.Key.RightCtrl or System.Windows.Input.Key.LeftShift
+                or System.Windows.Input.Key.RightShift or System.Windows.Input.Key.LeftAlt or System.Windows.Input.Key.RightAlt
+                or System.Windows.Input.Key.LWin or System.Windows.Input.Key.RWin)
+            return; // wait for the actual key
+        if (key == System.Windows.Input.Key.Escape) { EndCapture(); return; }
+
+        var hotkey = new Hotkey(System.Windows.Input.Keyboard.Modifiers & ~System.Windows.Input.ModifierKeys.Windows, key);
+        if (!hotkey.IsUsable)
+        {
+            _capturing.Content = "Add Ctrl or Alt (or use an F-key)";
+            return;
+        }
+        var other = _capturing == ClipKeyButton ? _settings.ScreenshotHotkey : _settings.ClipHotkey;
+        if (hotkey.ToString() == other)
+        {
+            _capturing.Content = "Already used for the other one";
+            return;
+        }
+        if (_capturing == ClipKeyButton) _settings.ClipHotkey = hotkey.ToString();
+        else _settings.ScreenshotHotkey = hotkey.ToString();
+        _settings.Save();
+        EndCapture();
+    }
+
+    void KeyCapture_LostFocus(object sender, System.Windows.Input.KeyboardFocusChangedEventArgs e)
+    {
+        if (_capturing == sender) EndCapture();
+    }
+
+    void EndCapture()
+    {
+        _capturing = null;
+        HotkeysChanged?.Invoke(this, EventArgs.Empty); // re-registers and re-renders
     }
 
     public void EnsureLoaded()

@@ -1,6 +1,6 @@
 # PC Optimizer
 
-A native Windows desktop app (C# / WPF, .NET 10, no third-party packages). Runs in the notification
+A native Windows desktop app (C# / WPF, .NET 10; the only package is the official Anthropic SDK for Ask AI). Runs in the notification
 area so Game Mode can kick in automatically. Inspired by Chris Titus Tech's WinUtil, game boosters
 like Razer Cortex and Process Lasso, and Windows' own maintenance tools.
 
@@ -51,10 +51,14 @@ The EXE isn't code-signed, so the first time you run it Windows SmartScreen may 
   - Optional FPS counter (with 1% lows) in the overlay for DirectX games, in administrator mode.
 - **Game Library** – every installed Steam, Epic and GOG game with cover art and playtime; click to play,
   optionally with Game Mode switched on.
-- **Clips & Screenshots** – Ctrl+Shift+F9 saves the last 30 seconds (via Windows Game Bar's background
+- **Clips & Screenshots** – Ctrl+Shift+F9 (changeable) saves the last 30 seconds (via Windows Game Bar's background
   recording), Ctrl+Shift+F10 saves a screenshot named after the game; a gallery of everything captured.
 - **Clipboard & Notes** – Ctrl+Alt+V opens your last 50 copies anywhere (memory only; password-manager copies
   are skipped), plus quick notes that save as you type.
+- **Command palette** – Ctrl+Alt+P (or Ctrl+Alt+Space when free) from anywhere: jump to pages, run actions, launch
+  games and apps, end stuck windows, quick maths, or ask AI.
+- **Ask AI** – questions about your PC answered by Claude using a live snapshot (load, memory hogs, disks, health
+  checks). Needs your own Anthropic API key, stored encrypted with Windows DPAPI.
 - **Screen Time** – time per app per day and a 7-day chart, counting only active use, with optional break reminders.
 - **Junk Cleaner** – temp files, browser caches, Recycle Bin, thumbnails, shader cache, crash dumps.
   Optional automatic cleaning (daily / weekly / monthly), skipped while you're gaming. Browser privacy:

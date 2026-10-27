@@ -36,8 +36,14 @@ public partial class UninstallView : UserControl
     async Task ReloadAsync()
     {
         SummaryText.Text = "Loading…";
+        // Registry read and icons both off the UI thread (icons on an STA thread, which the shell icon API needs;
+        // they come back frozen so the UI can use them).
         var programs = await Task.Run(InstalledApps.LoadPrograms);
-        InstalledApps.LoadIcons(programs); // shell icon APIs want the UI thread
+        var done = new TaskCompletionSource();
+        var sta = new Thread(() => { InstalledApps.LoadIcons(programs); done.SetResult(); }) { IsBackground = true };
+        sta.SetApartmentState(ApartmentState.STA);
+        sta.Start();
+        await done.Task;
         _programs.Clear();
         foreach (var p in programs) _programs.Add(p);
         UpdateSummary();

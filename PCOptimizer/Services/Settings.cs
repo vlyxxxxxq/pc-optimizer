@@ -92,6 +92,8 @@ public sealed class AppSettings
     // Library, clips, clipboard, screen time
     public bool LaunchWithGameMode { get; set; } = true;
     public bool CaptureHotkeys { get; set; } = true;
+    public string ClipHotkey { get; set; } = "Ctrl+Shift+F9";
+    public string ScreenshotHotkey { get; set; } = "Ctrl+Shift+F10";
     public bool ClipboardHistoryEnabled { get; set; } = true;
     public bool ScreenTimeEnabled { get; set; } = true;
     public bool BreakReminders { get; set; }

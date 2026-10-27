@@ -31,6 +31,8 @@ public sealed class HotkeyHost : IDisposable
     }
 
     /// <summary>Registers a system-wide hotkey. False if another app already owns that combination.</summary>
+    public bool Register(Hotkey hotkey, Action action) => Register(hotkey.NativeModifiers, hotkey.Key, action);
+
     public bool Register(uint mods, System.Windows.Input.Key key, Action action)
     {
         int id = _nextId++;
@@ -53,6 +55,58 @@ public sealed class HotkeyHost : IDisposable
         RemoveClipboardFormatListener(_source.Handle);
         _source.Dispose();
     }
+}
+
+/// <summary>A key plus modifiers, saved in settings as text like "Ctrl+Shift+F9".</summary>
+public readonly record struct Hotkey(System.Windows.Input.ModifierKeys Modifiers, System.Windows.Input.Key Key)
+{
+    public uint NativeModifiers =>
+        (Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Alt) ? HotkeyHost.MOD_ALT : 0) |
+        (Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Control) ? HotkeyHost.MOD_CONTROL : 0) |
+        (Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Shift) ? HotkeyHost.MOD_SHIFT : 0);
+
+    public override string ToString()
+    {
+        var parts = new List<string>();
+        if (Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Control)) parts.Add("Ctrl");
+        if (Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Shift)) parts.Add("Shift");
+        if (Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Alt)) parts.Add("Alt");
+        parts.Add(Key switch
+        {
+            >= System.Windows.Input.Key.D0 and <= System.Windows.Input.Key.D9 => ((int)Key - (int)System.Windows.Input.Key.D0).ToString(),
+            System.Windows.Input.Key.Snapshot => "PrintScreen",
+            _ => Key.ToString(),
+        });
+        return string.Join("+", parts);
+    }
+
+    public static Hotkey? Parse(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return null;
+        var mods = System.Windows.Input.ModifierKeys.None;
+        System.Windows.Input.Key? key = null;
+        foreach (var part in text.Split('+', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+        {
+            switch (part.ToLowerInvariant())
+            {
+                case "ctrl": mods |= System.Windows.Input.ModifierKeys.Control; break;
+                case "shift": mods |= System.Windows.Input.ModifierKeys.Shift; break;
+                case "alt": mods |= System.Windows.Input.ModifierKeys.Alt; break;
+                case "printscreen": key = System.Windows.Input.Key.Snapshot; break;
+                default:
+                    if (part.Length == 1 && char.IsDigit(part[0])) key = System.Windows.Input.Key.D0 + (part[0] - '0');
+                    else if (Enum.TryParse<System.Windows.Input.Key>(part, true, out var k)) key = k;
+                    else return null;
+                    break;
+            }
+        }
+        return key is { } kk ? new Hotkey(mods, kk) : null;
+    }
+
+    /// <summary>F-keys and Print Screen can stand alone; anything else needs Ctrl or Alt so typing isn't hijacked.</summary>
+    public bool IsUsable =>
+        Key is >= System.Windows.Input.Key.F1 and <= System.Windows.Input.Key.F24 or System.Windows.Input.Key.Snapshot ||
+        Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Control) || Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Alt);
 }
 
 /// <summary>Sends key presses to whatever window has focus.</summary>

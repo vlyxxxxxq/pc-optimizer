@@ -16,9 +16,9 @@
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
                         <DockPanel>
-                            <Border DockPanel.Dock="Right" Style="{StaticResource Badge}" VerticalAlignment="Top">
-                                <TextBlock x:Name="ClipKeyText" Text="Ctrl + Shift + F9" FontSize="11"/>
-                            </Border>
+                            <Button x:Name="ClipKeyButton" DockPanel.Dock="Right" Tag="clip" Click="ChangeKey_Click" PreviewKeyDown="KeyCapture_PreviewKeyDown"
+                                    LostKeyboardFocus="KeyCapture_LostFocus" Padding="10,3" FontSize="11" VerticalAlignment="Top"
+                                    ToolTip="Click, then press the keys you want"/>
                             <TextBlock Text="Save the last 30 seconds" FontSize="15" FontWeight="SemiBold"/>
                         </DockPanel>
                         <TextBlock x:Name="ClipStatus" Style="{StaticResource Muted}" Margin="0,4,0,0" TextWrapping="Wrap"/>
@@ -32,9 +32,9 @@
                 <Border Grid.Column="2" Style="{StaticResource Card}">
                     <StackPanel>
                         <DockPanel>
-                            <Border DockPanel.Dock="Right" Style="{StaticResource Badge}" VerticalAlignment="Top">
-                                <TextBlock x:Name="ShotKeyText" Text="Ctrl + Shift + F10" FontSize="11"/>
-                            </Border>
+                            <Button x:Name="ShotKeyButton" DockPanel.Dock="Right" Tag="shot" Click="ChangeKey_Click" PreviewKeyDown="KeyCapture_PreviewKeyDown"
+                                    LostKeyboardFocus="KeyCapture_LostFocus" Padding="10,3" FontSize="11" VerticalAlignment="Top"
+                                    ToolTip="Click, then press the keys you want"/>
                             <TextBlock Text="Screenshot" FontSize="15" FontWeight="SemiBold"/>
                         </DockPanel>
                         <TextBlock x:Name="ShotStatus" Style="{StaticResource Muted}" Margin="0,4,0,0" TextWrapping="Wrap"
