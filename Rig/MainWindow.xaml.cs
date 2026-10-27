@@ -93,6 +93,14 @@ public partial class MainWindow : Window
             Loaded += (_, _) => Go("Apps");
         }
 
+        // File batches cut short by a crash or power cut show up in Recovery.
+        Task.Run(BatchMover.FlagInterrupted).ContinueWith(t =>
+        {
+            if (BatchMover.NeedingAttention().Count is var n and > 0)
+                Dispatcher.Invoke(() => Notify("Some file changes need attention",
+                    $"{n} rename or Downloads batch{(n == 1 ? "" : "es")} didn't finish. Open File recovery to sort it out."));
+        });
+
         if (Migration.JustMigrated)
             Loaded += (_, _) => _tray.Notify("PC Optimizer is now Rig",
                 "Same app, new name and a lot more in it. Your settings, games and history came along.");

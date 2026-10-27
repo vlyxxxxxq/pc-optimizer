@@ -66,6 +66,8 @@
 
             <DockPanel Margin="0,16,0,10">
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button x:Name="RecoveryButton" Content="Recovery" Click="Recovery_Click" Margin="0,0,8,0" Visibility="Collapsed"
+                            ToolTip="Renames or undos that need a decision"/>
                     <Button x:Name="UndoButton" Content="Undo last rename" Click="Undo_Click" Margin="0,0,8,0"/>
                     <Button x:Name="RenameButton" Content="Rename" Style="{StaticResource PrimaryButton}" Click="Rename_Click" IsEnabled="False"/>
                 </StackPanel>

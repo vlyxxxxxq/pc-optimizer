@@ -16,7 +16,24 @@ public partial class RenamerView : UserControl
         if (Environment.GetEnvironmentVariable("RIG_TEST_RENAME") is { Length: > 0 } test) SetFolder(test);
     }
 
-    public void EnsureLoaded() => UndoButton.IsEnabled = Renamer.CanUndo;
+    public void EnsureLoaded()
+    {
+        UndoButton.IsEnabled = Renamer.CanUndo;
+        RenderRecovery();
+    }
+
+    void RenderRecovery()
+    {
+        int n = BatchMover.NeedingAttention().Count;
+        RecoveryButton.Visibility = n > 0 ? Visibility.Visible : Visibility.Collapsed;
+        RecoveryButton.Content = $"Recovery ({n})";
+    }
+
+    void Recovery_Click(object sender, RoutedEventArgs e)
+    {
+        new RecoveryWindow { Owner = Window.GetWindow(this) }.ShowDialog();
+        Refresh();
+    }
 
     void ChooseFolder_Click(object sender, RoutedEventArgs e)
     {
@@ -53,22 +70,32 @@ public partial class RenamerView : UserControl
         RenameButton.IsEnabled = changes > 0;
         RenameButton.Content = changes > 0 ? $"Rename {changes}" : "Rename";
         UndoButton.IsEnabled = Renamer.CanUndo;
+        RenderRecovery();
     }
 
-    void Rename_Click(object sender, RoutedEventArgs e)
+    async void Rename_Click(object sender, RoutedEventArgs e)
     {
-        int n = Renamer.Apply(_rows);
+        RenameButton.IsEnabled = UndoButton.IsEnabled = false;
+        var rows = _rows;
+        var result = await Task.Run(() => Renamer.Apply(rows));
         FindBox.Clear(); ReplaceBox.Clear(); PrefixBox.Clear(); SuffixBox.Clear();
         NumberingBox.SelectedIndex = 0; CaseBox.SelectedIndex = 0; LowerExtCheck.IsChecked = false;
         Refresh();
-        SummaryText.Text = $"Renamed {n} file{(n == 1 ? "" : "s")}. Undo puts them back.";
+        Report(result, "Renamed");
     }
 
-    void Undo_Click(object sender, RoutedEventArgs e)
+    async void Undo_Click(object sender, RoutedEventArgs e)
     {
-        int n = Renamer.Undo();
+        RenameButton.IsEnabled = UndoButton.IsEnabled = false;
+        var result = await Task.Run(() => Renamer.Undo());
         Refresh();
-        SummaryText.Text = $"Put {n} file name{(n == 1 ? "" : "s")} back.";
-        UndoButton.IsEnabled = false;
+        Report(result, "Put back");
+    }
+
+    void Report(BatchResult result, string verb)
+    {
+        SummaryText.Text = result.Summary(verb);
+        SummaryText.ToolTip = result.Details.Count > 0 ? string.Join("\n", result.Details.Take(20)) : null;
+        RenderRecovery();
     }
 }

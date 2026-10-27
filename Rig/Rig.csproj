@@ -19,6 +19,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Rig.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Resource Include="Assets\app.ico" />
     <!-- WinForms is referenced only for the tray icon; keep its namespaces out of WPF code. -->
     <Using Remove="System.Windows.Forms" />

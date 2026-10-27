@@ -80,6 +80,7 @@ public partial class MainWindow
             new() { Title = "Take a screenshot", Detail = "Clips & Screenshots", Glyph = "", Run = () => Dispatcher.InvokeAsync(async () => { await Task.Delay(400); TakeScreenshot(); }) },
             new() { Title = "Pick a colour from the screen", Detail = "Color Picker · copies the HEX", Glyph = "\uE790", Run = () => Dispatcher.InvokeAsync(async () => { await Task.Delay(300); await PickColorAsync(); }) },
             new() { Title = "Measure on screen", Detail = "Ruler · size in pixels", Glyph = "\uE790", Run = () => Dispatcher.InvokeAsync(async () => { await Task.Delay(300); await MeasureAsync(); }) },
+            new() { Title = "File recovery", Detail = "Unfinished renames and Downloads sorts", Glyph = "", Run = () => new RecoveryWindow { Owner = this }.ShowDialog() },
             new() { Title = "Play / pause music", Detail = "Media key", Glyph = "\uE768", Run = NowPlaying.PlayPause },
             new() { Title = "Next track", Detail = "Media key", Glyph = "\uE893", Run = NowPlaying.Next },
             new() { Title = "Previous track", Detail = "Media key", Glyph = "\uE892", Run = NowPlaying.Previous },

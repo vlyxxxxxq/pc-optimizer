@@ -50,7 +50,8 @@ public partial class DownloadsView : UserControl
         PlanList.ItemsSource = _plan.Take(12).ToList();
         MoreText.Text = _plan.Count > 12 ? $"…and {_plan.Count - 12} more" : "";
         OrganizeButton.IsEnabled = _plan.Count > 0;
-        UndoButton.IsEnabled = DownloadOrganizer.CanUndo;
+        UndoButton.IsEnabled = await Task.Run(() => DownloadOrganizer.CanUndo);
+        RenderRecovery();
 
         InstallerList.ItemsSource = _installers;
         InstallersTitle.Text = _installers.Count == 0 ? "Old installers: none"
@@ -60,16 +61,40 @@ public partial class DownloadsView : UserControl
 
     async void Organize_Click(object sender, RoutedEventArgs e)
     {
-        int moved = await Task.Run(() => DownloadOrganizer.Apply(_plan));
+        OrganizeButton.IsEnabled = UndoButton.IsEnabled = false;
+        var plan = _plan;
+        var result = await Task.Run(() => DownloadOrganizer.Apply(plan));
         await RefreshAsync();
-        SummaryTitle.Text = $"Sorted {moved} file{(moved == 1 ? "" : "s")}." + (_plan.Count > 0 ? $" {_plan.Count} couldn't be moved (in use)." : "");
+        Report(result, "Sorted");
     }
 
     async void Undo_Click(object sender, RoutedEventArgs e)
     {
-        int back = await Task.Run(DownloadOrganizer.Undo);
+        OrganizeButton.IsEnabled = UndoButton.IsEnabled = false;
+        var result = await Task.Run(() => DownloadOrganizer.Undo());
         await RefreshAsync();
-        SummaryTitle.Text = $"Put {back} file{(back == 1 ? "" : "s")} back where they were.";
+        Report(result, "Put back");
+    }
+
+    /// <summary>The real outcome, with what was skipped or in the way, and a way to recovery when something's open.</summary>
+    void Report(BatchResult result, string verb)
+    {
+        SummaryTitle.Text = result.Summary(verb);
+        SummaryTitle.ToolTip = result.Details.Count > 0 ? string.Join("\n", result.Details.Take(20)) : null;
+        RenderRecovery();
+    }
+
+    void RenderRecovery()
+    {
+        int n = BatchMover.NeedingAttention().Count;
+        RecoveryButton.Visibility = n > 0 ? Visibility.Visible : Visibility.Collapsed;
+        RecoveryButton.Content = $"Recovery ({n})";
+    }
+
+    void Recovery_Click(object sender, RoutedEventArgs e)
+    {
+        new RecoveryWindow { Owner = Window.GetWindow(this) }.ShowDialog();
+        _ = RefreshAsync();
     }
 
     void Auto_Click(object sender, RoutedEventArgs e)
@@ -97,7 +122,8 @@ public partial class DownloadsView : UserControl
     {
         var plan = await Task.Run(DownloadOrganizer.Plan);
         if (plan.Count == 0) return;
-        int moved = await Task.Run(() => DownloadOrganizer.Apply(plan));
+        var result = await Task.Run(() => DownloadOrganizer.Apply(plan));
+        int moved = result.Succeeded;
         if (moved > 0)
             Notify?.Invoke("Downloads sorted", moved == 1 ? $"{plan[0].Name} → {plan[0].Category}" : $"{moved} new downloads moved into their folders.");
         if (IsVisible) await RefreshAsync();
