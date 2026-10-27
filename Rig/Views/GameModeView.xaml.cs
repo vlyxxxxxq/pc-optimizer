@@ -194,6 +194,14 @@ public partial class GameModeView : UserControl
     {
         if (_service is null) return;
         bool on = _service.IsActive;
+        var state = _service.State;
+        ToggleButton.IsEnabled = state is not (GameModeState.Starting or GameModeState.Restoring);
+        var problems = _service.Problems;
+        ProblemDetail.Visibility = problems.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        ProblemDetail.Text = state == GameModeState.RecoveryNeeded
+            ? $"Not put back yet: {string.Join("; ", problems)}."
+            : problems.Count > 0 ? $"Not done: {string.Join("; ", problems)}." : "";
+        RetryRestoreButton.Visibility = state == GameModeState.RecoveryNeeded ? Visibility.Visible : Visibility.Collapsed;
         var accent = (Brush)FindResource(on ? "GoodBrush" : "MutedBrush");
         HeroGlyph.Foreground = accent;
         HeroIcon.Background = (Brush)FindResource(on ? "GoodTintBrush" : "ControlBrush");
@@ -203,7 +211,9 @@ public partial class GameModeView : UserControl
         NotGameButton.Visibility = on && _service.Game is not null ? Visibility.Visible : Visibility.Collapsed;
         RenderStats();
 
-        if (on)
+        if (state == GameModeState.Starting) { StatusTitle.Text = "Turning Game Mode on…"; StatusDetail.Text = ""; BoostDetail.Text = ""; }
+        else if (state == GameModeState.Restoring) { StatusTitle.Text = "Putting things back…"; StatusDetail.Text = ""; BoostDetail.Text = ""; }
+        else if (on)
         {
             StatusTitle.Text = _service.Game is { } g ? $"Game Mode on · {g.Name}" : "Game Mode is on";
             var since = _service.Since is { } s ? Fmt.Duration(DateTime.Now - s) : "";
@@ -214,7 +224,7 @@ public partial class GameModeView : UserControl
         }
         else
         {
-            StatusTitle.Text = "Game Mode is off";
+            StatusTitle.Text = state == GameModeState.RecoveryNeeded ? "Game Mode is off, but not everything is back" : "Game Mode is off";
             StatusDetail.Text = _settings?.AutoGameMode == true
                 ? "Watching for games. It'll switch on by itself when you start one."
                 : "Automatic mode is off. Turn it on here or from the tray icon.";
@@ -230,12 +240,20 @@ public partial class GameModeView : UserControl
         LibrariesTitle.Text = libs.Count == 0 ? "No game libraries found" : $"{libs.Count} game libraries found";
     }
 
+    async void RetryRestore_Click(object sender, RoutedEventArgs e)
+    {
+        if (_service is null) return;
+        RetryRestoreButton.IsEnabled = false;
+        try { await _service.RetryRecoveryAsync(); }
+        finally { RetryRestoreButton.IsEnabled = true; Render(); }
+    }
+
     async void Toggle_Click(object sender, RoutedEventArgs e)
     {
         if (_service is null) return;
         ToggleButton.IsEnabled = false;
         try { await _service.ToggleAsync(); }
-        finally { ToggleButton.IsEnabled = true; }
+        finally { Render(); }
     }
 
     void Setting_Click(object sender, RoutedEventArgs e)

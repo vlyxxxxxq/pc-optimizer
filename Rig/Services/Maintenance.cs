@@ -81,9 +81,11 @@ public static class Maintenance
         catch { parts.Add("Couldn't check app updates (winget unavailable)."); }
 
         var summary = string.Join(" ", parts);
-        s.LastMaintenance = DateTime.Now;
+        var when = DateTime.Now;
+        s.LastMaintenance = when;
         s.LastMaintenanceSummary = summary;
-        s.Save();
+        // Write just these two fields onto the newest file, so a stale copy never undoes choices made meanwhile.
+        AppSettings.Update(fresh => { fresh.LastMaintenance = when; fresh.LastMaintenanceSummary = summary; });
         return summary;
     }
 

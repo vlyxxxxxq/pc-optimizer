@@ -75,6 +75,25 @@ public static class Installer
         link.Save();
     }
 
+    static IEnumerable<Process> Others() =>
+        Process.GetProcessesByName("Rig").Concat(Process.GetProcessesByName("PCOptimizer")).Where(p => p.Id != Environment.ProcessId);
+
+    /// <summary>Signals running copies to quit cleanly and waits up to 20 seconds. True when none are left.</summary>
+    static bool StopRunningCopies()
+    {
+        try { using var quit = EventWaitHandle.OpenExisting(App.QuitSignalName); quit.Set(); } catch { /* none running for this profile */ }
+        var until = DateTime.Now.AddSeconds(20);
+        while (DateTime.Now < until)
+        {
+            var left = Others().ToList();
+            bool any = left.Count > 0;
+            foreach (var p in left) p.Dispose();
+            if (!any) return true;
+            Thread.Sleep(250);
+        }
+        return false;
+    }
+
     /// <summary>Runs from Settings → Apps → Uninstall (the "--uninstall" command line).</summary>
     public static void RunUninstall()
     {
@@ -84,11 +103,20 @@ public static class Installer
         bool wipe = MessageBox.Show("Also delete your settings, play history and benchmark results?",
             "Uninstall Rig", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes;
 
-        // Close other running copies so their files can be removed (they restore Game Mode changes on exit).
-        foreach (var p in Process.GetProcessesByName("Rig").Concat(Process.GetProcessesByName("PCOptimizer")).Where(p => p.Id != Environment.ProcessId))
+        // Ask the running copy to quit properly (it puts Game Mode's changes back and finishes recordings), then wait.
+        if (!StopRunningCopies())
         {
-            try { p.CloseMainWindow(); if (!p.WaitForExit(4000)) p.Kill(); } catch { }
-            finally { p.Dispose(); }
+            if (MessageBox.Show("Rig is still running and may be putting Game Mode's changes back. Close it anyway?\n\n" +
+                                "Anything it hasn't restored yet stays changed.", "Uninstall Rig", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+                return;
+            foreach (var p in Others()) { try { p.Kill(); p.WaitForExit(3000); } catch { } finally { p.Dispose(); } }
+        }
+        // If Game Mode couldn't put something back, keep the record (and the data folder) so the next start can.
+        if (AppSettings.Load().Recovery.Pending && wipe)
+        {
+            wipe = false;
+            MessageBox.Show("Game Mode still has changes to put back (see Game Mode → Try restoring again), so your settings folder was kept.",
+                "Uninstall Rig", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
 
         try { AutoStart.Set(false); } catch { }

@@ -40,7 +40,7 @@ public partial class DashboardView : UserControl
 
     public static readonly HomeCard[] Catalog =
     [
-        new("pins", "Pinned tools", true), new("health", "PC health", true),
+        new("pins", "Pinned tools", true), new("health", "Maintenance check", true),
         new("cpu", "CPU", false), new("memory", "Memory", false), new("system", "System", false),
         new("gamemode", "Game Mode", false), new("music", "Now playing", false),
         new("screentime", "Screen time today", false, "ScreenTime"), new("input", "Input today", false, "Input"),
@@ -71,8 +71,9 @@ public partial class DashboardView : UserControl
 
         _cpu.Sample(); // prime the delta
         _timer.Tick += (_, _) => Update();
-        Loaded += (_, _) => { Update(); _timer.Start(); SizeCards(); };
-        Unloaded += (_, _) => _timer.Stop();
+        Loaded += (_, _) => SizeCards();
+        // Pages stay loaded when you switch away (they're only hidden), so follow visibility, not Loaded/Unloaded.
+        IsVisibleChanged += (_, _) => { if (IsVisible) { Update(); _timer.Start(); } else _timer.Stop(); };
     }
 
     public void ShowChecking()
@@ -91,10 +92,11 @@ public partial class DashboardView : UserControl
         ScoreLabel.Text = report.Label;
         ScoreArc.Stroke = report.Brush;
         ScoreArc.Data = Arc(report.Score / 100.0, 96, 9);
-        int issues = report.Findings.Count(f => f.Severity != Severity.Good);
-        HealthSummary.Text = issues == 0
-            ? "Everything looks great. Nothing needs your attention."
-            : $"{issues} {(issues == 1 ? "thing" : "things")} could make your PC faster.";
+        int issues = report.Findings.Count(f => f.Severity is Severity.Warn or Severity.Bad);
+        int unknown = report.Findings.Count(f => f.Severity == Severity.Unknown);
+        HealthSummary.Text = (issues == 0 ? "Nothing on the checklist needs attention." : $"{issues} maintenance {(issues == 1 ? "item" : "items")} to look at.")
+            + (unknown > 0 ? $" {unknown} couldn't be checked." : "") + $" Checked {report.Checked:t}.";
+        HealthSummary.ToolTip = HealthReport.Basis;
         FindingsList.ItemsSource = report.Findings;
     }
 
@@ -238,7 +240,7 @@ public partial class DashboardView : UserControl
             slot.Children.OfType<Border>().Last().Visibility = _editing ? Visibility.Visible : Visibility.Collapsed;
             CardHost.Children.Add(slot);
         }
-        AddCardButton.Visibility = _editing ? Visibility.Visible : Visibility.Collapsed;
+        AddCardButton.Visibility = CompactButton.Visibility = _editing ? Visibility.Visible : Visibility.Collapsed;
         AddCardButton.IsEnabled = Catalog.Any(c => !_settings.HomeCards.Contains(c.Id) && Available(c.Id));
         CustomizeButton.Content = _editing ? "Done" : "Customize";
         CustomizeButton.Style = (Style)FindResource(_editing ? "PrimaryButton" : typeof(Button));
@@ -252,7 +254,7 @@ public partial class DashboardView : UserControl
     {
         double w = CardHost.ActualWidth;
         if (w <= 0) return;
-        int perRow = w >= 840 ? 3 : 2;
+        int perRow = w >= 840 ? 3 : w >= 520 ? 2 : 1;
         foreach (var (id, slot) in _slots)
             slot.Width = Math.Max(120, Math.Floor(Catalog.First(c => c.Id == id).Wide ? w - 16 : w / perRow - 16));
     }
@@ -278,6 +280,17 @@ public partial class DashboardView : UserControl
         RenderCards();
     }
 
+    /// <summary>The essentials only: pinned tools, Game Mode and the maintenance check (customizable as usual).</summary>
+    public static readonly List<string> CompactPreset = ["pins", "gamemode", "health"];
+
+    void Compact_Click(object sender, RoutedEventArgs e)
+    {
+        if (_settings is null) return;
+        _settings.HomeCards = [.. CompactPreset];
+        _settings.Save();
+        RenderCards();
+    }
+
     void Customize_Click(object sender, RoutedEventArgs e)
     {
         _editing = !_editing;
@@ -299,11 +312,19 @@ public partial class DashboardView : UserControl
 
     // --- Card contents, pushed in by the main window ---
 
-    public void SetGameMode(bool on, string? game, GameSession? last)
+    public void SetGameMode(bool on, string? game, GameSession? last, GameModeState state = GameModeState.Off)
     {
-        GameStateText.Text = on ? "On" : "Off";
+        GameStateText.Text = state switch
+        {
+            GameModeState.Starting => "Starting…", GameModeState.Restoring => "Restoring…",
+            GameModeState.RecoveryNeeded => "Needs a look", _ => on ? "On" : "Off",
+        };
+        if (state == GameModeState.RecoveryNeeded) { GameStateText.Foreground = (Brush)FindResource("WarnBrush"); GameStateDetail.Text = "Something wasn't put back. Open Game Mode."; }
+        else
+        {
         GameStateText.Foreground = (Brush)FindResource(on ? "GoodBrush" : "TextBrush");
         GameStateDetail.Text = on ? game ?? "Turned on by hand" : "Turns on when you start a game";
+        }
         LastSessionText.Text = last is null ? "No games played yet" : $"Last: {last.Game}";
         LastSessionDetail.Text = last is null ? "" : $"{Fmt.Duration(last.Duration).Replace("0h ", "")} · {last.Start:ddd d MMM}" +
             (last.AvgFps is { } fps ? $" · {fps:0} FPS" : "");
@@ -311,6 +332,8 @@ public partial class DashboardView : UserControl
 
     public void SetMusic(Track? track)
     {
+        // Nothing to control without a player: the buttons say so instead of sending keys into the void.
+        foreach (var b in MusicButtons.Children.OfType<Button>()) b.IsEnabled = track is not null;
         SongText.Text = track?.Title ?? "Nothing playing";
         ArtistText.Text = track is null ? "Spotify, Apple Music, YouTube and more" : track.Artist is null ? track.App : $"{track.Artist} · {track.App}";
     }

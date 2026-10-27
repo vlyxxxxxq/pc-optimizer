@@ -11,11 +11,13 @@
                 <StackPanel>
                     <DockPanel>
                         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
+                            <Button x:Name="RecoveryButton" Content="Recovery" Click="Recovery_Click" Margin="0,0,8,0" Visibility="Collapsed"
+                                    ToolTip="Sorts or undos that need a decision"/>
                             <Button x:Name="UndoButton" Content="Undo last" Click="Undo_Click" Margin="0,0,8,0"/>
                             <Button x:Name="OrganizeButton" Content="Organize now" Style="{StaticResource PrimaryButton}" Click="Organize_Click"/>
                         </StackPanel>
                         <StackPanel>
-                            <TextBlock x:Name="SummaryTitle" Text="Looking at Downloads…" FontSize="15" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="SummaryTitle" AutomationProperties.LiveSetting="Polite" Text="Looking at Downloads…" FontSize="15" FontWeight="SemiBold"/>
                             <TextBlock x:Name="FolderText" Style="{StaticResource Muted}" Margin="0,2,16,0" TextTrimming="CharacterEllipsis"/>
                         </StackPanel>
                     </DockPanel>

@@ -95,23 +95,48 @@ public static class Shell
         catch (Exception ex) { MessageBox.Show($"Couldn't open the location:\n{ex.Message}", "Rig"); }
     }
 
-    public static async Task<(int ExitCode, string Output)> RunAsync(string file, string args,
-        System.Text.Encoding? encoding = null)
+    /// <summary>Exit code used when a program couldn't start, timed out or was canceled.</summary>
+    public const int NotRun = -1;
+
+    /// <summary>Runs a program with a ready-made argument string (for fixed commands). Times out after 10 minutes by default.</summary>
+    public static Task<(int ExitCode, string Output)> RunAsync(string file, string args,
+        System.Text.Encoding? encoding = null, TimeSpan? timeout = null, CancellationToken cancel = default) =>
+        RunAsync(new ProcessStartInfo(file, args), encoding, timeout, cancel);
+
+    /// <summary>Runs a program with separate arguments, each quoted safely (use this when any part comes from data or the user).</summary>
+    public static Task<(int ExitCode, string Output)> RunAsync(string file, IEnumerable<string> args,
+        System.Text.Encoding? encoding = null, TimeSpan? timeout = null, CancellationToken cancel = default)
     {
-        var psi = new ProcessStartInfo(file, args)
+        var psi = new ProcessStartInfo(file);
+        foreach (var a in args) psi.ArgumentList.Add(a);
+        return RunAsync(psi, encoding, timeout, cancel);
+    }
+
+    static async Task<(int ExitCode, string Output)> RunAsync(ProcessStartInfo psi, System.Text.Encoding? encoding, TimeSpan? timeout, CancellationToken cancel)
+    {
+        psi.RedirectStandardOutput = true;
+        psi.RedirectStandardError = true;
+        psi.UseShellExecute = false;
+        psi.CreateNoWindow = true;
+        psi.StandardOutputEncoding = encoding;
+        psi.StandardErrorEncoding = encoding;
+        Process p;
+        try { p = Process.Start(psi)!; }
+        catch (Exception ex) { return (NotRun, $"Couldn't start {psi.FileName}: {ex.Message}"); }
+        using (p)
         {
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            StandardOutputEncoding = encoding,
-            StandardErrorEncoding = encoding,
-        };
-        using var p = Process.Start(psi)!;
-        var stdout = p.StandardOutput.ReadToEndAsync();
-        var stderr = p.StandardError.ReadToEndAsync();
-        await p.WaitForExitAsync();
-        return (p.ExitCode, ((await stdout) + (await stderr)).Trim());
+            var stdout = p.StandardOutput.ReadToEndAsync();
+            var stderr = p.StandardError.ReadToEndAsync();
+            using var limit = CancellationTokenSource.CreateLinkedTokenSource(cancel);
+            limit.CancelAfter(timeout ?? TimeSpan.FromMinutes(10));
+            try { await p.WaitForExitAsync(limit.Token); }
+            catch (OperationCanceledException)
+            {
+                try { p.Kill(entireProcessTree: true); } catch { }
+                return (NotRun, cancel.IsCancellationRequested ? "Canceled." : $"{Path.GetFileName(psi.FileName)} didn't finish in time and was stopped.");
+            }
+            return (p.ExitCode, ((await stdout) + (await stderr)).Trim());
+        }
     }
 
     /// <summary>Runs commands in a visible elevated console so the user can watch progress. False if UAC was declined.</summary>

@@ -14,9 +14,13 @@
     <RootNamespace>Rig</RootNamespace>
     <Product>Rig</Product>
     <AssemblyTitle>Rig</AssemblyTitle>
-    <Version>2.0.0</Version>
+    <Version>2.1.0</Version>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Rig.Tests" />
+  </ItemGroup>
 
   <ItemGroup>
     <Resource Include="Assets\app.ico" />

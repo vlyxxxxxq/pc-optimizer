@@ -63,6 +63,61 @@
                 </StackPanel>
             </Border>
 
+            <!-- Privacy & data -->
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
+                    <TextBlock Text="PRIVACY &amp; DATA" Style="{StaticResource CardLabel}"/>
+                    <TextBlock Style="{StaticResource Muted}" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Text="What Rig records about how you use your PC. All of it stays on this PC; nothing is sent anywhere."/>
+                    <DockPanel Margin="0,14,0,0">
+                        <CheckBox DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ClipboardHistoryEnabled}" Click="Privacy_Click"/>
+                        <StackPanel>
+                            <TextBlock Text="Clipboard history" FontSize="14"/>
+                            <TextBlock Style="{StaticResource Muted}" TextWrapping="Wrap" Text="Last 50 copies, in memory only; password-manager copies are skipped."/>
+                        </StackPanel>
+                    </DockPanel>
+                    <DockPanel Margin="0,14,0,0">
+                        <CheckBox DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ScreenTimeEnabled}" Click="Privacy_Click"/>
+                        <StackPanel>
+                            <TextBlock Text="Screen time tracking" FontSize="14"/>
+                            <TextBlock Style="{StaticResource Muted}" TextWrapping="Wrap" Text="Which app is in front, every few seconds; 60 days kept."/>
+                        </StackPanel>
+                    </DockPanel>
+                    <DockPanel Margin="0,14,0,0">
+                        <CheckBox DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding InputStatsEnabled}" Click="Privacy_Click"/>
+                        <StackPanel>
+                            <TextBlock Text="Input counting" FontSize="14"/>
+                            <TextBlock Style="{StaticResource Muted}" TextWrapping="Wrap" Text="How many keys and clicks, never which keys in which order."/>
+                        </StackPanel>
+                    </DockPanel>
+                    <DockPanel Margin="0,14,0,0">
+                        <Button DockPanel.Dock="Right" Content="Open data folder" Click="DataFolder_Click"/>
+                        <TextBlock x:Name="DataFolderText" Style="{StaticResource Muted}" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                    </DockPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Shortcuts -->
+            <Border Style="{StaticResource Card}" Margin="0,16,0,0">
+                <StackPanel>
+                    <TextBlock Text="KEYBOARD SHORTCUTS" Style="{StaticResource CardLabel}"/>
+                    <TextBlock Style="{StaticResource Muted}" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Text="These work anywhere, even in games. Change a capture or crosshair key on its page."/>
+                    <ItemsControl x:Name="ShortcutList" Margin="0,8,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <DockPanel Margin="0,6,0,0">
+                                    <Border DockPanel.Dock="Right" Style="{StaticResource Badge}">
+                                        <TextBlock Text="{Binding Key}" FontSize="12"/>
+                                    </Border>
+                                    <TextBlock Text="{Binding What}" VerticalAlignment="Center"/>
+                                </DockPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
             <!-- Appearance -->
             <Border Style="{StaticResource Card}" Margin="0,16,0,0">
                 <StackPanel>

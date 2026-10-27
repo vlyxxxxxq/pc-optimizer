@@ -3,7 +3,7 @@ using Microsoft.Win32;
 
 namespace Rig.Services;
 
-public sealed record PlannedMove(string From, string To, string Category)
+public sealed record PlannedMove(string From, string To, string Category, FileIdentity? Identity = null)
 {
     public string Name => Path.GetFileName(From);
 }
@@ -22,6 +22,8 @@ public sealed class OldInstaller : ObservableObject
 /// <summary>
 /// Sorts loose files in Downloads into folders by type. Only top-level files are moved (folders stay put),
 /// downloads still in progress or touched in the last 2 minutes are skipped, and the last run can be undone.
+/// Every run is journaled (see BatchMover): files are checked again just before moving, and Undo never overwrites a
+/// new file that has since taken an old name; anything it can't put back stays listed in Recovery.
 /// </summary>
 public static class DownloadOrganizer
 {
@@ -56,7 +58,7 @@ public static class DownloadOrganizer
         }
     }
 
-    static string UndoFile => AppSettings.DataFile("downloads-undo.json");
+    static string LegacyUndoFile => AppSettings.DataFile("downloads-undo.json");
 
     public static string CategoryOf(string file)
     {
@@ -85,7 +87,7 @@ public static class DownloadOrganizer
                 var category = CategoryOf(f.Name);
                 var dest = FreeName(Path.Combine(root, category), f.Name, taken);
                 taken.Add(dest);
-                moves.Add(new PlannedMove(f.FullName, dest, category));
+                moves.Add(new PlannedMove(f.FullName, dest, category, FileIdentity.Of(f.FullName)));
             }
             catch { }
         }
@@ -100,55 +102,37 @@ public static class DownloadOrganizer
         return path;
     }
 
-    /// <summary>Moves the planned files. Returns how many moved; the batch is saved so it can be undone.</summary>
-    public static int Apply(List<PlannedMove> moves)
+    /// <summary>Moves the planned files after checking each is still the file previewed.</summary>
+    public static BatchResult Apply(List<PlannedMove> moves, CancellationToken cancel = default)
     {
-        var done = new List<PlannedMove>();
-        foreach (var m in moves)
-        {
-            try
-            {
-                if (!File.Exists(m.From) || File.Exists(m.To)) continue;
-                Directory.CreateDirectory(Path.GetDirectoryName(m.To)!);
-                File.Move(m.From, m.To);
-                done.Add(m);
-            }
-            catch { /* in use: leave it */ }
-        }
-        if (done.Count > 0)
-        {
-            try
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(UndoFile)!);
-                File.WriteAllText(UndoFile, JsonSerializer.Serialize(done));
-            }
-            catch { }
-        }
-        return done.Count;
+        ImportLegacy();
+        return BatchMover.Apply("downloads", Folder, moves.Select(m => new BatchMover.Move(m.From, m.To, m.Identity)).ToList(), twoStep: false, cancel);
     }
 
-    public static bool CanUndo => File.Exists(UndoFile);
+    public static bool CanUndo { get { ImportLegacy(); return BatchMover.Latest("downloads") is not null; } }
 
-    /// <summary>Puts the last organized batch back where it was. Returns how many went back.</summary>
-    public static int Undo()
+    /// <summary>Puts the last organized batch back, as far as it safely can.</summary>
+    public static BatchResult Undo(CancellationToken cancel = default)
     {
-        List<PlannedMove> moves;
-        try { moves = JsonSerializer.Deserialize<List<PlannedMove>>(File.ReadAllText(UndoFile)) ?? []; }
-        catch { return 0; }
-        int back = 0;
-        foreach (var m in moves)
+        ImportLegacy();
+        return BatchMover.Latest("downloads") is { } j ? BatchMover.Undo(j, cancel) : BatchResult.Nothing("Nothing to undo.");
+    }
+
+    /// <summary>2.0's undo file becomes a journal, so the last sort can still be undone after updating.</summary>
+    static void ImportLegacy()
+    {
+        if (!File.Exists(LegacyUndoFile)) return;
+        try
         {
-            try
+            var moves = JsonSerializer.Deserialize<List<PlannedMove>>(File.ReadAllText(LegacyUndoFile)) ?? [];
+            var j = new Journal
             {
-                if (File.Exists(m.To) && !File.Exists(m.From)) { File.Move(m.To, m.From); back++; }
-                // Remove the category folder if the undo emptied it.
-                var dir = Path.GetDirectoryName(m.To)!;
-                if (Directory.Exists(dir) && !Directory.EnumerateFileSystemEntries(dir).Any()) Directory.Delete(dir);
-            }
-            catch { }
+                Kind = "downloads", Folder = Folder, State = JournalState.Applied, Created = File.GetLastWriteTime(LegacyUndoFile),
+                Items = moves.Select(m => new JournalItem { From = m.From, To = m.To, State = ItemState.Done, After = FileIdentity.Of(m.To) }).ToList(),
+            };
+            if (j.Items.Count == 0 || j.Save()) File.Delete(LegacyUndoFile);
         }
-        try { File.Delete(UndoFile); } catch { }
-        return back;
+        catch { }
     }
 
     /// <summary>Installers sitting in Downloads (or its Installers folder) for more than 30 days: usually safe to delete.</summary>

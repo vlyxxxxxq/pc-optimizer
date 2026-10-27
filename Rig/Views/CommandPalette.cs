@@ -19,6 +19,10 @@ public sealed class PaletteCommand
     public bool NeedsQuery { get; init; }
     /// <summary>Shown whatever was typed (calculator result).</summary>
     public bool AlwaysMatch { get; init; }
+    /// <summary>The module this belongs to (null: always available). Switched-off modules' commands aren't offered.</summary>
+    public string? Module { get; init; }
+    /// <summary>Extra words that should find it.</summary>
+    public string Keywords { get; init; } = "";
 }
 
 /// <summary>
@@ -135,7 +139,8 @@ public sealed class CommandPalette : Window
         var q = _search.Text.Trim();
         var scored = _source(q)
             .Where(c => !c.NeedsQuery || q.Length > 0)
-            .Select(c => (Cmd: c, Score: c.AlwaysMatch ? (c.Rank < 0 ? 10 : 0.5) : q.Length == 0 ? 1 : Score(c.Title, q)))
+            .Select(c => (Cmd: c, Score: c.AlwaysMatch ? (c.Rank < 0 ? 10 : 0.5) : q.Length == 0 ? 1
+                : Math.Max(Score(c.Title, q), c.Keywords.Length > 0 ? Score(c.Keywords, q) * 0.8 : 0)))
             .Where(x => x.Score > 0)
             .OrderByDescending(x => x.Score).ThenBy(x => x.Cmd.Rank).ThenBy(x => x.Cmd.Title)
             .Select(x => x.Cmd).Take(40).ToList();

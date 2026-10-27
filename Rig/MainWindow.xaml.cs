@@ -36,8 +36,9 @@ public partial class MainWindow : Window
         _screenTime.Notify += Notify;
         _power = new PowerTimer(() => _gameMode.Detector.Libraries.Where(l => l.Source == "Steam" && l.Name is null).Select(l => l.Root));
         _power.Due += action => new Views.PowerCountdown(action).Show();
-        _recorder.Finished += (file, error) => Dispatcher.Invoke(() => RecordingFinished(file, error));
+        _recorder.Finished += (file, error) => Dispatcher.BeginInvoke(() => RecordingFinished(file, error));
         _timers.Fired += TimerFired;
+        _timers.Enabled = IsOn("Timers");
         RegisterPages();
 
         // Background services, each only while its module is on.
@@ -54,7 +55,7 @@ public partial class MainWindow : Window
 
         // Crosshair: follows the chosen games, the "Show now" switch and its hotkey.
         _crosshairTimer.Tick += (_, _) => UpdateCrosshair();
-        if (IsOn("Crosshair")) { RegisterCrosshairHotkey(); _crosshairTimer.Start(); }
+        if (IsOn("Crosshair")) { RegisterCrosshairHotkey(); SyncCrosshairTimer(); }
 
         // Automatic sorting watches the Downloads folder from its page.
         if (IsOn("Downloads") && _settings.DownloadsAutoOrganize) _ = Page("Downloads");
@@ -67,7 +68,9 @@ public partial class MainWindow : Window
         _freeTimer.Start();
 
         // Updates: clean up after a previous update, then check shortly after start and once a day.
-        Updater.CleanUpOld();
+        if (Perf.On) ContentRendered += (_, _) => Perf.Write("startup-to-first-render", (DateTime.Now - System.Diagnostics.Process.GetCurrentProcess().StartTime).TotalMilliseconds);
+        // Once the window has been up for a bit, this version counts as healthy and the previous one can go.
+        Loaded += async (_, _) => { await Task.Delay(TimeSpan.FromSeconds(5)); Updater.MarkHealthy(Environment.ProcessPath!); };
         _updateTimer.Tick += async (_, _) =>
         {
             _updateTimer.Interval = TimeSpan.FromHours(24);
@@ -92,6 +95,17 @@ public partial class MainWindow : Window
             _settings.Save();
             Loaded += (_, _) => Go("Apps");
         }
+
+        AppSettings.SaveFailed += message => Dispatcher.BeginInvoke(() => _tray.Notify("Settings not saved", message));
+        if (_settings.LoadProblem is { } loadProblem) Loaded += (_, _) => _tray.Notify("Settings were reset", loadProblem);
+
+        // File batches cut short by a crash or power cut show up in Recovery.
+        Task.Run(BatchMover.FlagInterrupted).ContinueWith(t =>
+        {
+            if (BatchMover.NeedingAttention().Count is var n and > 0)
+                Dispatcher.Invoke(() => Notify("Some file changes need attention",
+                    $"{n} rename or Downloads batch{(n == 1 ? "" : "es")} didn't finish. Open File recovery to sort it out."));
+        });
 
         if (Migration.JustMigrated)
             Loaded += (_, _) => _tray.Notify("PC Optimizer is now Rig",
@@ -122,9 +136,18 @@ public partial class MainWindow : Window
     DateTime _freeGamesAt;
 
     /// <summary>Fills Home's cards from the services (every 5 s while Home is on screen).</summary>
+    bool _refreshingHome;
+
     async Task RefreshHomeAsync()
     {
-        if (Created<Views.DashboardView>(Modules.Home) is not { } home) return;
+        if (_refreshingHome || Created<Views.DashboardView>(Modules.Home) is not { } home) return; // the last refresh is still running
+        _refreshingHome = true;
+        try { await RefreshHomeCoreAsync(home); }
+        finally { _refreshingHome = false; }
+    }
+
+    async Task RefreshHomeCoreAsync(Views.DashboardView home)
+    {
         if (home.Shows("gamemode"))
         {
             if (_lastSession is null || !_lastSessionLoaded)
@@ -132,7 +155,7 @@ public partial class MainWindow : Window
                 _lastSession = await Task.Run(() => GameStats.Load().OrderByDescending(s => s.Start).FirstOrDefault());
                 _lastSessionLoaded = _lastSession is not null;
             }
-            home.SetGameMode(_gameMode.IsActive, _gameMode.Game?.Name, _lastSession);
+            home.SetGameMode(_gameMode.IsActive, _gameMode.Game?.Name, _lastSession, _gameMode.State);
         }
         if (home.Shows("music")) home.SetMusic(await Task.Run(NowPlaying.Current));
         if (home.Shows("screentime"))
@@ -234,6 +257,12 @@ public partial class MainWindow : Window
             return p;
         });
         _homeTimer.Tick += async (_, _) => { if (Created<Views.DashboardView>(Modules.Home) is { IsVisible: true }) await RefreshHomeAsync(); };
+        // Background work that only feeds what's on screen pauses while the window is hidden in the tray.
+        IsVisibleChanged += (_, _) =>
+        {
+            if (IsVisible) { if (_settings.ShowNowPlaying) { _musicTimer.Start(); _ = UpdateMusicAsync(); } _homeTimer.Start(); }
+            else { _musicTimer.Stop(); _homeTimer.Stop(); }
+        };
         _homeTimer.Start();
         _gameMode.StateChanged += async (_, _) => await RefreshHomeAsync();
         _gameMode.SessionEnded += _ => _lastSession = null; // reloaded on the next refresh
@@ -252,6 +281,19 @@ public partial class MainWindow : Window
             p.Attach(_settings);
             p.TestNotificationRequested += (_, _) => _tray.Notify("Notifications work", "You'll see Game Mode alerts like this one.");
             p.NowPlayingChanged += SetNowPlaying;
+            p.PrivacyChanged += (_, _) => { foreach (var id in new[] { "Clipboard", "ScreenTime", "Input" }) ApplyModule(id); };
+            p.IsVisibleChanged += (_, _) =>
+            {
+                if (!p.IsVisible) return;
+                p.ShowShortcuts(
+                [
+                    ("Command palette", PaletteKeyText.Text is { Length: > 0 } k ? k : "taken by another app"),
+                    ("Clipboard history", "Ctrl+Alt+V"),
+                    ("Save the last 30 seconds", _settings.ClipHotkey), ("Screenshot", _settings.ScreenshotHotkey),
+                    ("Record screen", _settings.RecordHotkey), ("Crosshair on/off", _settings.CrosshairHotkey),
+                    ("Pick a colour", _settings.ColorHotkey),
+                ]);
+            };
             p.ModuleChanged += ApplyModule;
             p.UpdateFound += info =>
             {
@@ -309,8 +351,8 @@ public partial class MainWindow : Window
         {
             var p = new Views.CrosshairView();
             p.Attach(_settings);
-            p.Changed += (_, _) => UpdateCrosshair();
-            p.ShowRequested += on => { _crosshairManual = on; UpdateCrosshair(); };
+            p.Changed += (_, _) => { SyncCrosshairTimer(); UpdateCrosshair(); };
+            p.ShowRequested += on => { _crosshairManual = on; SyncCrosshairTimer(); UpdateCrosshair(); };
             p.HotkeyPaused += (_, _) => { _crosshairKeys?.Dispose(); _crosshairKeys = null; };
             p.HotkeyChanged += (_, _) => RegisterCrosshairHotkey();
             p.ShowHotkeyState(_crosshairKeyOk);
@@ -349,9 +391,17 @@ public partial class MainWindow : Window
         {
             _crosshairManual = !_crosshairManual;
             Created<Views.CrosshairView>("Crosshair")?.SetShowing(_crosshairManual);
+            SyncCrosshairTimer();
             UpdateCrosshair();
         });
         Created<Views.CrosshairView>("Crosshair")?.ShowHotkeyState(_crosshairKeyOk);
+    }
+
+    /// <summary>The once-a-second foreground check only runs while there are games to watch or it's on by hand.</summary>
+    void SyncCrosshairTimer()
+    {
+        if (IsOn("Crosshair") && (_settings.CrosshairGames.Count > 0 || _crosshairManual)) _crosshairTimer.Start();
+        else { _crosshairTimer.Stop(); if (!_crosshairManual) _crosshair?.Hide(); }
     }
 
     /// <summary>Shows the crosshair when switched on by hand, or while a chosen game is the foreground window.</summary>
@@ -445,7 +495,17 @@ public partial class MainWindow : Window
     readonly System.Windows.Threading.DispatcherTimer _musicTimer = new() { Interval = TimeSpan.FromSeconds(3) };
 
     /// <summary>Sidebar mini player: shows the current track (checked every 3 s, off the UI thread).</summary>
+    bool _readingMusic;
+
     async Task UpdateMusicAsync()
+    {
+        if (_readingMusic) return;
+        _readingMusic = true;
+        try { await UpdateMusicCoreAsync(); }
+        finally { _readingMusic = false; }
+    }
+
+    async Task UpdateMusicCoreAsync()
     {
         var track = _settings.ShowNowPlaying && !_settings.SidebarCollapsed ? await Task.Run(NowPlaying.Current) : null;
         MusicChip.Visibility = track is null ? Visibility.Collapsed : Visibility.Visible;
@@ -623,7 +683,9 @@ public partial class MainWindow : Window
         _crosshair?.Close();
         _crosshairKeys?.Dispose();
         _screenTime.Stop();
-        _recorder.Stop();
+        // Finish a recording in progress so the file is complete (playable) before the app goes away.
+        if (_recorder.IsRecording && !_recorder.StopAndWait(TimeSpan.FromSeconds(30)))
+            try { File.AppendAllText(AppSettings.DataFile(Path.Combine("logs", "recordings.log")), $"{DateTime.Now:s} recording didn't finish before exit{Environment.NewLine}"); } catch { }
         _inputStats.Stop();
         Created<Views.ClipboardView>("Clipboard")?.FlushNotes();
         _hotkeys?.Dispose();
@@ -647,6 +709,8 @@ public partial class MainWindow : Window
     /// <summary>Quick fade + slide up when a page opens.</summary>
     static void AnimateIn(UIElement page)
     {
+        // Respect "Animation effects" being off in Windows (reduced motion).
+        if (!SystemParameters.ClientAreaAnimation) { page.Opacity = 1; page.RenderTransform = null; return; }
         var ease = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut };
         var duration = TimeSpan.FromMilliseconds(220);
         var shift = new TranslateTransform(0, 12);

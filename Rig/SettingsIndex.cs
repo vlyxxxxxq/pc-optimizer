@@ -1,0 +1,85 @@
+namespace Rig;
+
+/// <summary>One searchable setting or section: the page it lives on and the heading to jump to.</summary>
+public sealed record SettingEntry(string Id, string Module, string Title, string Keywords = "");
+
+/// <summary>
+/// Everything the command palette can find inside pages, without building the pages. Generated from the pages' card
+/// headings and switch captions; a test (SettingsIndexTests) checks each title still appears on its page, and lists
+/// new headings that aren't indexed yet. Ids are stable: "module.slug".
+/// </summary>
+public static class SettingsIndex
+{
+    public static readonly SettingEntry[] All =
+    [
+        new("game.turn-on-when-i-start-playing", "Game", "Turn on when I start playing"),
+        new("game.treat-any-fullscreen-app-as-a-game", "Game", "Treat any fullscreen app as a game"),
+        new("game.maximum-performance-power-plan", "Game", "Maximum performance power plan"),
+        new("game.high-cpu-priority-for-the-game", "Game", "High CPU priority for the game"),
+        new("game.block-sleep-and-screensaver", "Game", "Block sleep and screensaver"),
+        new("game.close-background-apps", "Game", "Close background apps"),
+        new("game.reopen-them-when-you-re-done", "Game", "Reopen them when you're done"),
+        new("game.force-close-apps-that-don-t-close", "Game", "Force-close apps that don't close"),
+        new("game.performance-overlay", "Game", "Performance overlay"),
+        new("game.session-recap", "Game", "Session recap"),
+        new("library.free-to-keep-right-now", "Library", "Free to keep right now"),
+        new("crosshair.turn-on-automatically-in", "Crosshair", "Turn on automatically in"),
+        new("crosshair.toggle-hotkey", "Crosshair", "Toggle hotkey"),
+        new("controller.stick-drift-check", "Controller", "Stick drift check"),
+        new("controller.rumble", "Controller", "Rumble"),
+        new("input.keyboard-heatmap", "Input", "Keyboard heatmap"),
+        new("input.mouse-heatmap", "Input", "Mouse heatmap"),
+        new("input.per-game", "Input", "Per game"),
+        new("clips.save-the-last-30-seconds", "Clips", "Save the last 30 seconds"),
+        new("clips.screenshot", "Clips", "Screenshot"),
+        new("clips.record-your-screen", "Clips", "Record your screen"),
+        new("clips.gallery", "Clips", "Gallery"),
+        new("clipboard.clipboard-history", "Clipboard", "Clipboard history"),
+        new("clipboard.quick-notes", "Clipboard", "Quick notes"),
+        new("screentime.apps-today", "ScreenTime", "Apps today"),
+        new("screentime.break-reminders", "ScreenTime", "Break reminders"),
+        new("layouts.save-the-current-arrangement", "Layouts", "Save the current arrangement"),
+        new("downloads.looking-at-downloads", "Downloads", "Looking at Downloads…"),
+        new("downloads.old-installers", "Downloads", "Old installers"),
+        new("cleaner.clean-automatically", "Cleaner", "Clean automatically"),
+        new("cleaner.browser-privacy", "Cleaner", "Browser privacy"),
+        new("hardware.benchmark", "Hardware", "Benchmark"),
+        new("network.connection", "Network", "Connection"),
+        new("network.ping-stability", "Network", "Ping & stability"),
+        new("network.dns-speed", "Network", "DNS speed"),
+        new("network.download-speed", "Network", "Download speed"),
+        new("security.virus-scan", "Security", "Virus scan"),
+        new("security.virus-definitions", "Security", "Virus definitions"),
+        new("security.game-folder-exclusions", "Security", "Game folder exclusions"),
+        new("tools.administrator-mode", "Tools", "Administrator mode"),
+        new("tools.power-timer", "Tools", "Power timer"),
+        new("tools.graphics-drivers", "Tools", "Graphics drivers"),
+        new("tools.maintenance-night", "Tools", "Maintenance night"),
+        new("tools.also-install-app-updates", "Tools", "Also install app updates"),
+        new("tools.pause-windows-update", "Tools", "Pause Windows Update"),
+        new("tools.power-plan", "Tools", "Power plan"),
+        new("tools.quick-fixes", "Tools", "Quick fixes"),
+        new("tools.repair-windows", "Tools", "Repair Windows"),
+        new("tools.windows-tools", "Tools", "Windows tools"),
+        new("settings.start-with-windows", "Settings", "Start with Windows"),
+        new("settings.keep-running-when-i-close-the-window", "Settings", "Keep running when I close the window"),
+        new("settings.notifications", "Settings", "Notifications"),
+        new("settings.now-playing-in-the-sidebar", "Settings", "Now playing in the sidebar"),
+        new("settings.clipboard-history", "Settings", "Clipboard history"),
+        new("settings.screen-time-tracking", "Settings", "Screen time tracking"),
+        new("settings.input-counting", "Settings", "Input counting"),
+        new("settings.theme", "Settings", "Theme"),
+        new("settings.accent-colour", "Settings", "Accent colour"),
+        new("settings.you-re-up-to-date", "Settings", "You're up to date"),
+        new("settings.check-for-updates-automatically-once-a-day", "Settings", "Check for updates automatically (once a day)"),
+        new("settings.beta-updates", "Settings", "Beta updates"),
+        new("timers.new-timer", "Timers", "New timer"),
+        new("timers.new-reminder", "Timers", "New reminder"),
+        new("timers.running", "Timers", "Running"),
+        new("timers.stopwatch", "Timers", "Stopwatch"),
+        new("renamer.preview", "Renamer", "Preview"),
+        new("colorpicker.pick-a-colour", "ColorPicker", "Pick a colour"),
+        new("colorpicker.measure", "ColorPicker", "Measure"),
+        new("colorpicker.picked-colours", "ColorPicker", "Picked colours"),
+    ];
+}

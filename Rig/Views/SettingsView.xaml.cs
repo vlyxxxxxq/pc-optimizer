@@ -10,6 +10,32 @@ public partial class SettingsView : UserControl
 
     public event EventHandler? TestNotificationRequested;
     public event Action<bool>? NowPlayingChanged;
+    /// <summary>A tracking switch changed; the main window starts or stops that tracking.</summary>
+    public event EventHandler? PrivacyChanged;
+
+    void Privacy_Click(object sender, RoutedEventArgs e)
+    {
+        _settings?.Save();
+        PrivacyChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    void DataFolder_Click(object sender, RoutedEventArgs e)
+    {
+        var dir = Path.GetDirectoryName(AppSettings.DataFile("settings.json"))!;
+        Directory.CreateDirectory(dir);
+        Shell.Open(dir);
+    }
+
+    /// <summary>Every global shortcut, with the key it's on now.</summary>
+    public void ShowShortcuts(IEnumerable<(string What, string Key)> keys)
+    {
+        var rows = keys.Select(k => new ShortcutRow(k.What, k.Key)).ToList();
+        // Only rebuild the list when a key changed, so screen readers keep their place on repeat visits.
+        if (ShortcutList.ItemsSource is List<ShortcutRow> shown && shown.SequenceEqual(rows)) return;
+        ShortcutList.ItemsSource = rows;
+    }
+
+    public sealed record ShortcutRow(string What, string Key);
     /// <summary>A module was switched on or off (its id).</summary>
     public event Action<string>? ModuleChanged;
 
@@ -167,19 +193,19 @@ public partial class SettingsView : UserControl
         UpdateProgress.Visibility = Visibility.Visible;
         UpdateTitle.Text = $"Downloading version {_update.Version.ToString()}…";
         var progress = new Progress<double>(p => { UpdateProgress.Value = p; UpdateText.Text = $"{p:P0} of {Fmt.Bytes(_update.Size)}"; });
-        if (!await Updater.InstallAsync(_update, progress))
+        if (await Updater.InstallAsync(_update, progress) is { } problem)
         {
             UpdateProgress.Visibility = Visibility.Collapsed;
             InstallUpdateButton.IsEnabled = CheckUpdateButton.IsEnabled = true;
             UpdateTitle.Text = "Couldn't update automatically";
-            UpdateText.Text = "The app's folder may be read-only. Opening the download page instead.";
-            Shell.Open(_update.PageUrl);
+            UpdateText.Text = problem + " You can download it from the release page instead.";
         }
     }
 
     public void Attach(AppSettings settings)
     {
         Loaded += (_, _) => RenderModules();
+        DataFolderText.Text = "Data folder: " + Path.GetDirectoryName(AppSettings.DataFile("settings.json"));
         ThemeLight.IsChecked = settings.Theme == "Light";
         ThemeDark.IsChecked = settings.Theme != "Light";
         RenderAccents();
@@ -236,19 +262,19 @@ public partial class SettingsView : UserControl
             MessageBox.Show($"That file couldn't be read:\n{ex.Message}", "Import setup", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
-        if (MessageBox.Show(Backup.Describe(backup) +
-                            "\n\nThis replaces your current Game Mode and app settings. Tweaks are switched on (you can turn any off later). Continue?",
-                "Import setup", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
-            return;
+        var preview = new ImportPreviewWindow(backup, _settings) { Owner = Window.GetWindow(this) };
+        if (preview.ShowDialog() != true || preview.Choices is not { } choices) return;
 
-        var skipped = Backup.Apply(backup, _settings);
-        MessageBox.Show("Setup imported. Rig will restart to load it" +
-                        (_settings.PendingInstallIds.Count > 0 ? ", then show the apps to install." : ".") +
-                        (skipped.Count > 0
-                            ? $"\n\nThese tweaks need administrator mode, so they weren't applied:\n  • {string.Join("\n  • ", skipped)}"
-                            : ""),
-            "Import setup", MessageBoxButton.OK, MessageBoxImage.Information);
-        App.Restart();
+        var result = Backup.Apply(backup, _settings, choices);
+        var lines = new List<string> { result.SettingsSaved ? "Setup imported." : "The import couldn't be saved, so your settings were not changed on disk." };
+        lines.AddRange(result.Notes);
+        if (result.DataRestored.Count > 0) lines.Add($"Personal data restored: {string.Join(", ", result.DataRestored)}.");
+        if (result.DataFailed.Count > 0) lines.Add($"Couldn't restore: {string.Join(", ", result.DataFailed)}.");
+        if (result.SkippedTweaks.Count > 0) lines.Add($"These tweaks need administrator mode, so they weren't applied:\n  • {string.Join("\n  • ", result.SkippedTweaks)}");
+        if (result.SafetyCopy is not null) lines.Add($"Your previous setup was saved as {Path.GetFileName(result.SafetyCopy)} in Rig's backups folder.");
+        lines.Add("Rig will restart to load it" + (_settings.PendingInstallIds.Count > 0 ? ", then show the apps to install." : "."));
+        MessageBox.Show(string.Join("\n\n", lines), "Import setup", MessageBoxButton.OK, result.SettingsSaved ? MessageBoxImage.Information : MessageBoxImage.Warning);
+        if (result.SettingsSaved) App.Restart();
     }
 
     void TestNotification_Click(object sender, RoutedEventArgs e) =>

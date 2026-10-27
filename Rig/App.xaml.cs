@@ -5,7 +5,21 @@ namespace Rig;
 public partial class App : Application
 {
     static Mutex? _instanceLock;
-    EventWaitHandle? _showSignal;
+    EventWaitHandle? _showSignal, _quitSignal;
+
+    /// <summary>
+    /// Name of the "please quit" signal for this settings profile. The uninstaller (and updates) use it so the running
+    /// copy exits properly: Game Mode puts everything back and recordings are finished before files are removed.
+    /// </summary>
+    public static string QuitSignalName
+    {
+        get
+        {
+            var p = Environment.GetEnvironmentVariable("RIG_SETTINGS");
+            var profile = p is { Length: > 0 } ? "." + Convert.ToHexString(System.Security.Cryptography.SHA1.HashData(System.Text.Encoding.UTF8.GetBytes(p.ToLowerInvariant())))[..12] : "";
+            return $@"Local\Rig.Quit{profile}";
+        }
+    }
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -45,6 +59,14 @@ public partial class App : Application
         Services.Installer.RefreshRegistration();
 
         // First run: welcome tour. Choosing "Install" relaunches from the installed copy.
+        // After an update the new version is on trial: if it keeps failing to start, the previous one comes back.
+        if (Environment.ProcessPath is { } self && Services.Updater.CheckAtStart(self) == Services.Updater.StartCheck.RolledBack)
+        {
+            ReleaseInstanceLock();
+            Shutdown();
+            return;
+        }
+
         var settings = Services.AppSettings.Load();
         Services.Theme.Apply(Resources, settings.Theme != "Light", settings.Accent);
         if (Services.Migration.Run(settings, e.Args)) { Shutdown(); return; } // continues from the new Rig folder
@@ -69,6 +91,11 @@ public partial class App : Application
         {
             while (_showSignal.WaitOne()) Dispatcher.Invoke(window.ShowFromTray);
         }) { IsBackground = true, Name = "ShowSignal" }.Start();
+        _quitSignal = new EventWaitHandle(false, EventResetMode.AutoReset, QuitSignalName);
+        new Thread(() =>
+        {
+            if (_quitSignal.WaitOne()) Dispatcher.Invoke(() => { (MainWindow as MainWindow)?.Cleanup(); Shutdown(); });
+        }) { IsBackground = true, Name = "QuitSignal" }.Start();
     }
 
     protected override void OnExit(ExitEventArgs e)
@@ -92,6 +119,9 @@ public partial class App : Application
     }
 
     /// <summary>Lets a relaunched (e.g. elevated) copy start before this one has fully exited.</summary>
+    /// <summary>Every switch gets its caption as its accessible name when it loads (see MainWindow.NameSwitchOnLoad).</summary>
+    void Switch_Loaded(object sender, RoutedEventArgs e) => Rig.MainWindow.NameSwitchOnLoad(sender, e);
+
     public static void ReleaseInstanceLock()
     {
         try { _instanceLock?.ReleaseMutex(); } catch { }

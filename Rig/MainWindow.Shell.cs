@@ -32,6 +32,42 @@ public partial class MainWindow
         return page;
     }
 
+    /// <summary>
+    /// A switch is a bare toggle; screen readers need the caption next to it ("Notifications", "Block sleep…") as its
+    /// name. Done for every switch as it loads, including ones inside lists; a switch that sets its own name keeps it.
+    /// </summary>
+    internal static void NameSwitchOnLoad(object sender, RoutedEventArgs e)
+    {
+        // Switches, and plain checkboxes without a caption of their own (ticks in lists).
+        if (sender is CheckBox cb && (cb.Style == (Style)Application.Current.Resources["Switch"] || cb.Content is null)
+            && string.IsNullOrEmpty(AutomationProperties.GetName(cb)) && Caption(cb) is { Length: > 0 } name)
+            AutomationProperties.SetName(cb, name);
+    }
+
+    /// <summary>The nearest text beside a switch: a heading in its row (before or after it), looking up to three levels out.</summary>
+    static string? Caption(FrameworkElement element)
+    {
+        DependencyObject current = element;
+        for (int level = 0; level < 3; level++)
+        {
+            if (VisualTreeHelper.GetParent(current) is not Panel panel) return null;
+            var siblings = panel.Children.OfType<UIElement>().ToList();
+            int at = siblings.IndexOf((UIElement)current);
+            // Nearest sibling first: the text before the switch, then after it.
+            foreach (var sibling in siblings.Take(at).Reverse().Concat(siblings.Skip(at + 1)))
+                if (FirstText(sibling) is { Length: > 0 } text) return text;
+            current = panel;
+        }
+        return null;
+
+        static string? FirstText(DependencyObject d) => d switch
+        {
+            TextBlock { Text.Length: > 0 } t => t.Text,
+            Panel p => p.Children.OfType<UIElement>().Select(FirstText).FirstOrDefault(x => x is { Length: > 0 }),
+            _ => null,
+        };
+    }
+
     /// <summary>The page if it exists already, without creating it.</summary>
     T? Created<T>(string id) where T : class => _created.GetValueOrDefault(id) as T;
 
@@ -54,6 +90,7 @@ public partial class MainWindow
 
     void Show(string id)
     {
+        Services.Perf.UntilIdle(Dispatcher, (_created.ContainsKey(id) ? "nav-repeat " : "nav-first ") + id);
         var page = Page(id);
         foreach (var (key, p) in _created) p.Visibility = key == id ? Visibility.Visible : Visibility.Collapsed;
         _current = id;
@@ -159,11 +196,25 @@ public partial class MainWindow
         switch (id)
         {
             case "Clipboard": _clipboard.Enabled = on && _settings.ClipboardHistoryEnabled; break;
-            case "ScreenTime": if (on) _screenTime.Start(); else _screenTime.Stop(); break;
-            case "Input": if (on && _settings.InputStatsEnabled) _inputStats.Start(); else if (!on) _inputStats.Stop(); break;
-            case "Clips" or "ColorPicker": RegisterCaptureHotkeys(); break;
+            case "ScreenTime": if (on && _settings.ScreenTimeEnabled) _screenTime.Start(); else _screenTime.Stop(); break;
+            case "Input": if (on && _settings.InputStatsEnabled) _inputStats.Start(); else _inputStats.Stop(); break;
+            case "Clips" or "ColorPicker":
+                // A recording in progress is finished and saved first, never cut off.
+                if (id == "Clips" && !on && _recorder.IsRecording)
+                {
+                    _recorder.StopAndWait(TimeSpan.FromSeconds(30));
+                    Notify("Recording saved", "Clips & Recording was switched off, so the recording in progress was finished and saved.");
+                }
+                RegisterCaptureHotkeys();
+                break;
+            case "Timers":
+                _timers.Enabled = on;
+                if (!on && _timers.Items.Count > 0)
+                    Notify("Reminders paused", $"{_timers.Items.Count} timer(s) and reminder(s) won't go off while Timers is switched off. Any that come due meanwhile go off when it's back on.");
+                break;
+            case "Photos": Created<PhotosView>("Photos")?.Cancel(); break;
             case "Crosshair":
-                if (on) { RegisterCrosshairHotkey(); _crosshairTimer.Start(); }
+                if (on) { RegisterCrosshairHotkey(); SyncCrosshairTimer(); }
                 else { _crosshairKeys?.Dispose(); _crosshairKeys = null; _crosshairTimer.Stop(); _crosshairManual = false; _crosshair?.Hide(); }
                 break;
             case "Downloads":
