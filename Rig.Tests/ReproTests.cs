@@ -56,7 +56,7 @@ public class ReproTests
             bmp.Save(Path.Combine(dir, name + ".png"), System.Drawing.Imaging.ImageFormat.Png);
         }
         var result = SimilarPhotos.Find(dir, false, null, CancellationToken.None);
-        Assert.DoesNotContain(result.SelectMany(g => g.Photos), p => p.Remove);
+        Assert.DoesNotContain(result.Groups.SelectMany(g => g.Photos), p => p.Remove);
     }
 
     [Fact]

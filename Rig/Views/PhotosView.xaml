@@ -5,7 +5,7 @@
         <StackPanel DockPanel.Dock="Top">
             <TextBlock Text="Similar Photos" Style="{StaticResource PageTitle}"/>
             <TextBlock Style="{StaticResource PageSubtitle}"
-                       Text="Finds photos that look the same, even resized or re-saved copies, keeps the best one of each and lets you recycle the rest."/>
+                       Text="Finds exact copies of photos, and pictures that look alike (resized or re-saved). Exact copies are ticked for the Recycle Bin, keeping one; look-alikes are only suggestions for you to check."/>
             <Border Style="{StaticResource Card}" Margin="0,20,0,0">
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
@@ -33,6 +33,8 @@
                         <Border Style="{StaticResource Card}" Margin="0,0,0,12">
                             <StackPanel>
                                 <TextBlock Text="{Binding Title}" Style="{StaticResource CardLabel}"/>
+                                <TextBlock Text="{Binding Why}" Style="{StaticResource Muted}" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding KeeperText}" Style="{StaticResource Muted}" Margin="0,2,0,0" TextWrapping="Wrap"/>
                                 <ItemsControl ItemsSource="{Binding Photos}" Margin="0,10,0,0">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
@@ -44,7 +46,16 @@
                                                         MouseLeftButtonUp="Photo_Click" Tag="{Binding Path}" ToolTip="{Binding Path}">
                                                     <Image Source="{Binding Thumb}" Stretch="UniformToFill"/>
                                                 </Border>
-                                                <CheckBox IsChecked="{Binding Remove}" Content="Recycle" Margin="0,6,0,0" Click="Tick_Click"/>
+                                                <DockPanel Margin="0,6,0,0">
+                                                    <Button DockPanel.Dock="Right" Content="Keep this" Click="Keep_Click" Padding="8,2" FontSize="11"
+                                                            Visibility="{Binding Keeper, Converter={StaticResource InverseBoolToVis}}"/>
+                                                    <Border DockPanel.Dock="Right" Style="{StaticResource Badge}" Background="{DynamicResource GoodTintBrush}"
+                                                            Visibility="{Binding Keeper, Converter={StaticResource BoolToVis}}">
+                                                        <TextBlock Text="Keeper" FontSize="11"/>
+                                                    </Border>
+                                                    <CheckBox IsChecked="{Binding Remove}" Content="Recycle" Click="Tick_Click"
+                                                              IsEnabled="{Binding Keeper, Converter={StaticResource Not}}"/>
+                                                </DockPanel>
                                                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
                                                 <TextBlock Text="{Binding Detail}" Style="{StaticResource Muted}" FontSize="11" TextTrimming="CharacterEllipsis"/>
                                             </StackPanel>
