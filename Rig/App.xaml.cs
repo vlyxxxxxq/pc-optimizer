@@ -59,6 +59,14 @@ public partial class App : Application
         Services.Installer.RefreshRegistration();
 
         // First run: welcome tour. Choosing "Install" relaunches from the installed copy.
+        // After an update the new version is on trial: if it keeps failing to start, the previous one comes back.
+        if (Environment.ProcessPath is { } self && Services.Updater.CheckAtStart(self) == Services.Updater.StartCheck.RolledBack)
+        {
+            ReleaseInstanceLock();
+            Shutdown();
+            return;
+        }
+
         var settings = Services.AppSettings.Load();
         Services.Theme.Apply(Resources, settings.Theme != "Light", settings.Accent);
         if (Services.Migration.Run(settings, e.Args)) { Shutdown(); return; } // continues from the new Rig folder

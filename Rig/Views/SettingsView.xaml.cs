@@ -167,13 +167,12 @@ public partial class SettingsView : UserControl
         UpdateProgress.Visibility = Visibility.Visible;
         UpdateTitle.Text = $"Downloading version {_update.Version.ToString()}…";
         var progress = new Progress<double>(p => { UpdateProgress.Value = p; UpdateText.Text = $"{p:P0} of {Fmt.Bytes(_update.Size)}"; });
-        if (!await Updater.InstallAsync(_update, progress))
+        if (await Updater.InstallAsync(_update, progress) is { } problem)
         {
             UpdateProgress.Visibility = Visibility.Collapsed;
             InstallUpdateButton.IsEnabled = CheckUpdateButton.IsEnabled = true;
             UpdateTitle.Text = "Couldn't update automatically";
-            UpdateText.Text = "The app's folder may be read-only. Opening the download page instead.";
-            Shell.Open(_update.PageUrl);
+            UpdateText.Text = problem + " You can download it from the release page instead.";
         }
     }
 

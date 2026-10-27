@@ -47,6 +47,29 @@ public sealed class ScreenRecorder
 
     public void Stop() => _stop = true;
 
+    /// <summary>
+    /// Stops and waits until the file is finished (an MP4 is only playable once its index is written when the writer
+    /// closes). Used on exit, restart, update and uninstall. False if it didn't finish in time.
+    /// </summary>
+    public bool StopAndWait(TimeSpan timeout)
+    {
+        var thread = _thread;
+        _stop = true;
+        return thread is null || thread.Join(timeout);
+    }
+
+    /// <summary>Recordings that failed to finish are written down here, since there may be no window left to say so.</summary>
+    static void LogProblem(string file, string error)
+    {
+        try
+        {
+            var log = AppSettings.DataFile(Path.Combine("logs", "recordings.log"));
+            Directory.CreateDirectory(Path.GetDirectoryName(log)!);
+            System.IO.File.AppendAllText(log, $"{DateTime.Now:s} {file}: {error}{Environment.NewLine}");
+        }
+        catch { }
+    }
+
     void Run(ScreenArea area, bool gif, bool cursor, int fps, string file)
     {
         string? error = null;
@@ -58,8 +81,10 @@ public sealed class ScreenRecorder
         }
         catch (Exception ex)
         {
+            // Keep whatever was written: a partial file may still be useful or recoverable.
             error = ex.Message;
-            try { System.IO.File.Delete(file); } catch { }
+            LogProblem(file, ex.Message);
+            try { if (new FileInfo(file) is { Exists: true, Length: 0 } empty) empty.Delete(); } catch { }
         }
         finally
         {

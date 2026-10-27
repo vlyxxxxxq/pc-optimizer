@@ -42,6 +42,24 @@ jobs:
           Copy-Item out/lite/Rig.exe dist/PCOptimizer-lite.exe
           Get-ChildItem dist | ForEach-Object { "{0} {1:N1} MB" -f $_.Name, ($_.Length / 1MB) }
 
+      # Detached signatures for the updater (docs/SIGNING.md). Skipped until the RIG_SIGNING_KEY secret exists;
+      # Rig only requires them once its embedded public key (Updater.SigningKey) is set.
+      - name: Sign the assets
+        shell: pwsh
+        env:
+          RIG_SIGNING_KEY: ${{ secrets.RIG_SIGNING_KEY }}
+        run: |
+          if (-not $env:RIG_SIGNING_KEY) { "No signing key configured; releases are unsigned."; exit 0 }
+          $key = [System.Security.Cryptography.ECDsa]::Create()
+          $key.ImportFromPem($env:RIG_SIGNING_KEY)
+          foreach ($f in Get-ChildItem dist -Filter *.exe) {
+            $stream = [IO.File]::OpenRead($f.FullName)
+            try { $sig = $key.SignData($stream, [System.Security.Cryptography.HashAlgorithmName]::SHA256, [System.Security.Cryptography.DSASignatureFormat]::IeeeP1363FixedFieldConcatenation) }
+            finally { $stream.Dispose() }
+            [IO.File]::WriteAllText("$($f.FullName).sig", [Convert]::ToBase64String($sig))
+            "Signed $($f.Name)"
+          }
+
       - name: Publish the GitHub release
         shell: pwsh
         env:
@@ -49,7 +67,7 @@ jobs:
         run: |
           $tag = "${{ github.ref_name }}"
           $notes = "docs/release-notes/$tag.md"
-          $ghArgs = @('release', 'create', $tag, 'dist/Rig.exe', 'dist/Rig-lite.exe', 'dist/PCOptimizer.exe', 'dist/PCOptimizer-lite.exe', '--title', "Rig $tag")
+          $ghArgs = @('release', 'create', $tag) + (Get-ChildItem dist | ForEach-Object { $_.FullName }) + @('--title', "Rig $tag")
           $ghArgs += $(if ($tag.Contains('-')) { '--prerelease' } else { '--latest' })
           if (Test-Path $notes) { $ghArgs += @('--notes-file', $notes) } else { $ghArgs += '--generate-notes' }
           gh @ghArgs

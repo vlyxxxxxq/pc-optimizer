@@ -6,7 +6,8 @@ using System.Windows;
 
 namespace Rig.Services;
 
-public sealed record UpdateInfo(AppVersion Version, string Tag, string Notes, string DownloadUrl, long Size, string PageUrl);
+public sealed record UpdateInfo(AppVersion Version, string Tag, string Notes, string DownloadUrl, long Size, string PageUrl,
+    string? Sha256 = null, string? SignatureUrl = null);
 
 /// <summary>A version like 2.0.0 or 2.0.0-beta.1. A pre-release sorts before its final release.</summary>
 public sealed record AppVersion(Version Core, string? Pre) : IComparable<AppVersion>
@@ -94,19 +95,65 @@ public static class Updater
             if (release.GetProperty("prerelease").GetBoolean() && !beta) continue;
             var tag = release.GetProperty("tag_name").GetString() ?? "";
             if (AppVersion.Parse(tag) is not { } version || !(version > CurrentVersion) || (best is not null && !(version > best.Version))) continue;
-            foreach (var asset in release.GetProperty("assets").EnumerateArray())
+            var assets = release.GetProperty("assets").EnumerateArray().ToList();
+            string? sigUrl = assets.FirstOrDefault(a => string.Equals(a.GetProperty("name").GetString(), AssetName + ".sig", StringComparison.OrdinalIgnoreCase)) is { ValueKind: JsonValueKind.Object } sig
+                ? sig.GetProperty("browser_download_url").GetString() : null;
+            foreach (var asset in assets)
             {
                 if (!string.Equals(asset.GetProperty("name").GetString(), AssetName, StringComparison.OrdinalIgnoreCase)) continue;
+                // GitHub publishes a SHA-256 digest per asset ("sha256:…"); it guards against a damaged download.
+                string? sha = asset.TryGetProperty("digest", out var d) && d.GetString() is { } dg && dg.StartsWith("sha256:") ? dg[7..] : null;
                 best = new UpdateInfo(version, tag, release.GetProperty("body").GetString() ?? "",
                     asset.GetProperty("browser_download_url").GetString()!, asset.GetProperty("size").GetInt64(),
-                    release.GetProperty("html_url").GetString() ?? ReleasesPage);
+                    release.GetProperty("html_url").GetString() ?? ReleasesPage, sha, sigUrl);
             }
         }
         return best;
     }
 
-    /// <summary>Downloads and swaps in the new EXE, then restarts. Returns false if it couldn't (e.g. no write access).</summary>
-    public static async Task<bool> InstallAsync(UpdateInfo update, IProgress<double> progress)
+    // ---------- Authenticity ----------
+
+    /// <summary>
+    /// The release-signing public key (ECDSA P-256, SubjectPublicKeyInfo, base64). While it's empty, releases can't be
+    /// authenticated and updates are checked for size and SHA-256 only; see docs/SIGNING.md for setting up a key.
+    /// Once set, every update must carry a valid "&lt;asset&gt;.sig" or it's refused.
+    /// </summary>
+    public const string SigningKey = "";
+
+    public static bool SigningConfigured => SigningKey.Length > 0;
+
+    /// <summary>Checks a detached signature (base64 IEEE P1363 ECDSA over SHA-256 of the file) against a public key.</summary>
+    public static bool Verify(Stream file, string signatureBase64, string publicKeyBase64)
+    {
+        try
+        {
+            using var key = System.Security.Cryptography.ECDsa.Create();
+            key.ImportSubjectPublicKeyInfo(Convert.FromBase64String(publicKeyBase64), out _);
+            return key.VerifyData(file, Convert.FromBase64String(signatureBase64.Trim()),
+                System.Security.Cryptography.HashAlgorithmName.SHA256, System.Security.Cryptography.DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
+        }
+        catch { return false; }
+    }
+
+    static string Sha256(string path)
+    {
+        using var s = File.OpenRead(path);
+        return Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(s)).ToLowerInvariant();
+    }
+
+    // ---------- Installing, with rollback ----------
+
+    /// <summary>Written while a new version proves it starts; cleared by MarkHealthy. Lives next to the EXE.</summary>
+    public sealed record PendingUpdate(string Exe, string From, string To, int Attempts);
+
+    static string MarkerFor(string exe) => exe + ".update.json";
+
+    /// <summary>
+    /// Downloads the update (bounded to its published size, cancellable), checks it, swaps it in and restarts. The
+    /// previous EXE stays as ".old" until the new one reports a healthy start; if it doesn't start, the old one is put
+    /// back. Returns why it couldn't, or null on success (the app is restarting).
+    /// </summary>
+    public static async Task<string?> InstallAsync(UpdateInfo update, IProgress<double> progress, CancellationToken cancel = default)
     {
         var exe = Environment.ProcessPath!;
         var dir = Path.GetDirectoryName(exe)!;
@@ -114,49 +161,94 @@ public static class Updater
         var old = exe + ".old";
         try
         {
-            using (var response = await Http.GetAsync(update.DownloadUrl, HttpCompletionOption.ResponseHeadersRead))
+            using (var response = await Http.GetAsync(update.DownloadUrl, HttpCompletionOption.ResponseHeadersRead, cancel))
             {
                 response.EnsureSuccessStatusCode();
-                long total = response.Content.Headers.ContentLength ?? update.Size;
-                await using var input = await response.Content.ReadAsStreamAsync();
+                if (response.Content.Headers.ContentLength is { } announced && announced != update.Size)
+                    return "The download isn't the size GitHub lists for it, so it wasn't used.";
+                await using var input = await response.Content.ReadAsStreamAsync(cancel);
                 await using var output = File.Create(fresh);
                 var buffer = new byte[1 << 16];
                 long done = 0;
                 int read;
-                while ((read = await input.ReadAsync(buffer)) > 0)
+                while ((read = await input.ReadAsync(buffer, cancel)) > 0)
                 {
-                    await output.WriteAsync(buffer.AsMemory(0, read));
                     done += read;
-                    if (total > 0) progress.Report((double)done / total);
+                    if (done > update.Size) return "The download was bigger than expected, so it was stopped.";
+                    await output.WriteAsync(buffer.AsMemory(0, read), cancel);
+                    progress.Report((double)done / update.Size);
                 }
             }
-            if (new FileInfo(fresh).Length != update.Size) throw new IOException("Download was incomplete.");
+            if (new FileInfo(fresh).Length != update.Size) return "The download was incomplete. Try again.";
+            if (update.Sha256 is { } expected && !Sha256(fresh).Equals(expected, StringComparison.OrdinalIgnoreCase))
+                return "The download didn't match its published checksum, so it wasn't used.";
+            if (SigningConfigured)
+            {
+                if (update.SignatureUrl is null) return "This release isn't signed, so it wasn't installed.";
+                var signature = await Http.GetStringAsync(update.SignatureUrl, cancel);
+                await using var check = File.OpenRead(fresh);
+                if (!Verify(check, signature, SigningKey)) return "The update's signature didn't check out, so it wasn't installed.";
+            }
 
             if (File.Exists(old)) File.Delete(old);
             File.Move(exe, old);          // a running EXE can be renamed, just not overwritten
             File.Move(fresh, exe);
+            File.WriteAllText(MarkerFor(exe), JsonSerializer.Serialize(new PendingUpdate(exe, CurrentVersion.ToString(), update.Version.ToString(), 0)));
         }
-        catch
+        catch (OperationCanceledException) { return "Canceled."; }
+        catch (Exception ex)
         {
-            try { if (File.Exists(fresh)) File.Delete(fresh); } catch { }
-            if (!File.Exists(exe) && File.Exists(old)) File.Move(old, exe); // put the original back
-            return false;
+            if (!File.Exists(exe) && File.Exists(old)) try { File.Move(old, exe); } catch { } // put the original back
+            return ex is UnauthorizedAccessException ? "Rig's folder is read-only, so it can't update itself here." : $"Couldn't update: {ex.Message}";
         }
+        finally { try { if (File.Exists(fresh)) File.Delete(fresh); } catch { } }
 
         App.ReleaseInstanceLock();
-        Process.Start(new ProcessStartInfo(exe) { UseShellExecute = true, WorkingDirectory = dir });
-        Application.Current.Shutdown();
-        return true;
+        Process.Start(new ProcessStartInfo(exe, "--updated") { UseShellExecute = true, WorkingDirectory = dir });
+        Application.Current.Shutdown(); // runs the normal exit: Game Mode restores, recordings finish
+        return null;
     }
 
-    /// <summary>Removes the previous version left behind by an update.</summary>
-    public static void CleanUpOld()
+    public enum StartCheck { Normal, Trial, RolledBack }
+
+    /// <summary>
+    /// Runs first thing at start. After an update, counts start attempts; if the new version failed to come up
+    /// three times, the previous EXE is put back (and started). The broken one is kept as ".failed".
+    /// </summary>
+    public static StartCheck CheckAtStart(string exe, bool launchOld = true)
     {
+        var marker = MarkerFor(exe);
+        try { if (File.Exists(exe + ".new")) File.Delete(exe + ".new"); } catch { } // an interrupted download
+        if (!File.Exists(marker)) { CleanUpOld(exe); return StartCheck.Normal; }
         try
         {
-            var old = Environment.ProcessPath + ".old";
-            if (File.Exists(old)) File.Delete(old);
+            var pending = JsonSerializer.Deserialize<PendingUpdate>(File.ReadAllText(marker))!;
+            if (pending.Attempts >= 2 && File.Exists(exe + ".old"))
+            {
+                File.Move(exe, exe + ".failed", overwrite: true);
+                File.Move(exe + ".old", exe);
+                File.Delete(marker);
+                if (launchOld) Process.Start(new ProcessStartInfo(exe, "--rolled-back") { UseShellExecute = true, WorkingDirectory = Path.GetDirectoryName(exe)! });
+                return StartCheck.RolledBack;
+            }
+            File.WriteAllText(marker, JsonSerializer.Serialize(pending with { Attempts = pending.Attempts + 1 }));
+            return StartCheck.Trial;
         }
-        catch { /* still locked for a moment; next launch gets it */ }
+        catch { return StartCheck.Normal; }
+    }
+
+    /// <summary>The new version is up and running: forget the old one.</summary>
+    public static void MarkHealthy(string exe)
+    {
+        try { File.Delete(MarkerFor(exe)); } catch { }
+        CleanUpOld(exe);
+    }
+
+    /// <summary>Removes the previous version, but never while an update is still on trial.</summary>
+    public static void CleanUpOld(string? exe = null)
+    {
+        exe ??= Environment.ProcessPath!;
+        if (File.Exists(MarkerFor(exe))) return;
+        try { if (File.Exists(exe + ".old")) File.Delete(exe + ".old"); } catch { /* still locked; next launch */ }
     }
 }

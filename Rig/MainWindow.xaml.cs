@@ -36,7 +36,7 @@ public partial class MainWindow : Window
         _screenTime.Notify += Notify;
         _power = new PowerTimer(() => _gameMode.Detector.Libraries.Where(l => l.Source == "Steam" && l.Name is null).Select(l => l.Root));
         _power.Due += action => new Views.PowerCountdown(action).Show();
-        _recorder.Finished += (file, error) => Dispatcher.Invoke(() => RecordingFinished(file, error));
+        _recorder.Finished += (file, error) => Dispatcher.BeginInvoke(() => RecordingFinished(file, error));
         _timers.Fired += TimerFired;
         RegisterPages();
 
@@ -67,7 +67,8 @@ public partial class MainWindow : Window
         _freeTimer.Start();
 
         // Updates: clean up after a previous update, then check shortly after start and once a day.
-        Updater.CleanUpOld();
+        // Once the window has been up for a bit, this version counts as healthy and the previous one can go.
+        Loaded += async (_, _) => { await Task.Delay(TimeSpan.FromSeconds(5)); Updater.MarkHealthy(Environment.ProcessPath!); };
         _updateTimer.Tick += async (_, _) =>
         {
             _updateTimer.Interval = TimeSpan.FromHours(24);
@@ -634,7 +635,9 @@ public partial class MainWindow : Window
         _crosshair?.Close();
         _crosshairKeys?.Dispose();
         _screenTime.Stop();
-        _recorder.Stop();
+        // Finish a recording in progress so the file is complete (playable) before the app goes away.
+        if (_recorder.IsRecording && !_recorder.StopAndWait(TimeSpan.FromSeconds(30)))
+            try { File.AppendAllText(AppSettings.DataFile(Path.Combine("logs", "recordings.log")), $"{DateTime.Now:s} recording didn't finish before exit{Environment.NewLine}"); } catch { }
         _inputStats.Stop();
         Created<Views.ClipboardView>("Clipboard")?.FlushNotes();
         _hotkeys?.Dispose();
