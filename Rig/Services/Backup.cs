@@ -5,7 +5,8 @@ namespace Rig.Services;
 /// <summary>A shareable snapshot of how someone has Rig set up.</summary>
 public sealed class BackupFile
 {
-    public int Format { get; set; } = 1;
+    /// <summary>1: PC Optimizer / Rig 2.0 (settings copied wholesale). 2: settings follow SettingsPolicy.</summary>
+    public int Format { get; set; } = Backup.CurrentFormat;
     public string Version { get; set; } = "";
     public DateTime Created { get; set; }
     public AppSettings Settings { get; set; } = new();
@@ -17,16 +18,43 @@ public sealed class BackupFile
     public Dictionary<string, string> Data { get; set; } = [];
 }
 
+/// <summary>What an import did, for an honest report.</summary>
+public sealed record ImportResult(List<string> Notes, List<string> SkippedTweaks, List<string> DataRestored, List<string> DataFailed, string? SafetyCopy, bool SettingsSaved);
+
 public static class Backup
 {
+    public const int CurrentFormat = 2;
+    public const long MaxSize = 20 * 1024 * 1024;
     public const string Filter = "Rig setup (*.pcopt)|*.pcopt";
     static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
+
+    /// <summary>The file contents; personal data only when asked (a setup shared with friends stays settings-only).</summary>
+    public static BackupFile Create(AppSettings settings, IEnumerable<string> tweaksOn, IEnumerable<string> apps, bool includeData)
+    {
+        // Only what the policy allows to travel: never this PC's recovery records or schedules.
+        var portable = new AppSettings();
+        SettingsPolicy.Apply(settings, portable, new ImportChoices(Preferences: true, AllowTrackingOn: true, PersonalData: includeData));
+        var file = new BackupFile
+        {
+            Version = Updater.CurrentVersion.ToString(), Created = DateTime.Now, Settings = portable,
+            Tweaks = tweaksOn.ToList(), Apps = apps.ToList(),
+        };
+        if (includeData)
+            foreach (var name in AppSettings.DataFiles)
+                if (File.Exists(AppSettings.DataFile(name)))
+                    try { file.Data[name] = File.ReadAllText(AppSettings.DataFile(name)); } catch { }
+        return file;
+    }
 
     public static async Task ExportAsync(string path, AppSettings settings, IProgress<string> progress, bool includeData = false)
     {
         progress.Report("Reading tweaks…");
-        var tweaks = Services.Tweaks.All().SelectMany(g => g.Tweaks).ToList();
-        foreach (var t in tweaks) t.Refresh();
+        var tweaks = await Task.Run(() =>
+        {
+            var all = Services.Tweaks.All().SelectMany(g => g.Tweaks).ToList();
+            foreach (var t in all) t.Refresh();
+            return all.Where(t => t.IsOn).Select(t => t.Name).ToList();
+        });
 
         progress.Report("Checking installed apps (this takes a few seconds)…");
         var apps = new List<string>();
@@ -37,64 +65,91 @@ public static class Backup
         }
         catch { /* winget missing: share settings and tweaks only */ }
 
-        var file = new BackupFile
-        {
-            Version = Updater.CurrentVersion.ToString(),
-            Created = DateTime.Now,
-            Settings = settings,
-            Tweaks = tweaks.Where(t => t.IsOn).Select(t => t.Name).ToList(),
-            Apps = apps,
-        };
-        if (includeData)
-            foreach (var name in AppSettings.DataFiles)
-                if (File.Exists(AppSettings.DataFile(name))) file.Data[name] = await File.ReadAllTextAsync(AppSettings.DataFile(name));
-        await File.WriteAllTextAsync(path, JsonSerializer.Serialize(file, Json));
+        await Write(path, Create(settings, tweaks, apps, includeData));
     }
 
-    public static BackupFile Read(string path) =>
-        JsonSerializer.Deserialize<BackupFile>(File.ReadAllText(path)) ?? throw new InvalidDataException("Not a Rig setup file.");
-
-    /// <summary>Applies settings and tweaks. Returns the tweaks that couldn't be applied (e.g. need admin).</summary>
-    public static List<string> Apply(BackupFile backup, AppSettings settings)
+    static async Task Write(string path, BackupFile file)
     {
-        settings.CopyFrom(backup.Settings);
-        var catalog = Winget.Catalog().SelectMany(g => g.Packages).Select(p => p.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        settings.PendingInstallIds = backup.Apps.Where(catalog.Contains).ToList(); // only known, vetted packages
-        settings.Save();
-        // Only known file names are written back, never paths taken from the file.
-        foreach (var (name, content) in backup.Data)
-            if (AppSettings.DataFiles.Contains(name))
-                try { File.WriteAllText(AppSettings.DataFile(name), content); } catch { }
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
+        var tmp = path + ".tmp";
+        await File.WriteAllTextAsync(tmp, JsonSerializer.Serialize(file, Json));
+        File.Move(tmp, path, overwrite: true);
+    }
+
+    /// <summary>Reads and checks a setup file; throws with a message a person can act on.</summary>
+    public static BackupFile Read(string path)
+    {
+        var info = new FileInfo(path);
+        if (info.Length > MaxSize) throw new InvalidDataException($"That file is {Fmt.Bytes(info.Length)}; setup files are never that big, so it wasn't opened.");
+        BackupFile? b;
+        try { b = JsonSerializer.Deserialize<BackupFile>(File.ReadAllText(path)); }
+        catch (JsonException) { throw new InvalidDataException("That isn't a Rig setup file (or it's damaged)."); }
+        if (b?.Settings is null) throw new InvalidDataException("That isn't a Rig setup file.");
+        if (b.Format > CurrentFormat) throw new InvalidDataException($"That setup was made by a newer Rig ({b.Version}). Update Rig, then import it.");
+        b.Tweaks ??= []; b.Apps ??= []; b.Data ??= [];
+        b.Settings.Normalize();
+        // Only known data files, never paths taken from the file.
+        b.Data = b.Data.Where(kv => AppSettings.DataFiles.Contains(kv.Key) && kv.Value is not null).ToDictionary();
+        return b;
+    }
+
+    /// <summary>
+    /// Applies the parts the person chose. Before anything changes, the current setup (with personal data) is saved
+    /// to Rig's backups folder, so the import can be undone by importing that file.
+    /// </summary>
+    public static ImportResult Apply(BackupFile backup, AppSettings settings, ImportChoices choices, bool applyTweaks = true)
+    {
+        string? safety = null;
+        try
+        {
+            safety = AppSettings.DataFile(Path.Combine("backups", $"before-import-{DateTime.Now:yyyyMMdd-HHmmss}.pcopt"));
+            Write(safety, Create(settings, [], [], includeData: true)).GetAwaiter().GetResult();
+        }
+        catch { safety = null; }
+
+        var notes = SettingsPolicy.Apply(backup.Settings, settings, choices);
+        if (choices.Apps)
+        {
+            var catalog = Winget.Catalog().SelectMany(g => g.Packages).Select(p => p.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            settings.PendingInstallIds = backup.Apps.Where(catalog.Contains).ToList(); // only known, vetted packages
+        }
+        bool saved = settings.Save();
+
+        var restored = new List<string>();
+        var failed = new List<string>();
+        if (choices.PersonalData)
+            foreach (var (name, content) in backup.Data)
+                try { File.WriteAllText(AppSettings.DataFile(name), content); restored.Add(name); }
+                catch { failed.Add(name); }
 
         var skipped = new List<string>();
-        var tweaks = Services.Tweaks.All().SelectMany(g => g.Tweaks).ToDictionary(t => t.Name, StringComparer.OrdinalIgnoreCase);
-        foreach (var name in backup.Tweaks)
+        if (choices.Tweaks && applyTweaks)
         {
-            if (!tweaks.TryGetValue(name, out var t)) continue;
-            t.Refresh();
-            if (t.IsOn) continue;
-            if (!t.CanChange) { skipped.Add(name); continue; }
-            t.IsOn = true;
-            if (!t.IsOn) skipped.Add(name);
+            var tweaks = Services.Tweaks.All().SelectMany(g => g.Tweaks).ToDictionary(t => t.Name, StringComparer.OrdinalIgnoreCase);
+            foreach (var name in backup.Tweaks)
+            {
+                if (!tweaks.TryGetValue(name, out var t)) continue;
+                t.Refresh();
+                if (t.IsOn) continue;
+                if (!t.CanChange) { skipped.Add(name); continue; }
+                t.IsOn = true;
+                if (!t.IsOn) skipped.Add(name);
+            }
         }
-        return skipped;
+        return new ImportResult(notes, skipped, restored, failed, safety, saved);
     }
 
-    /// <summary>Plain-English summary for the import confirmation.</summary>
+    /// <summary>Plain-English summary for the import preview.</summary>
     public static string Describe(BackupFile b)
     {
         var s = b.Settings;
         var lines = new List<string>
         {
-            $"From Rig {b.Version}, saved {b.Created:g}:",
-            $"  • Game Mode: automatic {(s.AutoGameMode ? "on" : "off")}, {s.GameProfiles.Count} game profile(s), " +
-            $"{s.CustomGames.Count} custom game(s), {s.AppsToClose.Count} app(s) to close",
-            $"  • {b.Tweaks.Count} tweak(s) to switch on",
-            $"  • {b.Apps.Count} app(s) to offer for install (you choose on the Apps page)",
-            $"  • Auto-clean {(s.AutoClean ? $"every {s.AutoCleanDays} day(s)" : "off")}, updates {(s.AutoCheckUpdates ? "automatic" : "manual")}",
+            $"From {(b.Format < 2 ? "PC Optimizer / Rig" : "Rig")} {b.Version}, saved {b.Created:g}.",
+            $"Game Mode: automatic {(s.AutoGameMode ? "on" : "off")}, {s.GameProfiles.Count} game profile(s), " +
+            $"{s.CustomGames.Count} custom game(s), {s.AppsToClose.Count} app(s) to close.",
+            $"Look: {s.Theme} theme, {s.HomeCards.Count} Home cards, {s.DisabledModules.Count} module(s) switched off.",
         };
-        if (b.Data.Count > 0)
-            lines.Add($"  • Personal data: {string.Join(", ", b.Data.Keys.Select(Path.GetFileNameWithoutExtension))} (replaces yours)");
         return string.Join("\n", lines);
     }
 }

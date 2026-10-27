@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using System.Text.Json;
 using Microsoft.Win32;
 
@@ -52,6 +53,8 @@ public sealed class AppSettings
     public bool KeepAwake { get; set; } = true;
     public bool CloseApps { get; set; }
     public bool ReopenApps { get; set; } = true;
+    /// <summary>End apps that don't close when asked (unsaved work in them is lost). Off: they're left open.</summary>
+    public bool ForceCloseApps { get; set; }
     public List<string> CustomGames { get; set; } = [];
     public List<string> AppsToClose { get; set; } = [];
     /// <summary>Game folders or exe names the user marked "Not a game".</summary>
@@ -72,22 +75,16 @@ public sealed class AppSettings
     /// <summary>Catalog apps to tick on the Apps page after importing a backup (consumed on next start).</summary>
     public List<string> PendingInstallIds { get; set; } = [];
 
-    /// <summary>Copies the shareable preferences from a backup (not machine state like pending restores).</summary>
-    public void CopyFrom(AppSettings o)
-    {
-        CloseToTray = o.CloseToTray; Notifications = o.Notifications;
-        AutoGameMode = o.AutoGameMode; DetectFullscreen = o.DetectFullscreen;
-        BoostPowerPlan = o.BoostPowerPlan; BoostPriority = o.BoostPriority; KeepAwake = o.KeepAwake;
-        CloseApps = o.CloseApps; ReopenApps = o.ReopenApps;
-        CustomGames = o.CustomGames.ToList(); AppsToClose = o.AppsToClose.ToList();
-        IgnoredGames = o.IgnoredGames.ToList(); GameProfiles = o.GameProfiles.ToList();
-        AutoCheckUpdates = o.AutoCheckUpdates; AutoClean = o.AutoClean; AutoCleanDays = o.AutoCleanDays;
-    }
-
     /// <summary>Power plan to restore if the app exited while Game Mode was on.</summary>
     public string? PendingRestorePlan { get; set; }
     /// <summary>A game profile changed the resolution and the app exited before putting it back.</summary>
     public bool PendingDisplayRestore { get; set; }
+    /// <summary>Game Mode changes still to undo (see GameModeRecovery); kept until each one is put back.</summary>
+    public GameModeRecovery Recovery { get; set; } = new();
+
+    /// <summary>Format of this file; newer files from a later Rig are read as far as possible and never downgraded silently.</summary>
+    public int SchemaVersion { get; set; } = CurrentSchema;
+    public const int CurrentSchema = 2;
 
     /// <summary>Set RIG_SETTINGS to use a different file (handy for testing).</summary>
     static string FilePath => Environment.GetEnvironmentVariable("RIG_SETTINGS") is { Length: > 0 } custom
@@ -122,20 +119,90 @@ public sealed class AppSettings
     public static string DataFile(string name) => Path.Combine(Path.GetDirectoryName(FilePath)!, name);
 
     /// <summary>Data files a full backup carries along with the settings.</summary>
-    public static readonly string[] DataFiles = ["sessions.json", "screentime.json", "inputstats.json", "notes.txt", "benchmarks.json", "layouts.json"];
+    public static readonly string[] DataFiles = ["sessions.json", "screentime.json", "inputstats.json", "notes.txt", "benchmarks.json", "layouts.json", "timers.json"];
 
     static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
 
+    /// <summary>Set when settings.json couldn't be read: what happened and where the damaged copy was kept.</summary>
+    [System.Text.Json.Serialization.JsonIgnore] public string? LoadProblem { get; private set; }
+
+    /// <summary>A save failed (disk full, no access…); the app says so once instead of pretending it worked.</summary>
+    public static event Action<string>? SaveFailed;
+
+    /// <summary>
+    /// Reads settings.json. A damaged file is kept beside it (settings.corrupt-*.json) and the last good copy
+    /// (settings.json.bak, made by every save) is used instead; only if that fails too do the defaults apply.
+    /// </summary>
     public static AppSettings Load()
+    {
+        if (!File.Exists(FilePath))
+            return File.Exists(FilePath + ".bak") && TryRead(FilePath + ".bak") is { } fromBackup ? fromBackup : new() { IsFirstRun = true };
+        if (TryRead(FilePath) is { } s) return s;
+
+        string kept = FilePath.Replace(".json", $".corrupt-{DateTime.Now:yyyyMMdd-HHmmss}.json");
+        try { File.Copy(FilePath, kept, overwrite: true); } catch { kept = "(couldn't keep a copy)"; }
+        var good = TryRead(FilePath + ".bak") ?? new AppSettings();
+        good.LoadProblem = $"Your settings file was damaged, so {(File.Exists(FilePath + ".bak") ? "the last good copy" : "the defaults")} were loaded. The damaged file was kept as {Path.GetFileName(kept)}.";
+        return good;
+    }
+
+    static AppSettings? TryRead(string path)
     {
         try
         {
-            if (File.Exists(FilePath))
-                return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(FilePath)) ?? new();
+            var s = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path));
+            s?.Normalize();
+            return s;
         }
-        catch { /* corrupt file: fall back to defaults */ }
-        return new() { IsFirstRun = true };
+        catch { return null; }
     }
+
+    static readonly string[] Themes = ["Dark", "Light"];
+
+    /// <summary>
+    /// Makes loaded or imported values safe: missing (null) lists and objects get their defaults, numbers are kept
+    /// in range, and unknown themes, colours, enums and hotkeys fall back to defaults.
+    /// </summary>
+    public void Normalize()
+    {
+        var defaults = new AppSettings();
+        foreach (var p in SettingsPolicy.Properties())
+            if (!p.PropertyType.IsValueType && p.PropertyType != typeof(string) && p.GetValue(this) is null && p.GetValue(defaults) is { } d)
+                p.SetValue(this, d);
+        GameProfiles.RemoveAll(g => g is null);
+        foreach (var g in GameProfiles) { g.Game ??= ""; g.DisplayMode ??= DisplayModes.Unchanged; }
+        CrosshairGames.RemoveAll(g => g is null);
+        Crosshair ??= new();
+        if (!Enum.IsDefined(Crosshair.Shape)) Crosshair.Shape = CrosshairShape.CrossDot;
+        Crosshair.Size = Math.Clamp(Crosshair.Size, 1, 60);
+        Crosshair.Thickness = Math.Clamp(Crosshair.Thickness, 1, 12);
+        Crosshair.Gap = Math.Clamp(Crosshair.Gap, 0, 40);
+        Crosshair.Opacity = Math.Clamp(Crosshair.Opacity, 0.1, 1);
+        if (!IsColor(Crosshair.Color)) Crosshair.Color = defaults.Crosshair.Color;
+        if (!Themes.Contains(Theme)) Theme = defaults.Theme;
+        if (Accent is not null && !IsColor(Accent)) Accent = null;
+        if (!Enum.IsDefined(MaintenanceDay)) MaintenanceDay = DayOfWeek.Sunday;
+        MaintenanceHour = Math.Clamp(MaintenanceHour, 0, 23);
+        AutoCleanDays = Math.Clamp(AutoCleanDays, 1, 90);
+        BreakMinutes = Math.Clamp(BreakMinutes, 15, 240);
+        OverlayCorner = Math.Clamp(OverlayCorner, 0, 3);
+        foreach (var (get, set, fallback) in new (Func<string>, Action<string>, string)[]
+                 {
+                     (() => ClipHotkey, v => ClipHotkey = v, defaults.ClipHotkey), (() => ScreenshotHotkey, v => ScreenshotHotkey = v, defaults.ScreenshotHotkey),
+                     (() => RecordHotkey, v => RecordHotkey = v, defaults.RecordHotkey), (() => CrosshairHotkey, v => CrosshairHotkey = v, defaults.CrosshairHotkey),
+                     (() => ColorHotkey, v => ColorHotkey = v, defaults.ColorHotkey),
+                 })
+            if (Hotkey.Parse(get()) is not { IsUsable: true }) set(fallback);
+        DisabledModules = DisabledModules.Where(id => id is not null && Rig.Modules.All.Any(m => m.Id == id && !m.Core)).Distinct().ToList();
+        HomeCards = HomeCards.Where(c => !string.IsNullOrWhiteSpace(c)).Distinct().ToList();
+        foreach (var list in new[] { CustomGames, AppsToClose, IgnoredGames, PinnedPages, CollapsedCategories, ColorHistory, PendingInstallIds })
+            list.RemoveAll(string.IsNullOrWhiteSpace);
+        ColorHistory = ColorHistory.Where(IsColor).Take(24).ToList();
+        Recovery ??= new();
+        Recovery.Normalize();
+    }
+
+    static bool IsColor(string? s) => s is not null && Regex.IsMatch(s, "^#[0-9A-Fa-f]{6}$");
 
     /// <summary>No settings file existed yet: show the welcome. Not saved.</summary>
     [System.Text.Json.Serialization.JsonIgnore] public bool IsFirstRun { get; private set; }
@@ -195,14 +262,56 @@ public sealed class AppSettings
     public DateTime? LastMaintenance { get; set; }
     public string? LastMaintenanceSummary { get; set; }
 
-    public void Save()
+    static readonly object WriteLock = new();
+    static bool _reportedFailure;
+
+    /// <summary>
+    /// Writes settings.json atomically (a temp file replaces it, and the previous file becomes settings.json.bak), one
+    /// writer at a time across processes. Fields the scheduled maintenance writes from its own process are merged so
+    /// this copy never overwrites them with older values. Returns false (and raises SaveFailed once) if it couldn't.
+    /// </summary>
+    public bool Save()
     {
-        try
+        lock (WriteLock)
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
-            File.WriteAllText(FilePath, JsonSerializer.Serialize(this, Json));
+            using var mutex = new Mutex(false, @"Local\Rig.Settings." + Convert.ToHexString(System.Security.Cryptography.SHA1.HashData(System.Text.Encoding.UTF8.GetBytes(FilePath.ToLowerInvariant())))[..12]);
+            bool owned = false;
+            try
+            {
+                try { owned = mutex.WaitOne(TimeSpan.FromSeconds(5)); } catch (AbandonedMutexException) { owned = true; }
+                Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
+                if (File.Exists(FilePath) && TryRead(FilePath) is { } onDisk) MergeNewer(onDisk);
+                var tmp = FilePath + ".tmp";
+                File.WriteAllText(tmp, JsonSerializer.Serialize(this, Json));
+                if (File.Exists(FilePath)) File.Replace(tmp, FilePath, FilePath + ".bak", ignoreMetadataErrors: true);
+                else File.Move(tmp, FilePath);
+                _reportedFailure = false;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                if (!_reportedFailure) { _reportedFailure = true; SaveFailed?.Invoke($"Rig couldn't save your settings ({ex.Message}). Changes may be lost when it closes."); }
+                return false;
+            }
+            finally { if (owned) mutex.ReleaseMutex(); }
         }
-        catch { }
+    }
+
+    /// <summary>Maintenance runs as its own process; its results on disk win if they're newer than this copy's.</summary>
+    void MergeNewer(AppSettings onDisk)
+    {
+        static bool Newer(DateTime? disk, DateTime? mine) => disk is { } d && (mine is null || d > mine);
+        if (Newer(onDisk.LastMaintenance, LastMaintenance)) { LastMaintenance = onDisk.LastMaintenance; LastMaintenanceSummary = onDisk.LastMaintenanceSummary; }
+        if (Newer(onDisk.LastAutoClean, LastAutoClean)) LastAutoClean = onDisk.LastAutoClean;
+    }
+
+    /// <summary>Reads the newest settings, changes them and saves, for processes that mustn't overwrite the app's choices.</summary>
+    public static bool Update(Action<AppSettings> change)
+    {
+        var fresh = Load();
+        if (fresh.LoadProblem is not null) return false; // never write over a file we couldn't read
+        change(fresh);
+        return fresh.Save();
     }
 }
 

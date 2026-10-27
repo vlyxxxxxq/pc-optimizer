@@ -71,6 +71,19 @@ public static class DisplayModes
         return ChangeDisplaySettingsEx(null, ref dm, IntPtr.Zero, CDS_FULLSCREEN, IntPtr.Zero) == 0;
     }
 
-    /// <summary>Back to the mode saved in Windows' settings.</summary>
-    public static void Restore() => ChangeDisplaySettingsEx(null, IntPtr.Zero, IntPtr.Zero, 0, IntPtr.Zero);
+    /// <summary>Back to the mode saved in Windows' settings. False if Windows refused.</summary>
+    public static bool Restore() => ChangeDisplaySettingsEx(null, IntPtr.Zero, IntPtr.Zero, 0, IntPtr.Zero) == 0;
+
+    /// <summary>
+    /// Back to a captured mode: Windows' saved mode first (the clean way), then the captured one if that differs.
+    /// Returns whether the display now shows the wanted mode (null: whatever Windows has saved).
+    /// </summary>
+    public static bool RestoreTo((int W, int H, int Hz)? mode)
+    {
+        if (Current() is null) return false; // display not connected right now
+        bool ok = Restore();
+        if (mode is not { } m) return ok;
+        if (Current() is { } now && now == m) return true;
+        return Apply(m.W, m.H, m.Hz) && Current() == m;
+    }
 }

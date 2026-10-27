@@ -69,7 +69,7 @@ public class ReproTests
             ScreenTimeEnabled = false, ClipboardHistoryEnabled = false, ClipHotkey = "Ctrl+Alt+F1",
         };
         var target = new AppSettings();
-        target.CopyFrom(source);
+        SettingsPolicy.Apply(source, target, new ImportChoices());
         Assert.Equal("Light", target.Theme);
         Assert.Equal("#9B6BFF", target.Accent);
         Assert.Equal(["health"], target.HomeCards);

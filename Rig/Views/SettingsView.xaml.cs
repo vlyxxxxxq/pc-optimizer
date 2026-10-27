@@ -236,19 +236,19 @@ public partial class SettingsView : UserControl
             MessageBox.Show($"That file couldn't be read:\n{ex.Message}", "Import setup", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
-        if (MessageBox.Show(Backup.Describe(backup) +
-                            "\n\nThis replaces your current Game Mode and app settings. Tweaks are switched on (you can turn any off later). Continue?",
-                "Import setup", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
-            return;
+        var preview = new ImportPreviewWindow(backup, _settings) { Owner = Window.GetWindow(this) };
+        if (preview.ShowDialog() != true || preview.Choices is not { } choices) return;
 
-        var skipped = Backup.Apply(backup, _settings);
-        MessageBox.Show("Setup imported. Rig will restart to load it" +
-                        (_settings.PendingInstallIds.Count > 0 ? ", then show the apps to install." : ".") +
-                        (skipped.Count > 0
-                            ? $"\n\nThese tweaks need administrator mode, so they weren't applied:\n  • {string.Join("\n  • ", skipped)}"
-                            : ""),
-            "Import setup", MessageBoxButton.OK, MessageBoxImage.Information);
-        App.Restart();
+        var result = Backup.Apply(backup, _settings, choices);
+        var lines = new List<string> { result.SettingsSaved ? "Setup imported." : "The import couldn't be saved, so your settings were not changed on disk." };
+        lines.AddRange(result.Notes);
+        if (result.DataRestored.Count > 0) lines.Add($"Personal data restored: {string.Join(", ", result.DataRestored)}.");
+        if (result.DataFailed.Count > 0) lines.Add($"Couldn't restore: {string.Join(", ", result.DataFailed)}.");
+        if (result.SkippedTweaks.Count > 0) lines.Add($"These tweaks need administrator mode, so they weren't applied:\n  • {string.Join("\n  • ", result.SkippedTweaks)}");
+        if (result.SafetyCopy is not null) lines.Add($"Your previous setup was saved as {Path.GetFileName(result.SafetyCopy)} in Rig's backups folder.");
+        lines.Add("Rig will restart to load it" + (_settings.PendingInstallIds.Count > 0 ? ", then show the apps to install." : "."));
+        MessageBox.Show(string.Join("\n\n", lines), "Import setup", MessageBoxButton.OK, result.SettingsSaved ? MessageBoxImage.Information : MessageBoxImage.Warning);
+        if (result.SettingsSaved) App.Restart();
     }
 
     void TestNotification_Click(object sender, RoutedEventArgs e) =>

@@ -93,6 +93,9 @@ public partial class MainWindow : Window
             Loaded += (_, _) => Go("Apps");
         }
 
+        AppSettings.SaveFailed += message => Dispatcher.BeginInvoke(() => _tray.Notify("Settings not saved", message));
+        if (_settings.LoadProblem is { } loadProblem) Loaded += (_, _) => _tray.Notify("Settings were reset", loadProblem);
+
         // File batches cut short by a crash or power cut show up in Recovery.
         Task.Run(BatchMover.FlagInterrupted).ContinueWith(t =>
         {
