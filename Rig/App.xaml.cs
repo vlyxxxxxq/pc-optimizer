@@ -119,6 +119,9 @@ public partial class App : Application
     }
 
     /// <summary>Lets a relaunched (e.g. elevated) copy start before this one has fully exited.</summary>
+    /// <summary>Every switch gets its caption as its accessible name when it loads (see MainWindow.NameSwitchOnLoad).</summary>
+    void Switch_Loaded(object sender, RoutedEventArgs e) => Rig.MainWindow.NameSwitchOnLoad(sender, e);
+
     public static void ReleaseInstanceLock()
     {
         try { _instanceLock?.ReleaseMutex(); } catch { }

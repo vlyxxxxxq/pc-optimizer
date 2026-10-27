@@ -11,15 +11,16 @@
                 <StackPanel>
                     <TextBlock Text="Save the current arrangement" FontSize="15" FontWeight="SemiBold"/>
                     <TextBlock x:Name="OpenNowText" Style="{StaticResource Muted}" Margin="0,4,0,0" TextWrapping="Wrap"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
-                        <TextBox x:Name="NameBox" Width="240" Margin="0,0,8,0" KeyDown="NameBox_KeyDown" ToolTip="Layout name"/>
+                    <Label Content="Layout _name" Target="{Binding ElementName=NameBox}" Padding="0" Margin="0,12,0,0" Foreground="{DynamicResource MutedBrush}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                        <TextBox x:Name="NameBox" Width="240" Margin="0,0,8,0" KeyDown="NameBox_KeyDown" AutomationProperties.Name="Layout name"/>
                         <Button x:Name="SaveButton" Content="Save layout" Style="{StaticResource PrimaryButton}" Click="Save_Click"/>
                     </StackPanel>
                     <CheckBox x:Name="LaunchCheck" Content="When restoring, also open apps from the layout that aren't running" Margin="0,12,0,0" Click="LaunchCheck_Click"/>
                 </StackPanel>
             </Border>
 
-            <TextBlock x:Name="StatusText" Style="{StaticResource Muted}" Margin="2,12,0,0" TextWrapping="Wrap"/>
+            <TextBlock x:Name="StatusText" AutomationProperties.LiveSetting="Polite" Style="{StaticResource Muted}" Margin="2,12,0,0" TextWrapping="Wrap"/>
             <TextBlock x:Name="EmptyText" Style="{StaticResource Muted}" Margin="2,12,0,0" Text="No layouts saved yet."/>
             <ItemsControl x:Name="LayoutList" Margin="0,4,0,0">
                 <ItemsControl.ItemTemplate>

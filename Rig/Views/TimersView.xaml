@@ -24,25 +24,32 @@
                             <Button Content="1 hour" Tag="60" Click="Preset_Click" Margin="0,0,6,6"/>
                         </WrapPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                            <TextBox x:Name="TimerLength" Width="90" Text="15m" Margin="0,0,8,0" ToolTip="e.g. 15m, 1h 30m, 90s"/>
-                            <TextBox x:Name="TimerName" Width="160" Margin="0,0,8,0" ToolTip="Name (optional)"/>
-                            <Button x:Name="StartTimerButton" Content="Start" Style="{StaticResource PrimaryButton}" Click="StartTimer_Click"/>
+                            <StackPanel Margin="0,0,8,0">
+                                <Label Content="_Length" Target="{Binding ElementName=TimerLength}" Padding="0" Foreground="{DynamicResource MutedBrush}"/>
+                                <TextBox x:Name="TimerLength" Width="90" Text="15m" Margin="0,4,0,0" ToolTip="e.g. 15m, 1h 30m, 90s" AutomationProperties.Name="Timer length"/>
+                            </StackPanel>
+                            <StackPanel Margin="0,0,8,0">
+                                <Label Content="_Name (optional)" Target="{Binding ElementName=TimerName}" Padding="0" Foreground="{DynamicResource MutedBrush}"/>
+                                <TextBox x:Name="TimerName" Width="160" Margin="0,4,0,0" AutomationProperties.Name="Timer name"/>
+                            </StackPanel>
+                            <Button x:Name="StartTimerButton" Content="Start" Style="{StaticResource PrimaryButton}" Click="StartTimer_Click" VerticalAlignment="Bottom"/>
                         </StackPanel>
-                        <TextBlock x:Name="TimerError" Style="{StaticResource Muted}" Margin="0,6,0,0" Foreground="{DynamicResource WarnBrush}"/>
+                        <TextBlock x:Name="TimerError" AutomationProperties.LiveSetting="Polite" Style="{StaticResource Muted}" Margin="0,6,0,0" Foreground="{DynamicResource WarnBrush}"/>
                     </StackPanel>
                 </Border>
                 <Border Grid.Column="2" Style="{StaticResource Card}">
                     <StackPanel>
                         <TextBlock Text="New reminder" FontSize="15" FontWeight="SemiBold"/>
-                        <TextBox x:Name="ReminderText" Margin="0,12,0,0" ToolTip="What to remind you about"/>
+                        <Label Content="_Remind me about" Target="{Binding ElementName=ReminderText}" Padding="0" Margin="0,12,0,0" Foreground="{DynamicResource MutedBrush}"/>
+                        <TextBox x:Name="ReminderText" Margin="0,4,0,0" AutomationProperties.Name="Remind me about"/>
                         <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                             <RadioButton x:Name="RemindIn" Content="in" GroupName="When" IsChecked="True" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                            <TextBox x:Name="RemindInBox" Text="30m" Width="70" Margin="0,0,12,0"/>
+                            <TextBox x:Name="RemindInBox" Text="30m" Width="70" Margin="0,0,12,0" AutomationProperties.Name="Remind in, for example 30m"/>
                             <RadioButton x:Name="RemindAt" Content="at" GroupName="When" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                            <TextBox x:Name="RemindAtBox" Width="70" Margin="0,0,12,0" ToolTip="e.g. 18:30 or 6:30pm"/>
+                            <TextBox x:Name="RemindAtBox" Width="70" Margin="0,0,12,0" ToolTip="e.g. 18:30 or 6:30pm" AutomationProperties.Name="Remind at, for example 18:30"/>
                             <Button x:Name="AddReminderButton" Content="Add" Style="{StaticResource PrimaryButton}" Click="AddReminder_Click"/>
                         </StackPanel>
-                        <TextBlock x:Name="ReminderError" Style="{StaticResource Muted}" Margin="0,6,0,0" Foreground="{DynamicResource WarnBrush}"/>
+                        <TextBlock x:Name="ReminderError" AutomationProperties.LiveSetting="Polite" Style="{StaticResource Muted}" Margin="0,6,0,0" Foreground="{DynamicResource WarnBrush}"/>
                     </StackPanel>
                 </Border>
             </Grid>

@@ -155,7 +155,7 @@ public partial class MainWindow : Window
                 _lastSession = await Task.Run(() => GameStats.Load().OrderByDescending(s => s.Start).FirstOrDefault());
                 _lastSessionLoaded = _lastSession is not null;
             }
-            home.SetGameMode(_gameMode.IsActive, _gameMode.Game?.Name, _lastSession);
+            home.SetGameMode(_gameMode.IsActive, _gameMode.Game?.Name, _lastSession, _gameMode.State);
         }
         if (home.Shows("music")) home.SetMusic(await Task.Run(NowPlaying.Current));
         if (home.Shows("screentime"))
@@ -281,6 +281,19 @@ public partial class MainWindow : Window
             p.Attach(_settings);
             p.TestNotificationRequested += (_, _) => _tray.Notify("Notifications work", "You'll see Game Mode alerts like this one.");
             p.NowPlayingChanged += SetNowPlaying;
+            p.PrivacyChanged += (_, _) => { foreach (var id in new[] { "Clipboard", "ScreenTime", "Input" }) ApplyModule(id); };
+            p.IsVisibleChanged += (_, _) =>
+            {
+                if (!p.IsVisible) return;
+                p.ShowShortcuts(
+                [
+                    ("Command palette", PaletteKeyText.Text is { Length: > 0 } k ? k : "taken by another app"),
+                    ("Clipboard history", "Ctrl+Alt+V"),
+                    ("Save the last 30 seconds", _settings.ClipHotkey), ("Screenshot", _settings.ScreenshotHotkey),
+                    ("Record screen", _settings.RecordHotkey), ("Crosshair on/off", _settings.CrosshairHotkey),
+                    ("Pick a colour", _settings.ColorHotkey),
+                ]);
+            };
             p.ModuleChanged += ApplyModule;
             p.UpdateFound += info =>
             {
@@ -696,6 +709,8 @@ public partial class MainWindow : Window
     /// <summary>Quick fade + slide up when a page opens.</summary>
     static void AnimateIn(UIElement page)
     {
+        // Respect "Animation effects" being off in Windows (reduced motion).
+        if (!SystemParameters.ClientAreaAnimation) { page.Opacity = 1; page.RenderTransform = null; return; }
         var ease = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut };
         var duration = TimeSpan.FromMilliseconds(220);
         var shift = new TranslateTransform(0, 12);

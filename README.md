@@ -40,8 +40,9 @@ The EXE isn't code-signed, so the first time you run it Windows SmartScreen may 
 Tools are grouped into five categories. Any tool you don't use can be switched off in Settings → Modules: it
 leaves the sidebar and stops its background work. Pages only load the first time you open them.
 
-**Home** – a grid of cards you choose and arrange (Customize): pinned tools (right-click any sidebar page to pin
-it), PC health with one-click fixes, live CPU and memory, system info, Game Mode, now playing, today's screen time
+**Home** – a grid of cards you choose and arrange (Customize, or a compact preset): pinned tools (right-click any
+sidebar page to pin it), a maintenance check with one-click fixes (junk, startup apps, free space, memory right now,
+driver age; a checklist, not a speed test), live CPU and memory, system info, Game Mode, now playing, today's screen time
 and input, timers, the power timer, free games and storage.
 
 **Command palette** – Ctrl+Alt+P (or Ctrl+Alt+Space when free) from anywhere: jump to any page or setting, run
@@ -52,8 +53,10 @@ reminders (`remind me in 20 min to stretch`, `timer 25m focus`).
 ### Gaming
 - **Game Mode** – turns on when a game from your libraries (Steam, Epic, GOG, Ubisoft, EA, Riot, Xbox, your own
   list) is the window you're using. Optional boosts: top power plan, high CPU priority, no sleep, closing background
-  apps; per-game profiles, including their own resolution and refresh rate. Everything is undone when the game
-  closes, even after a crash. Performance overlay with FPS (admin) and a recap card after each session.
+  apps (asked to close; force-closing is a separate option); per-game profiles, including their own resolution and
+  refresh rate. Each change is recorded before it's made and put back to your original value when the game closes;
+  anything that couldn't be restored (even after a crash) is retried on the next start, with a "Try restoring again"
+  button. Performance overlay with FPS (admin) and a recap card after each session.
 - **Game Library** – every installed Steam, Epic and GOG game with covers and playtime, patch notes, and
   free-to-keep games with optional alerts.
 - **Crosshair** – a click-through custom crosshair that turns on in the games you pick (Ctrl+Shift+F8).
@@ -62,8 +65,8 @@ reminders (`remind me in 20 min to stretch`, `timer 25m focus`).
   per-game APM. Counts only, never what you type.
 
 ### Media
-- **Similar Photos** – finds near-duplicate photos (resized or re-saved copies too), keeps the best of each and
-  recycles the rest.
+- **Similar Photos** – finds exact copies (ticked for the Recycle Bin, keeping one) and look-alikes such as resized or
+  re-saved copies (suggestions only, nothing ticked), with the reason for each match and a keeper you choose.
 - **Color Picker & Ruler** – Ctrl+Shift+F7 freezes the screen with a magnifier; click a pixel and its HEX is
   copied (RGB and HSL too). Drag to measure anything in pixels.
 - **Clips & Recording** – save the last 30 seconds (Windows Game Bar), screenshots named after the game, and screen
@@ -80,7 +83,8 @@ reminders (`remind me in 20 min to stretch`, `timer 25m focus`).
 - **Downloads** – sorts loose downloads into folders (with undo and optional auto-sorting) and finds old installers.
 - **Disk Space** – WizTree-style folder tree and treemap, largest files, duplicates and a tidy-up tab.
 - **Junk Cleaner** – temp files, caches, Recycle Bin, shader cache, crash dumps; optional automatic cleaning.
-- **Batch Rename** – find and replace, numbering, prefixes, case, with a live preview and undo.
+- **Batch Rename** – find and replace, numbering, prefixes, case, with a live preview and undo. Renames and Downloads
+  sorts keep a recovery record, never overwrite a file, and anything an undo can't put back is listed in File recovery.
 - **Uninstaller** – remove several programs in one go, plus removable Windows extras.
 
 ### System
@@ -89,9 +93,11 @@ reminders (`remind me in 20 min to stretch`, `timer 25m focus`).
   **Security** (Defender) and **Tools** (driver check, Windows Update pause, repairs, power timer, maintenance night).
 
 ### Settings
-Start with Windows, close to tray, notifications, now playing, **dark or light theme with six accent colours**,
-**modules**, updates (with a beta channel), and backup & share: one file with your setup, optionally with your
-personal data, to move to another PC or share with a friend.
+Start with Windows, close to tray, notifications, now playing, **privacy & data** (clipboard history, screen time,
+input counting, where data lives), **keyboard shortcuts**, **dark or light theme with six accent colours** (Windows'
+contrast themes are followed), **modules**, updates (with a beta channel), and backup & share: one file with your
+setup, optionally with your personal data. Importing shows a preview where you choose each part, saves your current
+setup first, and never switches tracking on without asking.
 
 Deliberately left out: "RAM cleaners" (trimming other apps' memory just makes them page back in from disk)
 and registry cleaners (no measurable benefit, real risk).
@@ -115,6 +121,10 @@ Releasing is automated: bump `<Version>` in `Rig/Rig.csproj`, optionally add `do
 then push a `vX.Y.Z` tag. GitHub Actions builds both EXEs (also published as `PCOptimizer.exe` and
 `PCOptimizer-lite.exe`, the names PC Optimizer 1.x updates from) and publishes the release. A tag with a suffix,
 like `v2.0.0-beta.1`, becomes a pre-release that only beta-channel users are offered. Every push is build-checked.
+
+Tests: `dotnet test Rig.Tests --filter "Category!=Desktop"` runs the domain tests (temporary folders and an isolated
+profile only); the `Desktop` category records a few seconds of a screen corner and needs an interactive session.
+Performance baseline and thresholds: `docs/PERFORMANCE.md`. Release signing: `docs/SIGNING.md`.
 
 If the app hits an error it shows a report you can copy; logs are in `%AppData%\Rig\logs`.
 

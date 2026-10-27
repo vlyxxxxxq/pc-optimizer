@@ -3,7 +3,7 @@ using System.Windows.Media;
 
 namespace Rig.Services;
 
-public enum Severity { Good, Warn, Bad }
+public enum Severity { Good, Unknown, Warn, Bad }
 
 /// <summary>One line of the health report. Action is a page key the main window navigates to.</summary>
 public sealed record Finding(Severity Severity, string Title, string Detail, string? ActionLabel = null, string? Action = null)
@@ -12,15 +12,19 @@ public sealed record Finding(Severity Severity, string Title, string Detail, str
     {
         Severity.Bad => "DangerBrush",
         Severity.Warn => "WarnBrush",
+        Severity.Unknown => "MutedBrush",
         _ => "GoodBrush",
     }];
 
-    public string Glyph => Severity == Severity.Good ? "" : ""; // checkmark / warning
+    public string Glyph => Severity switch { Severity.Good => "\uE73E", Severity.Unknown => "\uE9CE", _ => "\uE7BA" }; // check / unknown / warning
     public bool HasAction => ActionLabel is not null;
 }
 
 public sealed record HealthReport(int Score, List<Finding> Findings)
 {
+    public DateTime Checked { get; init; } = DateTime.Now;
+    /// <summary>What the score is (and isn't) based on.</summary>
+    public const string Basis = "Based on junk files, startup apps, free disk space, memory in use right now and graphics driver age. It's a maintenance checklist, not a speed test.";
     public string Label => Score switch
     {
         >= 85 => "Excellent",
@@ -37,12 +41,15 @@ public static class Health
 {
     const long MB = 1024 * 1024, GB = 1024 * MB;
 
+    /// <summary>junkBytes/startupEnabled below 0 mean that check didn't run or failed, which is reported, not scored.</summary>
     public static HealthReport Evaluate(long junkBytes, int startupEnabled)
     {
         int score = 100;
         var findings = new List<Finding>();
 
-        if (junkBytes >= 200 * MB)
+        if (junkBytes < 0)
+            findings.Add(new(Severity.Unknown, "Junk files weren't checked", "The scan didn't finish. Open Junk Cleaner to scan again.", "Open", "clean"));
+        else if (junkBytes >= 200 * MB)
         {
             score -= (int)Math.Min(30, 5 + 5.0 * junkBytes / GB);
             findings.Add(new(junkBytes >= GB ? Severity.Bad : Severity.Warn,
@@ -54,7 +61,9 @@ public static class Health
             findings.Add(new(Severity.Good, "Junk files are under control", "Less than 200 MB of removable junk."));
         }
 
-        if (startupEnabled > 6)
+        if (startupEnabled < 0)
+            findings.Add(new(Severity.Unknown, "Startup apps weren't checked", "Couldn't read the startup list.", "Open", "startup"));
+        else if (startupEnabled > 6)
         {
             score -= Math.Min(20, 4 + (startupEnabled - 6) * 3);
             findings.Add(new(startupEnabled > 12 ? Severity.Bad : Severity.Warn,
@@ -92,8 +101,8 @@ public static class Health
             if (load >= 85)
             {
                 score -= 10;
-                findings.Add(new(Severity.Warn, $"Memory is {load:0}% used",
-                    "Closing programs you aren't using will make things snappier.", "View processes", "processes"));
+                findings.Add(new(Severity.Warn, $"Memory is {load:0}% used right now",
+                    "A moment-in-time reading: closing programs you aren't using frees it up.", "View processes", "processes"));
             }
         }
 
@@ -103,10 +112,13 @@ public static class Health
             {
                 score -= 5;
                 findings.Add(new(Severity.Warn, $"{gpu.Vendor} graphics driver is {gpu.AgeDays / 30} months old",
-                    $"{gpu.Name}. Newer drivers often improve FPS and fix crashes in new games.", "Get driver", "drivers"));
+                    $"{gpu.Name}. Newer drivers fix bugs and often help with new games.", "Get driver", "drivers"));
             }
         }
-        catch { }
+        catch
+        {
+            findings.Add(new(Severity.Unknown, "Graphics driver wasn't checked", "Windows didn't report the driver's date."));
+        }
 
         return new HealthReport(Math.Clamp(score, 0, 100),
             findings.OrderByDescending(f => f.Severity).ToList());

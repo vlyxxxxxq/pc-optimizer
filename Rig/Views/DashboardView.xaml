@@ -1,6 +1,7 @@
 <UserControl x:Class="Rig.Views.DashboardView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:services="clr-namespace:Rig.Services">
     <UserControl.Resources>
         <!-- Faint horizontal guides at 25/50/75% behind each chart -->
         <ControlTemplate x:Key="ChartGrid">
@@ -26,6 +27,8 @@
         <StackPanel Margin="32,28,32,32">
             <DockPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
+                    <Button x:Name="CompactButton" Content="Use compact layout" Margin="0,0,8,0" Visibility="Collapsed" Click="Compact_Click"
+                            ToolTip="Just pinned tools, Game Mode and the maintenance check"/>
                     <Button x:Name="AddCardButton" Content="+ Add a card" Margin="0,0,8,0" Visibility="Collapsed" Click="AddCard_Click"/>
                     <Button x:Name="CustomizeButton" Content="Customize" Click="Customize_Click"/>
                 </StackPanel>
@@ -53,7 +56,7 @@
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition/>
                         </Grid.ColumnDefinitions>
-                        <Grid Width="96" Height="96" VerticalAlignment="Top">
+                        <Grid Width="96" Height="96" VerticalAlignment="Top" ToolTip="{x:Static services:HealthReport.Basis}">
                             <Ellipse Stroke="{DynamicResource ControlBrush}" StrokeThickness="9"/>
                             <Path x:Name="ScoreArc" StrokeThickness="9" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
                             <StackPanel VerticalAlignment="Center">
@@ -65,7 +68,7 @@
                             <DockPanel>
                                 <Button x:Name="RecheckButton" DockPanel.Dock="Right" Content="Re-check" Click="Recheck_Click" VerticalAlignment="Top"/>
                                 <StackPanel>
-                                    <TextBlock Text="PC health" FontSize="16" FontWeight="SemiBold"/>
+                                    <TextBlock Text="Maintenance check" FontSize="16" FontWeight="SemiBold"/>
                                     <TextBlock x:Name="HealthSummary" Style="{StaticResource Muted}" Margin="0,2,0,0"
                                                Text="Checking for junk files, startup load and disk space…"/>
                                 </StackPanel>
@@ -161,7 +164,7 @@
                         <TextBlock Text="NOW PLAYING" Style="{StaticResource CardLabel}"/>
                         <TextBlock x:Name="SongText" Text="Nothing playing" FontSize="18" FontWeight="SemiBold" Margin="0,8,0,0" TextTrimming="CharacterEllipsis"/>
                         <TextBlock x:Name="ArtistText" Style="{StaticResource Muted}" Text="Spotify, Apple Music, YouTube and more" TextTrimming="CharacterEllipsis"/>
-                        <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
+                        <StackPanel x:Name="MusicButtons" Orientation="Horizontal" Margin="0,16,0,0">
                             <Button Content="&#xE892;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Tag="prev" Click="Music_Click" Margin="0,0,8,0" ToolTip="Previous"/>
                             <Button Content="&#xE769;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Tag="play" Click="Music_Click" Margin="0,0,8,0" ToolTip="Play / pause" Style="{StaticResource PrimaryButton}"/>
                             <Button Content="&#xE893;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Tag="next" Click="Music_Click" ToolTip="Next"/>

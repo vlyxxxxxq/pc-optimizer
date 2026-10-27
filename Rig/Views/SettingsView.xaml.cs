@@ -10,6 +10,32 @@ public partial class SettingsView : UserControl
 
     public event EventHandler? TestNotificationRequested;
     public event Action<bool>? NowPlayingChanged;
+    /// <summary>A tracking switch changed; the main window starts or stops that tracking.</summary>
+    public event EventHandler? PrivacyChanged;
+
+    void Privacy_Click(object sender, RoutedEventArgs e)
+    {
+        _settings?.Save();
+        PrivacyChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    void DataFolder_Click(object sender, RoutedEventArgs e)
+    {
+        var dir = Path.GetDirectoryName(AppSettings.DataFile("settings.json"))!;
+        Directory.CreateDirectory(dir);
+        Shell.Open(dir);
+    }
+
+    /// <summary>Every global shortcut, with the key it's on now.</summary>
+    public void ShowShortcuts(IEnumerable<(string What, string Key)> keys)
+    {
+        var rows = keys.Select(k => new ShortcutRow(k.What, k.Key)).ToList();
+        // Only rebuild the list when a key changed, so screen readers keep their place on repeat visits.
+        if (ShortcutList.ItemsSource is List<ShortcutRow> shown && shown.SequenceEqual(rows)) return;
+        ShortcutList.ItemsSource = rows;
+    }
+
+    public sealed record ShortcutRow(string What, string Key);
     /// <summary>A module was switched on or off (its id).</summary>
     public event Action<string>? ModuleChanged;
 
@@ -179,6 +205,7 @@ public partial class SettingsView : UserControl
     public void Attach(AppSettings settings)
     {
         Loaded += (_, _) => RenderModules();
+        DataFolderText.Text = "Data folder: " + Path.GetDirectoryName(AppSettings.DataFile("settings.json"));
         ThemeLight.IsChecked = settings.Theme == "Light";
         ThemeDark.IsChecked = settings.Theme != "Light";
         RenderAccents();

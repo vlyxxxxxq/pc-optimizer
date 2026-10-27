@@ -53,6 +53,7 @@ public static class Theme
     {
         IsDark = dark;
         foreach (var (key, (d, l)) in Palette) Set(resources, key, Parse(dark ? d : l));
+        if (SystemParameters.HighContrast) { ApplyHighContrast(resources); return; }
 
         var accent = Parse(accentHex ?? Accents[0].Hex);
         // On light backgrounds the accent is darkened a little so text and icons in it stay readable.
@@ -85,6 +86,28 @@ public static class Theme
     }
 
     static T Frozen<T>(T f) where T : Freezable { f.Freeze(); return f; }
+
+    /// <summary>Windows' contrast theme: every surface, text and border uses the system's own colours, and no gradients or glows.</summary>
+    static void ApplyHighContrast(ResourceDictionary r)
+    {
+        IsDark = SystemColors.WindowColor.R + SystemColors.WindowColor.G + SystemColors.WindowColor.B < 384;
+        Color window = SystemColors.WindowColor, text = SystemColors.WindowTextColor, gray = SystemColors.GrayTextColor,
+              hilite = SystemColors.HighlightColor, hiliteText = SystemColors.HighlightTextColor, control = SystemColors.ControlColor;
+        foreach (var key in Palette.Keys) Set(r, key, window);
+        foreach (var key in new[] { "Text", "CardBorder", "ControlBorder", "StrongBorder", "HoverBorder", "GridLineStrong", "Knob" }) Set(r, key, text);
+        foreach (var key in new[] { "Muted", "DisabledText", "GridLine" }) Set(r, key, gray);
+        foreach (var key in new[] { "Control", "Subtle", "Track", "Thumb", "NavHover" }) Set(r, key, control);
+        foreach (var key in new[] { "Accent", "AccentLight", "Selected", "Good", "Warn", "Danger" }) Set(r, key, hilite);
+        r["AccentColor"] = hilite;
+        r["TitleBrush"] = Frozen(new SolidColorBrush(text));
+        r["PrimaryBrush"] = Frozen(new SolidColorBrush(hilite));
+        r["NavSelectedBrush"] = Frozen(new SolidColorBrush(hilite));
+        r["AccentGlowBrush"] = Frozen(new SolidColorBrush(Colors.Transparent));
+        r["EditVeilBrush"] = Frozen(new SolidColorBrush(window));
+        r["AccentGlowEffect"] = Frozen(new System.Windows.Media.Effects.DropShadowEffect { Opacity = 0 });
+        r["NavGlowEffect"] = Frozen(new System.Windows.Media.Effects.DropShadowEffect { Opacity = 0 });
+        _ = hiliteText;
+    }
 
     static void Set(ResourceDictionary resources, string key, Color c)
     {

@@ -72,6 +72,9 @@ public partial class WelcomeWindow : Window
     void Finish()
     {
         _settings.AutoGameMode = AutoGame.IsChecked == true;
+        // Tracking features start off for new users unless they chose them here.
+        _settings.ClipboardHistoryEnabled = ClipboardChoice.IsChecked == true;
+        _settings.ScreenTimeEnabled = ScreenTimeChoice.IsChecked == true;
         _settings.Notifications = Notify.IsChecked == true;
         _settings.Save();
 

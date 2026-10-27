@@ -15,7 +15,7 @@
                     </StackPanel>
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock x:Name="FolderText" Text="Pick a folder, like Pictures" TextTrimming="CharacterEllipsis"/>
-                        <TextBlock x:Name="StatusText" Style="{StaticResource Muted}" Margin="0,2,0,0"/>
+                        <TextBlock x:Name="StatusText" AutomationProperties.LiveSetting="Polite" Style="{StaticResource Muted}" Margin="0,2,0,0"/>
                     </StackPanel>
                 </DockPanel>
             </Border>
@@ -53,7 +53,7 @@
                                                             Visibility="{Binding Keeper, Converter={StaticResource BoolToVis}}">
                                                         <TextBlock Text="Keeper" FontSize="11"/>
                                                     </Border>
-                                                    <CheckBox IsChecked="{Binding Remove}" Content="Recycle" Click="Tick_Click"
+                                                    <CheckBox IsChecked="{Binding Remove}" Content="Recycle" Checked="Tick_Click" Unchecked="Tick_Click"
                                                               IsEnabled="{Binding Keeper, Converter={StaticResource Not}}"/>
                                                 </DockPanel>
                                                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
