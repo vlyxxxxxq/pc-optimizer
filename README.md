@@ -1,115 +1,104 @@
-# PC Optimizer
+# Rig
 
-A native Windows desktop app (C# / WPF, .NET 10, no third-party packages). Runs in the notification
-area so Game Mode can kick in automatically. Inspired by Chris Titus Tech's WinUtil, game boosters
-like Razer Cortex and Process Lasso, and Windows' own maintenance tools.
+Your PC toolkit: a native Windows desktop app (C# / WPF, .NET 10, no third-party packages) that boosts games,
+keeps Windows tidy, and handles the everyday stuff, from clipboard history and timers to screen recording,
+batch renaming and a colour picker. Formerly **PC Optimizer**. It lives in the notification area, so Game Mode
+and your hotkeys are always ready.
 
-![Dashboard](docs/screenshots/dashboard.png)
+![Home](docs/screenshots/home.png)
 
 | | |
 |---|---|
-| ![Game Mode](docs/screenshots/game-mode.png) | ![Disk Space](docs/screenshots/disk-space.png) |
-| **Game Mode**: boosts your PC while you play, then undoes everything | **Disk Space**: WizTree-style tree and treemap, Del to recycle |
-| ![Junk Cleaner](docs/screenshots/junk-cleaner.png) | ![Hardware](docs/screenshots/hardware.png) |
-| **Junk Cleaner**: caches, temp files, automatic cleaning | **Hardware**: specs, drive health, benchmarks |
-| ![Tweaks](docs/screenshots/tweaks.png) | |
-| **Tweaks**: reversible gaming, privacy and Windows tweaks | |
+| ![Light theme with a purple accent](docs/screenshots/home-light.png) | ![Game Mode](docs/screenshots/game-mode.png) |
+| **Home**: your cards, in dark or light with your accent colour | **Game Mode**: boosts your PC while you play, then undoes everything |
+| ![Timers](docs/screenshots/timers.png) | ![Settings](docs/screenshots/settings.png) |
+| **Timers & Reminders**, also from the command palette | **Settings**: theme, accent and switching modules on or off |
 
 ## Download
 
-Grab an EXE from the [latest release](../../releases/latest), for 64-bit Windows 10 and 11:
+Grab an EXE from the [releases](../../releases), for 64-bit Windows 10 and 11:
 
-- **`PCOptimizer.exe`** (~72 MB): everything built in. Pick this if you're not sure.
-- **`PCOptimizer-lite.exe`** (under 1 MB): needs the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) installed.
+- **`Rig.exe`** (~75 MB): everything built in. Pick this if you're not sure.
+- **`Rig-lite.exe`** (about 1 MB): needs the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) installed.
 
 Run it and a short welcome sets things up and offers to install it (no admin needed: it goes in your user
 folder, with a Start menu shortcut and an entry in Windows' "Installed apps" to uninstall it). Or pick
 "Portable" and keep running the EXE from wherever it is.
 
 The app updates itself: when a new release is out, Settings → Updates (or the sidebar) offers a one-click update.
+Switch on **Beta updates** to get new versions early.
+
+**Coming from PC Optimizer?** It updates itself into Rig. The first start after the update moves the program to
+its new folder and renames the shortcuts, the "Installed apps" entry, start with Windows and the maintenance task;
+your settings, games, play history and everything else come along.
 
 The EXE isn't code-signed, so the first time you run it Windows SmartScreen may say
 "Windows protected your PC". Click **More info → Run anyway**.
 
-## Features
+## What's inside
 
-- **Dashboard** – your pinned tools (right-click any sidebar page to pin it), a health score (0–100) with one-click
-  fixes, live CPU/memory charts, drives.
-- **Game Mode** – toggle it yourself (page, sidebar chip or tray menu) or let it turn on automatically.
-  - Detects games only when one is the window you're using and it lives in a game library
-    (Steam incl. all library folders, Epic, GOG, Ubisoft, EA, Riot, Xbox, `X:\Games`) or your own list.
-    Background apps such as Wallpaper Engine never count, and known non-game Steam apps (Lossless Scaling,
-    SteamVR, Soundpad, Proton…) are filtered out. "Not a game" ignores anything that slips through.
-  - Boosts (each optional): Ultimate/High performance power plan, high CPU priority for the game,
-    block sleep/screensaver, close background apps and reopen them afterwards.
-  - Apps to close: known background hogs that are actually running (sync clients, Teams, torrent clients…)
-    with a reason for each, plus one-click adding of any other open app.
-  - Everything is undone when the game closes, including after a crash (the old power plan is restored on next launch).
-  - Live CPU / GPU / game RAM while you play, and a play history: time per game plus average and peak load per session.
-  - Per-game profiles: different boosts for different games, including their own resolution and refresh rate.
-  - Optional performance overlay: a click-through CPU / GPU / RAM / ping readout in a corner of the screen.
-  - Windows notifications when Game Mode turns on or off.
-  - Optional FPS counter (with 1% lows) in the overlay for DirectX games, in administrator mode.
-  - Session recap card when a game closes: playtime, load, game RAM, clips captured, and FPS in admin mode.
-- **Game Library** – every installed Steam, Epic and GOG game with cover art and playtime; click to play,
-  optionally with Game Mode switched on. NEW badges and patch notes from Steam developers, plus free-to-keep
-  games on Epic, Steam, GOG and others (via GamerPower) with optional notifications.
-- **Crosshair** – a click-through custom crosshair (5 styles, colour, size, gap, outline) that turns on in the
-  games you pick and off when you leave them; Ctrl+Shift+F8 toggles it.
-- **Controller Tester** – live buttons, sticks and triggers for XInput controllers, a stick-drift check and rumble tests.
-- **Clips & Screenshots** – Ctrl+Shift+F9 (changeable) saves the last 30 seconds (via Windows Game Bar's background
-  recording), Ctrl+Shift+F10 saves a screenshot named after the game; a gallery of everything captured.
-- **Screen recorder** – Ctrl+Shift+F11 (changeable): drag out an area (or click for a whole screen) and record it as
-  an MP4 (Windows' H.264 encoder, GPU-accelerated when available) or a small GIF (up to 60 s). Video only.
-- **Clipboard & Notes** – Ctrl+Alt+V opens your last 50 copies anywhere (memory only; password-manager copies
-  are skipped), plus quick notes that save as you type.
-- **Command palette** – Ctrl+Alt+P (or Ctrl+Alt+Space when free) from anywhere: jump to pages, find any setting,
-  run actions, restore window layouts, control music, launch games and apps, end stuck windows, quick maths.
-- **Window Layouts** – save where your windows are (Gaming, Study…) and put them back in one click.
-- **Now playing** – a sidebar mini player for Spotify, Apple Music, YouTube and more, with media controls.
-- **Screen Time** – time per app per day and a 7-day chart, counting only active use, with optional break reminders.
-- **Input Stats** – optional key, click, scroll and cursor-travel counts with keyboard and mouse heatmaps and per-game
-  APM and most-used keys. Counts only, never what you type; stays on your PC.
-- **Downloads** – sorts loose files in Downloads into folders by type (with undo and optional auto-sorting) and
-  lists old installers to clear out.
-- **Junk Cleaner** – temp files, browser caches, Recycle Bin, thumbnails, shader cache, crash dumps.
-  Optional automatic cleaning (daily / weekly / monthly), skipped while you're gaming. Browser privacy:
-  cookies and history per browser (never passwords, autofill or bookmarks).
-- **Disk Space** – WizTree / WinDirStat style: a size-sorted folder tree with "% of parent", a colour treemap
-  you can click to jump to a folder, a largest-files list, a duplicate file finder, and a "Tidy up" tab for
-  empty folders and broken shortcuts. Select anything and press **Del** to send it to the Recycle Bin
-  (Windows and program folders are protected).
-- **Network** – live ping graph to any server with jitter and packet loss, DNS speed test across six
-  public providers with one-click switching (and back), Cloudflare download speed test. VPN-aware.
-- **Hardware** – full specs (CPU, RAM sticks and speed, GPU and VRAM, motherboard, BIOS, Windows), drive
-  health, and CPU / memory / unbuffered disk benchmarks with a history to compare before and after changes.
-- **Startup Apps** – icons and publishers; reversible enable/disable (same flags as Task Manager), plus
-  the scheduled tasks that launch at sign-in, which Task Manager doesn't show. Each item's impact
-  (memory and average CPU) is measured so you can see what's worth turning off.
-- **Right-click Menu** – switch off the clutter apps add to Explorer's context menu, reversibly.
-- **Processes** – live CPU/memory, grouped by app, End task with critical processes protected.
-- **Tweaks** – 24 reversible gaming, privacy and Explorer tweaks showing their real current state,
-  "Apply recommended", and restore point creation.
-- **Apps** – winget-powered: see and install updates for everything, or batch-install popular apps.
-- **Uninstaller** – every installed program with icon, size and install date; search, tick several and
-  uninstall them in one go with each program's own uninstaller. Plus removable Windows extras (Clipchamp, News, Solitaire…).
-- **Tools** – graphics driver check (version, age, one click to AMD / NVIDIA / Intel downloads),
-  pause Windows Update for 1–5 weeks, a power timer (shut down / restart / sleep after a delay or when downloads
-  finish), power plans
-  (+ add Ultimate Performance), flush DNS, restart Explorer, repair Windows (DISM/SFC, network reset,
-  Windows Update fix, chkdsk), shortcuts to Windows tools. Maintenance night: a weekly scheduled clean
-  and app-update check that catches up if the PC was off, and skips itself while you're gaming.
-- **Security** – Windows Defender status, quick / full scans, definition updates, and game-folder exclusions (admin).
-- **Settings** – start with Windows (in the tray), close to tray, notifications, automatic updates, and
-  backup & share: export your whole setup to one file (optionally with your play history, screen time, notes and
-  layouts) and import it on another PC or a friend's.
+Tools are grouped into five categories. Any tool you don't use can be switched off in Settings → Modules: it
+leaves the sidebar and stops its background work. Pages only load the first time you open them.
+
+**Home** – a grid of cards you choose and arrange (Customize): pinned tools (right-click any sidebar page to pin
+it), PC health with one-click fixes, live CPU and memory, system info, Game Mode, now playing, today's screen time
+and input, timers, the power timer, free games and storage.
+
+**Command palette** – Ctrl+Alt+P (or Ctrl+Alt+Space when free) from anywhere: jump to any page or setting, run
+actions, launch games and apps, end stuck windows, restore window layouts, control music, and quick answers:
+maths, units (`5 ft in cm`), currency (`100 usd to eur`), emoji (`:fire`), time zones (`time in tokyo`) and
+reminders (`remind me in 20 min to stretch`, `timer 25m focus`).
+
+### Gaming
+- **Game Mode** – turns on when a game from your libraries (Steam, Epic, GOG, Ubisoft, EA, Riot, Xbox, your own
+  list) is the window you're using. Optional boosts: top power plan, high CPU priority, no sleep, closing background
+  apps; per-game profiles, including their own resolution and refresh rate. Everything is undone when the game
+  closes, even after a crash. Performance overlay with FPS (admin) and a recap card after each session.
+- **Game Library** – every installed Steam, Epic and GOG game with covers and playtime, patch notes, and
+  free-to-keep games with optional alerts.
+- **Crosshair** – a click-through custom crosshair that turns on in the games you pick (Ctrl+Shift+F8).
+- **Controller Tester** – buttons, sticks, triggers, drift check and rumble for XInput controllers.
+- **Input Stats** – optional key, click, scroll and cursor-travel counts with keyboard and mouse heatmaps and
+  per-game APM. Counts only, never what you type.
+
+### Media
+- **Similar Photos** – finds near-duplicate photos (resized or re-saved copies too), keeps the best of each and
+  recycles the rest.
+- **Color Picker & Ruler** – Ctrl+Shift+F7 freezes the screen with a magnifier; click a pixel and its HEX is
+  copied (RGB and HSL too). Drag to measure anything in pixels.
+- **Clips & Recording** – save the last 30 seconds (Windows Game Bar), screenshots named after the game, and screen
+  recording of any area to MP4 or GIF (Ctrl+Shift+F9 / F10 / F11, all changeable).
+
+### Productivity
+- **Clipboard & Notes** – Ctrl+Alt+V opens your last 50 copies anywhere; quick notes that save as you type.
+- **Screen Time** – time per app per day with optional break reminders.
+- **Window Layouts** – save where your windows are and put them back in one click.
+- **Timers & Reminders** – countdowns, reminders at a time or after a while (kept across restarts) and a stopwatch.
+- **Now playing** – a sidebar mini player for Spotify, Apple Music, YouTube and more.
+
+### Files
+- **Downloads** – sorts loose downloads into folders (with undo and optional auto-sorting) and finds old installers.
+- **Disk Space** – WizTree-style folder tree and treemap, largest files, duplicates and a tidy-up tab.
+- **Junk Cleaner** – temp files, caches, Recycle Bin, shader cache, crash dumps; optional automatic cleaning.
+- **Batch Rename** – find and replace, numbering, prefixes, case, with a live preview and undo.
+- **Uninstaller** – remove several programs in one go, plus removable Windows extras.
+
+### System
+- **Startup Apps**, **Processes**, **Tweaks** (reversible), **Right-click Menu**, **Apps** (winget installs and
+  updates), **Hardware** (specs, drive health, benchmarks), **Network** (ping, DNS switcher, speed test),
+  **Security** (Defender) and **Tools** (driver check, Windows Update pause, repairs, power timer, maintenance night).
+
+### Settings
+Start with Windows, close to tray, notifications, now playing, **dark or light theme with six accent colours**,
+**modules**, updates (with a beta channel), and backup & share: one file with your setup, optionally with your
+personal data, to move to another PC or share with a friend.
 
 Deliberately left out: "RAM cleaners" (trimming other apps' memory just makes them page back in from disk)
 and registry cleaners (no measurable benefit, real risk).
 
 ## Build and run
 
-Needs the [.NET 10 SDK](https://dotnet.microsoft.com/download). From the `PCOptimizer` folder:
+Needs the [.NET 10 SDK](https://dotnet.microsoft.com/download). From the `Rig` folder:
 
 ```
 dotnet run -c Release
@@ -122,14 +111,13 @@ dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=
 dotnet publish -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:DebugType=none -o ..\Release\lite
 ```
 
-Then rename `Release\lite\PCOptimizer.exe` to `PCOptimizer-lite.exe` when attaching it to a release.
-The updater matches on those two asset names.
+Releasing is automated: bump `<Version>` in `Rig/Rig.csproj`, optionally add `docs/release-notes/vX.Y.Z.md`,
+then push a `vX.Y.Z` tag. GitHub Actions builds both EXEs (also published as `PCOptimizer.exe` and
+`PCOptimizer-lite.exe`, the names PC Optimizer 1.x updates from) and publishes the release. A tag with a suffix,
+like `v2.0.0-beta.1`, becomes a pre-release that only beta-channel users are offered. Every push is build-checked.
 
-Releasing is automated: bump `<Version>` in `PCOptimizer.csproj`, optionally add `docs/release-notes/vX.Y.Z.md`,
-then push a `vX.Y.Z` tag. GitHub Actions builds both EXEs and publishes the release. Every push to `main`
-is also build-checked.
+If the app hits an error it shows a report you can copy; logs are in `%AppData%\Rig\logs`.
 
-If the app hits an error it shows a report you can copy; logs are in `%AppData%\PCOptimizer\logs`.
-
-Settings live in `%AppData%\PCOptimizer\settings.json`. Set `PCOPTIMIZER_SETTINGS` to another path to use a
-separate profile (useful for testing).
+Settings live in `%AppData%\Rig\settings.json`. Set `RIG_SETTINGS` to another path to use a separate profile
+(useful for testing), and `RIG_TEST_INSTALL_ROOT` to try installing, migrating and uninstalling in a sandbox
+folder (registry under `HKCU\Software\RigTest`) without touching the real system.
