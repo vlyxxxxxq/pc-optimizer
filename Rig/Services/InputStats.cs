@@ -268,16 +268,39 @@ public sealed class InputStats
         };
     }
 
-    static InputStatsData Load()
+    /// <summary>Reads inputstats.json; a damaged file is kept beside it and the last good copy (.bak) is used instead.</summary>
+    internal static InputStatsData Load(string? path = null)
     {
-        try
+        path ??= FilePath;
+        var data = TryRead(path);
+        if (data is null && File.Exists(path))
         {
-            var data = File.Exists(FilePath) ? JsonSerializer.Deserialize<InputStatsData>(File.ReadAllText(FilePath)) ?? new() : new();
-            data.MoveHeat = Heatmaps.Upgrade(data.MoveHeat, InputStatsData.HeatW, InputStatsData.HeatH);
-            data.ClickHeat = Heatmaps.Upgrade(data.ClickHeat, InputStatsData.HeatW, InputStatsData.HeatH);
-            return data;
+            try { File.Copy(path, Path.ChangeExtension(path, $".corrupt-{DateTime.Now:yyyyMMdd-HHmmss}.json"), overwrite: true); } catch { }
         }
-        catch { return new(); }
+        data ??= TryRead(path + ".bak") ?? new();
+        data.MoveHeat = Heatmaps.Upgrade(data.MoveHeat, InputStatsData.HeatW, InputStatsData.HeatH);
+        data.ClickHeat = Heatmaps.Upgrade(data.ClickHeat, InputStatsData.HeatW, InputStatsData.HeatH);
+        return data;
+    }
+
+    static InputStatsData? TryRead(string path)
+    {
+        try { return File.Exists(path) ? JsonSerializer.Deserialize<InputStatsData>(File.ReadAllText(path)) : null; }
+        catch { return null; }
+    }
+
+    static readonly object WriteLock = new();
+    /// <summary>A temp file replaces inputstats.json, and the previous file becomes inputstats.json.bak.</summary>
+    internal static void Write(string path, string json)
+    {
+        lock (WriteLock)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            string tmp = path + ".tmp";
+            File.WriteAllText(tmp, json);
+            if (File.Exists(path)) File.Replace(tmp, path, path + ".bak", ignoreMetadataErrors: true);
+            else File.Move(tmp, path);
+        }
     }
 
     public void Save()
@@ -291,8 +314,7 @@ public sealed class InputStats
                 foreach (var old in Data.Days.Keys.Where(k => string.CompareOrdinal(k, cutoff) < 0).ToList()) Data.Days.Remove(old);
                 json = JsonSerializer.Serialize(Data);
             }
-            Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
-            File.WriteAllText(FilePath, json);
+            Write(FilePath, json);
         }
         catch { }
     }

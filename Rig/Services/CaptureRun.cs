@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;
 
@@ -13,12 +14,17 @@ internal sealed class CaptureRun : IAsyncDisposable
     long _microseconds;
     public string Directory { get; }
     public string Encoder { get; }
+    internal int ProcessId => _process.Id;
     public AppSettings Options { get; }
     public bool HasExited => _process.HasExited;
     public TimeSpan Elapsed => TimeSpan.FromTicks(Interlocked.Read(ref _microseconds) * 10);
     public string Error { get { lock (_errors) return _errors.ToString(); } }
     public Exception? AudioError => _audio?.Error;
-    static string? _encoder;
+    const string Software = "libopenh264";
+    static readonly string[] Encoders = ["h264_nvenc", "h264_amf", "h264_qsv", Software];
+    // Per process: the encoder that passed a probe at each output size/rate, and hardware encoders that later failed a real session.
+    static readonly ConcurrentDictionary<string, string> Chosen = new();
+    static readonly ConcurrentDictionary<string, bool> Demoted = new();
 
     CaptureRun(Process process, CaptureAudio? audio, string directory, string encoder, AppSettings options)
     {
@@ -38,7 +44,36 @@ internal sealed class CaptureRun : IAsyncDisposable
     public static async Task<CaptureRun> StartAsync(ScreenArea area, AppSettings options, bool synthetic = false)
     {
         var engine = await CaptureEngine.EnsureAsync();
-        string encoder = synthetic ? "libopenh264" : _encoder ??= await ChooseEncoderAsync(engine);
+        if (synthetic) return await LaunchAsync(engine, area, options, Software, synthetic: true);
+        var (width, height) = OutputSize(area, options);
+        string key = $"{width}x{height}@{options.CaptureFps}/{options.CaptureMbps}";
+        string encoder = Chosen.TryGetValue(key, out var known) && !Demoted.ContainsKey(known)
+            ? known : Chosen[key] = await ChooseEncoderAsync(engine, width, height, options);
+        return await StartWithFallbackAsync(encoder, e => LaunchAsync(engine, area, options, e), failed =>
+        {
+            Demoted[failed] = true;
+            Chosen[key] = Software;
+        });
+    }
+
+    /// <summary>
+    /// A hardware encoder can pass the probe yet fail with a real display and audio feed (driver limits, another app holding
+    /// the encoder). Rig then tries the software encoder once, after the failed process has fully exited, so two capture
+    /// sessions never run together. Audio failures aren't retried because a different encoder can't fix them.
+    /// </summary>
+    internal static async Task<T> StartWithFallbackAsync<T>(string encoder, Func<string, Task<T>> launch, Action<string> demote)
+    {
+        try { return await launch(encoder); }
+        catch (IOException first) when (encoder != Software && first is not AudioStartException)
+        {
+            demote(encoder);
+            try { return await launch(Software); }
+            catch (IOException second) { throw new IOException($"Recording couldn't start with {encoder} or the software encoder. {second.Message}", second); }
+        }
+    }
+
+    internal static async Task<CaptureRun> LaunchAsync(string engine, ScreenArea area, AppSettings options, string encoder, bool synthetic = false)
+    {
         var directory = Path.Combine(CaptureEngine.CacheRoot, "Replay", Guid.NewGuid().ToString("N"));
         System.IO.Directory.CreateDirectory(directory);
         CaptureAudio? audio = null;
@@ -52,14 +87,35 @@ internal sealed class CaptureRun : IAsyncDisposable
             {
                 audio?.Start();
                 var started = Stopwatch.StartNew();
-                while (run.Elapsed <= TimeSpan.Zero && !run.HasExited && started.Elapsed < TimeSpan.FromSeconds(20)) await Task.Delay(100);
-                if (run.HasExited || run.Elapsed <= TimeSpan.Zero || run.AudioError is not null)
-                    throw new IOException("Recording couldn't start. " + (run.AudioError?.Message ?? run.Error));
+                while (run.Elapsed <= TimeSpan.Zero && !run.HasExited && run.AudioError is null && started.Elapsed < TimeSpan.FromSeconds(20)) await Task.Delay(100);
+                if (run.AudioError is not null) throw new AudioStartException("Recording couldn't start. " + run.AudioError.Message);
+                if (run.HasExited || run.Elapsed <= TimeSpan.Zero) throw new IOException("Recording couldn't start. " + run.Error);
                 return run;
             }
-            catch { await run.DisposeAsync(); throw; }
+            catch
+            {
+                // Stop the child before the caller retries, so a fallback never overlaps a half-started session.
+                try { await run.DisposeAsync(); } catch (IOException) { }
+                throw;
+            }
         }
-        catch { audio?.Dispose(); throw; }
+        catch
+        {
+            audio?.Dispose();
+            // Nothing in this new folder was ever announced as recording, so it isn't recoverable data.
+            try { System.IO.Directory.Delete(directory, true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+            throw;
+        }
+    }
+
+    sealed class AudioStartException(string message) : IOException(message);
+
+    /// <summary>The size the scale filter in <see cref="Arguments"/> produces: height capped at the preset, width kept even.</summary>
+    internal static (int Width, int Height) OutputSize(ScreenArea area, AppSettings options)
+    {
+        int height = Math.Min(area.Height, options.CaptureHeight);
+        int width = (int)Math.Round(area.Width * (double)height / Math.Max(1, area.Height) / 2) * 2;
+        return (Math.Max(2, width), Math.Max(2, height));
     }
 
     internal static List<string> Arguments(ScreenArea area, AppSettings options, string directory, string encoder, string? pipe, bool synthetic = false)
@@ -80,20 +136,28 @@ internal sealed class CaptureRun : IAsyncDisposable
         return args;
     }
 
-    static async Task<string> ChooseEncoderAsync(string engine)
+    /// <summary>Probes each encoder with half a second at the real output size, frame rate, bitrate and GOP, not a token frame.</summary>
+    static async Task<string> ChooseEncoderAsync(string engine, int width, int height, AppSettings options)
     {
-        foreach (var encoder in new[] { "h264_nvenc", "h264_amf", "h264_qsv", "libopenh264" })
+        foreach (var encoder in Encoders.Where(e => !Demoted.ContainsKey(e)))
         {
-            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(7));
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             try
             {
-                var (code, _) = await CaptureEngine.RunAsync(engine, ["-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i", "color=size=640x360:rate=30", "-frames:v", "1", "-c:v", encoder, "-f", "null", "-"], timeout.Token);
+                var (code, _) = await CaptureEngine.RunAsync(engine, ProbeArguments(encoder, width, height, options), timeout.Token);
                 if (code == 0) return encoder;
             }
+            // Software encoding is the last resort: a slow probe at a large size is not a reason to refuse to record.
+            catch (OperationCanceledException) when (encoder == Software) { return encoder; }
             catch (OperationCanceledException) { }
         }
         throw new IOException("No compatible H.264 encoder is available on this PC.");
     }
+
+    internal static List<string> ProbeArguments(string encoder, int width, int height, AppSettings options) =>
+        ["-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i", $"testsrc2=size={width}x{height}:rate={options.CaptureFps}",
+            "-frames:v", (options.CaptureFps / 2).ToString(), "-pix_fmt", "yuv420p", "-c:v", encoder, "-b:v", $"{options.CaptureMbps}M",
+            "-g", (options.CaptureFps * 2).ToString(), "-bf", "0", "-f", "null", "-"];
 
     public async Task StopAsync()
     {
